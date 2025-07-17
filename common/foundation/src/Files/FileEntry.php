@@ -22,7 +22,7 @@ class FileEntry extends BaseModel
     use SoftDeletes, HashesId, HandlesEntryPaths, BelongsToWorkspace, Taggable;
 
     public const MODEL_TYPE = 'fileEntry';
-    protected $guarded = ['id'];
+    protected $guarded = ['id', 'telegram_file_id'];
     protected $hidden = ['pivot', 'preview_token'];
     protected $appends = ['hash', 'url'];
     protected $casts = [

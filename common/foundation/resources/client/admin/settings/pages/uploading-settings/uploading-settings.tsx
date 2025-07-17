@@ -97,6 +97,11 @@ function Form({data}: FormProps) {
           data.server.storage_dropbox_app_secret ?? '',
         storage_dropbox_refresh_token:
           data.server.storage_dropbox_refresh_token ?? '',
+
+        // telegram
+        telegram_api_id: data.server.telegram_api_id ?? '',
+        telegram_api_hash: data.server.telegram_api_hash ?? '',
+        telegram_channel: data.server.telegram_channel ?? '',
       },
     },
   });
@@ -224,6 +229,7 @@ function PrivateUploadSection() {
       <Item value="s3">Amazon S3 (Or compatible service)</Item>
       <Item value="dropbox">Dropbox</Item>
       <Item value="rackspace">Rackspace</Item>
+      <Item value="telegram">Telegram</Item>
     </FormSelect>
   );
 }
@@ -285,6 +291,9 @@ function CredentialsSection() {
         }
         if (drives.includes('backblaze_s3')) {
           return <BackblazeForm isInvalid={isInvalid} />;
+        }
+        if (drives.includes('telegram')) {
+          return <TelegramForm isInvalid={isInvalid} />;
         }
       }}
     </SettingsErrorGroup>
@@ -512,5 +521,33 @@ function FtpForm({isInvalid}: CredentialFormProps) {
         <Trans message="SSL" />
       </FormSwitch>
     </>
+  );
+}
+
+function TelegramForm({isInvalid}: CredentialFormProps) {
+  return (
+    <Fragment>
+      <FormTextField
+        invalid={isInvalid}
+        className="mb-30"
+        name="server.telegram_api_id"
+        label={<Trans message="Telegram API ID" />}
+        required
+      />
+      <FormTextField
+        invalid={isInvalid}
+        className="mb-30"
+        name="server.telegram_api_hash"
+        label={<Trans message="Telegram API Hash" />}
+        required
+      />
+      <FormTextField
+        invalid={isInvalid}
+        className="mb-30"
+        name="server.telegram_channel"
+        label={<Trans message="Telegram Channel" />}
+        required
+      />
+    </Fragment>
   );
 }

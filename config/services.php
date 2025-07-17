@@ -28,4 +28,10 @@ return [
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
+
+    'telegram' => [
+        'api_id' => env('TELEGRAM_API_ID'),
+        'api_hash' => env('TELEGRAM_API_HASH'),
+        'channel' => env('TELEGRAM_CHANNEL'),
+    ],
 ];

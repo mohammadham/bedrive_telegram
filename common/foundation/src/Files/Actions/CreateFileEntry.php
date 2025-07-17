@@ -16,6 +16,7 @@ class CreateFileEntry
         $data = [
             'name' => $payload->clientName,
             'file_name' => $payload->filename,
+            'telegram_file_id' => $payload->filename,
             'mime' => $payload->clientMime,
             'file_size' => $payload->size,
             'parent_id' => $payload->parentId,
