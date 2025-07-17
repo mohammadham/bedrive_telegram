@@ -23,14 +23,9 @@ class StoreFile
         FileEntryPayload $payload,
         array $fileOptions,
     ): string|false {
-        $diskName = $payload->public ? 'public' : 'uploads';
-        if (config("common.site.{$diskName}_disk_driver") === 'telegram') {
-            $this->disk = Storage::disk('telegram');
-        } else {
-            $this->disk = $payload->public
-                ? Storage::disk('public')
-                : Storage::disk('uploads');
-        }
+        $this->disk = $payload->public
+            ? Storage::disk('public')
+            : Storage::disk('uploads');
 
         $this->diskOptions = [
             'mimetype' => $payload->clientMime,

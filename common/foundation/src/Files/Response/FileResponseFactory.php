@@ -32,10 +32,6 @@ class FileResponseFactory
         FileEntry $entry,
         string $disposition = 'inline',
     ): FileResponse {
-        if ($entry->getDisk()->getDriver() instanceof \App\Services\Telegram\TelegramAdapter) {
-            return new TelegramFileResponse();
-        }
-
         $isLocalDrive =
             $entry->getDisk()->getAdapter() instanceof LocalFilesystemAdapter;
         $staticFileDelivery = config('common.site.static_file_delivery');

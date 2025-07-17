@@ -97,8 +97,6 @@ function Form({data}: FormProps) {
           data.server.storage_dropbox_app_secret ?? '',
         storage_dropbox_refresh_token:
           data.server.storage_dropbox_refresh_token ?? '',
-
-        // telegram
         telegram_api_id: data.server.telegram_api_id ?? '',
         telegram_api_hash: data.server.telegram_api_hash ?? '',
         telegram_channel: data.server.telegram_channel ?? '',
@@ -286,14 +284,14 @@ function CredentialsSection() {
         if (drives.includes('dropbox')) {
           return <DropboxForm isInvalid={isInvalid} />;
         }
+        if (drives.includes('telegram')) {
+          return <TelegramForm isInvalid={isInvalid} />;
+        }
         if (drives.includes('digitalocean_s3')) {
           return <DigitalOceanForm isInvalid={isInvalid} />;
         }
         if (drives.includes('backblaze_s3')) {
           return <BackblazeForm isInvalid={isInvalid} />;
-        }
-        if (drives.includes('telegram')) {
-          return <TelegramForm isInvalid={isInvalid} />;
         }
       }}
     </SettingsErrorGroup>
@@ -545,7 +543,7 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
         invalid={isInvalid}
         className="mb-30"
         name="server.telegram_channel"
-        label={<Trans message="Telegram Channel" />}
+        label={<Trans message="Telegram Channel ID" />}
         required
       />
     </Fragment>
