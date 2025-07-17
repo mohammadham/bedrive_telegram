@@ -72,6 +72,7 @@ use Common\Files\Providers\BackblazeServiceProvider;
 use Common\Files\Providers\DigitalOceanServiceProvider;
 use Common\Files\Providers\DropboxServiceProvider;
 use Common\Files\Providers\DynamicStorageDiskProvider;
+use Common\Files\Providers\TelegramServiceProvider;
 use Common\Files\S3\AbortOldS3Uploads;
 use Common\Files\Tus\DeleteExpiredTusUploads;
 use Common\Files\Tus\TusServiceProvider;
@@ -273,6 +274,9 @@ class CommonServiceProvider extends ServiceProvider
         }
         if ($this->storageDriverSelected('backblaze_s3')) {
             $this->app->register(BackblazeServiceProvider::class);
+        }
+        if ($this->storageDriverSelected('telegram')) {
+            $this->app->register(TelegramServiceProvider::class);
         }
 
         // register scout drivers
