@@ -1,7 +1,7 @@
 import {useCallback, useContext, useEffect, useRef, useState} from 'react';
 import {PlayerStoreContext} from '@common/player/player-context';
 import {usePlayerStore} from '@common/player/hooks/use-player-store';
-import Hls, {LevelLoadedData} from 'hls.js';
+import Hls, {levelLoadedData} from 'hls.js';
 import {useHtmlMediaInternalState} from '@common/player/providers/html-media/use-html-media-internal-state';
 import {useHtmlMediaEvents} from '@common/player/providers/html-media/use-html-media-events';
 import {useHtmlMediaApi} from '@common/player/providers/html-media/use-html-media-api';
@@ -69,7 +69,7 @@ export default function HlsProvider() {
     });
 
     hlsInstance.on(Hls.Events.AUDIO_TRACK_SWITCHED, (eventType, data) => {
-      const track = store.getState().audioTracks.find(t => t.id === data.id);
+      const track = store.getState().audioTracks.find(t => t.id.toString === data.id.toString);
       if (track) {
         store.getState().emit('currentAudioTrackChange', {trackId: track.id});
       }
@@ -77,7 +77,7 @@ export default function HlsProvider() {
 
     hlsInstance.on(
       Hls.Events.LEVEL_LOADED,
-      (eventType: string, data: LevelLoadedData) => {
+      (eventType: string, data: levelLoadedData) => {
         if (!store.getState().providerReady) {
           const {type, live, totalduration: duration} = data.details;
           const inferredStreamType = live
@@ -153,7 +153,7 @@ export default function HlsProvider() {
 
   return (
     <video
-      className="h-full w-full"
+      className="w-full h-full"
       ref={videoRef}
       playsInline
       poster={cuedMedia?.poster}
