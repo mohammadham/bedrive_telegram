@@ -86,5 +86,6 @@ class Kernel extends HttpKernel
         'signed' => ValidateSignature::class,
         'throttle' => ThrottleRequests::class,
         'prerenderIfCrawler' => PrerenderIfCrawler::class,
+        'api.token' => \App\Http\Middleware\ApiTokenAuth::class,
     ];
 }
