@@ -66,22 +66,25 @@ class UserApiController extends BaseController
     /**
      * Get user's Telegram settings
      */
-    public function getTelegramSettings(): JsonResponse
+    public function getTelegramSettings(User $user): JsonResponse
     {
-        $user = Auth::user();
+        $this->authorize('update', $user);
         $settings = UserTelegramSettings::where('user_id', $user->id)->first();
 
         return $this->success([
-            'telegram_chat_id' => $settings->telegram_chat_id ?? '',
-            'auto_send_to_telegram' => $settings->auto_send_to_telegram ?? false,
+            'settings' => [
+                'telegram_chat_id' => $settings->telegram_chat_id ?? '',
+                'auto_send_to_telegram' => $settings->auto_send_to_telegram ?? false,
+            ]
         ]);
     }
 
     /**
      * Update user's Telegram settings
      */
-    public function updateTelegramSettings(Request $request): JsonResponse
+    public function updateTelegramSettings(Request $request, User $user): JsonResponse
     {
+        $this->authorize('update', $user);
         $validator = Validator::make($request->all(), [
             'telegram_chat_id' => 'nullable|string|max:255',
             'auto_send_to_telegram' => 'boolean',
@@ -90,8 +93,6 @@ class UserApiController extends BaseController
         if ($validator->fails()) {
             return $this->error($validator->errors(), 422);
         }
-
-        $user = Auth::user();
         
         UserTelegramSettings::updateOrCreate(
             ['user_id' => $user->id],

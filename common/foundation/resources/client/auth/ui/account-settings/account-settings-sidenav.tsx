@@ -14,12 +14,15 @@ import {useSettings} from '@ui/settings/use-settings';
 import {SiteConfigContext} from '@common/core/settings/site-config-context';
 import {useAllSocialLoginsDisabled} from '@common/auth/ui/use-all-social-logins-disabled';
 
+import {TelegramIcon} from '@ui/icons/social/telegram';
+
 export enum AccountSettingsId {
   AccountDetails = 'account-details',
   SocialLogin = 'social-login',
   Password = 'password',
   TwoFactor = 'two-factor',
   LocationAndLanguage = 'location-and-language',
+  Telegram = 'telegram-settings',
   Developers = 'developers',
   DeleteAccount = 'delete-account',
   Sessions = 'sessions',
@@ -29,7 +32,7 @@ export function AccountSettingsSidenav() {
   const p = AccountSettingsId;
 
   const {hasPermission} = useAuth();
-  const {api} = useSettings();
+  const {api, uploads} = useSettings();
   const {auth} = useContext(SiteConfigContext);
 
   const allSocialsDisabled = useAllSocialLoginsDisabled();
@@ -66,6 +69,11 @@ export function AccountSettingsSidenav() {
         <Item icon={<LanguageIcon />} panel={p.LocationAndLanguage}>
           <Trans message="Location and language" />
         </Item>
+        {uploads.uploads_disk_driver === 'telegram' && (
+          <Item icon={<TelegramIcon />} panel={p.Telegram}>
+            <Trans message="Telegram" />
+          </Item>
+        )}
         {api?.integrated && hasPermission('api.access') ? (
           <Item icon={<ApiIcon />} panel={p.Developers}>
             <Trans message="Developers" />
