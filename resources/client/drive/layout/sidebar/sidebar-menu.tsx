@@ -12,6 +12,8 @@ import {FolderTree} from '@app/drive/layout/sidebar/folder-tree';
 import {useDeleteEntries} from '@app/drive/files/queries/use-delete-entries';
 import {useDroppable} from '@common/ui/library/interactions/dnd/use-droppable';
 import {MenuItemConfig} from '@common/menus/menu-config';
+import {Trans} from '@ui/i18n/trans';
+import {TelegramIcon} from '@ui/icons/social/telegram';
 
 export function SidebarMenu() {
   return (
@@ -29,6 +31,14 @@ export function SidebarMenu() {
           return <MenuItem key={item.id} item={item} />;
         }}
       </CustomMenu>
+      <MenuItem
+        item={{
+          id: 'telegram-settings',
+          label: <Trans message="Telegram Settings" />,
+          icon: <TelegramIcon />,
+          action: '/drive/settings/telegram',
+        }}
+      />
     </div>
   );
 }

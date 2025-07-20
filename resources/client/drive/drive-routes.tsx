@@ -49,6 +49,10 @@ export const driveRoutes: RouteObject[] = [
         path: 'search',
         lazy: () => lazyDriveRoute('DriveLayout'),
       },
+      {
+        path: 'settings/telegram',
+        lazy: () => lazyDriveRoute('TelegramSettingsDialog'),
+      },
     ],
   },
   {path: 'drive/s/:hash', lazy: () => lazyDriveRoute('ShareableLinkPage')},
