@@ -9,6 +9,7 @@ import {
 import React from 'react';
 import {AdminSettings} from '@common/admin/settings/admin-settings';
 import {useForm} from 'react-hook-form';
+import {TelegramSettings} from './telegram-settings';
 
 export function DriveSettings() {
   return (
@@ -79,6 +80,7 @@ function Form({data}: FormProps) {
       >
         <Trans message="Suggest emails" />
       </FormSwitch>
+      <TelegramSettings />
     </AdminSettingsForm>
   );
 }

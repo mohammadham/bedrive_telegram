@@ -47,12 +47,21 @@ class FileApiController extends BaseController
             $user = Auth::user();
             $file = $request->file('file');
             
-            // Upload file using existing BeDrive logic
-            $uploadAction = app(UploadFile::class);
-            $fileEntry = $uploadAction->execute([
-                'file' => $file,
-                'parentId' => $request->input('parent_id'),
-                'userId' => $user->id,
+            // Determine which disk to use
+            $disk = $this->settings->get('storage_default_driver', 'local') === 'telegram' ? 'telegram' : 'uploads';
+
+            // Upload file
+            $path = $file->store($user->id, $disk);
+
+            $fileEntry = app(CreateFileEntry::class)->execute([
+                'name' => $file->getClientOriginalName(),
+                'file_name' => basename($path),
+                'file_size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+                'parent_id' => $request->input('parent_id'),
+                'user_id' => $user->id,
+                'disk_prefix' => $disk,
+                'path' => $path,
             ]);
 
             // Handle Telegram upload if requested

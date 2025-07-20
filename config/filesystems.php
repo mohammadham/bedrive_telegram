@@ -66,6 +66,14 @@ return [
             ),
             'remote_root' => env('PUBLIC_UPLOADS_REMOTE_ROOT', 'storage'),
         ],
+
+        'telegram' => [
+            'driver' => 'telegram',
+            'api_id' => env('TELEGRAM_API_ID'),
+            'api_hash' => env('TELEGRAM_API_HASH'),
+            'phone' => env('TELEGRAM_PHONE'),
+            'chat_id' => env('TELEGRAM_CHAT_ID'),
+        ],
     ],
 
     /*
