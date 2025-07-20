@@ -23,20 +23,20 @@ class TelegramStorageServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Storage::extend('telegram', function ($app, $config) {
-            $telegramConfig = [
-                'api_id' => $config['api_id'] ?? env('TELEGRAM_API_ID'),
-                'api_hash' => $config['api_hash'] ?? env('TELEGRAM_API_HASH'),
-                'phone' => $config['phone'] ?? env('TELEGRAM_PHONE'),
-            ];
+        // Storage::extend('telegram', function ($app, $config) {
+        //     $telegramConfig = [
+        //         'api_id' => $config['api_id'] ?? env('TELEGRAM_API_ID'),
+        //         'api_hash' => $config['api_hash'] ?? env('TELEGRAM_API_HASH'),
+        //         'phone' => $config['phone'] ?? env('TELEGRAM_PHONE'),
+        //     ];
 
-            $chatId = $config['chat_id'] ?? env('TELEGRAM_CHAT_ID');
+        //     $chatId = $config['chat_id'] ?? env('TELEGRAM_CHAT_ID');
 
-            $driver = new TelegramStorageDriver($telegramConfig);
-            $adapter = new TelegramFilesystemAdapter($driver, $chatId);
-            
-            return new Filesystem($adapter, $config);
-        });
+        //     $driver = new TelegramStorageDriver($telegramConfig);
+        //     $adapter = new TelegramFilesystemAdapter($driver, $chatId);
+
+        //     return new Filesystem($adapter, $config);
+        // });
     }
 }
 
