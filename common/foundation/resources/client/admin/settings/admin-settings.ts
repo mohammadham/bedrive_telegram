@@ -63,6 +63,11 @@ export interface AdminServerSettings {
   storage_dropbox_app_secret?: string;
   storage_dropbox_refresh_token?: string;
 
+  // telegram storage credentials
+  telegram_api_id?: string;
+  telegram_api_hash?: string;
+  telegram_channel?: string;
+
   // mail
   mail_from_address?: string;
   mail_from_name?: string;

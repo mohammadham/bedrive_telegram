@@ -97,12 +97,13 @@ function Form({data}: FormProps) {
           data.server.storage_dropbox_app_secret ?? '',
         storage_dropbox_refresh_token:
           data.server.storage_dropbox_refresh_token ?? '',
-
+        
         // telegram
         storage_telegram_api_id: data.server.storage_telegram_api_id ?? '',
         storage_telegram_api_hash: data.server.storage_telegram_api_hash ?? '',
         storage_telegram_phone: data.server.storage_telegram_phone ?? '',
         storage_telegram_chat_id: data.server.storage_telegram_chat_id ?? '',
+
       },
     },
   });
@@ -231,6 +232,7 @@ function PrivateUploadSection() {
       <Item value="dropbox">Dropbox</Item>
       <Item value="telegram">Telegram</Item>
       <Item value="rackspace">Rackspace</Item>
+      <Item value="telegram">Telegram</Item>
     </FormSelect>
   );
 }
@@ -528,6 +530,7 @@ function FtpForm({isInvalid}: CredentialFormProps) {
 
 function TelegramForm({isInvalid}: CredentialFormProps) {
   return (
+
     <>
       <FormTextField
         invalid={isInvalid}
@@ -537,21 +540,25 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
         description={
           <Trans message="Get this from https://my.telegram.org/apps" />
         }
+
         required
       />
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
+
         name="server.storage_telegram_api_hash"
         label={<Trans message="Telegram API Hash" />}
         description={
           <Trans message="Get this from https://my.telegram.org/apps" />
         }
+
         required
       />
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
+
         name="server.storage_telegram_phone"
         label={<Trans message="Phone Number" />}
         description={
@@ -571,5 +578,6 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
         placeholder="@mychannel or -1001234567890"
       />
     </>
+
   );
 }
