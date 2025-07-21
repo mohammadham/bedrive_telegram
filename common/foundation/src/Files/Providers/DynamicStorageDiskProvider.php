@@ -26,6 +26,25 @@ class DynamicStorageDiskProvider extends ServiceProvider
         ) {
             return $this->resolveDisk('public', $initialConfig);
         });
+
+          // ----- add telegram driver here -----
+    Storage::extend('telegram', function ($app, $config) {
+        $telegramConfig = [
+            'api_id'  => $config['api_id'] ?? env('TELEGRAM_API_ID'),
+            'api_hash'=> $config['api_hash'] ?? env('TELEGRAM_API_HASH'),
+            'phone'   => $config['phone'] ?? env('TELEGRAM_PHONE'),
+        ];
+        $chatId = $config['chat_id'] ?? env('TELEGRAM_CHAT_ID');
+
+        $driver  = new \App\Services\Storage\TelegramStorageDriver($telegramConfig);
+        $adapter = new \App\Services\Storage\TelegramFilesystemAdapter($driver, $chatId);
+
+        return new \Illuminate\Filesystem\FilesystemAdapter(
+            new \League\Flysystem\Filesystem($adapter, $config),
+            $adapter,
+            $config
+        );
+    });
     }
 
     public function register()

@@ -1,0 +1,330 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\FileEntry;
+use App\Models\UserTelegramSettings;
+use App\Services\Storage\TelegramStorageDriver;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Common\Core\BaseController;
+use Common\Files\Actions\CreateFileEntry;
+use Common\Files\Actions\UploadFile;
+use Common\Settings\Settings;
+
+class FileApiController extends BaseController
+{
+    protected $settings;
+
+    public function __construct(Settings $settings)
+    {
+        $this->settings = $settings;
+    }
+
+    /**
+     * Upload file via API
+     */
+    public function upload(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file',
+            'parent_id' => 'nullable|integer|exists:file_entries,id',
+            'telegram_chat_id' => 'nullable|string',
+            'send_to_telegram' => 'boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors(), 422);
+        }
+
+        try {
+            $user = Auth::user();
+            $file = $request->file('file');
+            
+            // Upload file using existing BeDrive logic
+            $uploadAction = app(UploadFile::class);
+            $fileEntry = $uploadAction->execute([
+                'file' => $file,
+                'parentId' => $request->input('parent_id'),
+                'userId' => $user->id,
+            ]);
+
+            // Handle Telegram upload if requested
+            $telegramResult = null;
+            if ($request->input('send_to_telegram', false)) {
+                $telegramResult = $this->sendToTelegram($fileEntry, $request->input('telegram_chat_id'));
+            }
+
+            return $this->success([
+                'file' => $fileEntry,
+                'telegram' => $telegramResult,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('API file upload error: ' . $e->getMessage());
+            return $this->error('File upload failed: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Upload file from URL
+     */
+    public function uploadFromUrl(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'url' => 'required|url',
+            'filename' => 'nullable|string|max:255',
+            'parent_id' => 'nullable|integer|exists:file_entries,id',
+            'telegram_chat_id' => 'nullable|string',
+            'send_to_telegram' => 'boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors(), 422);
+        }
+
+        try {
+            $user = Auth::user();
+            $url = $request->input('url');
+            $filename = $request->input('filename') ?: basename(parse_url($url, PHP_URL_PATH)) ?: 'downloaded_file';
+
+            // Download file from URL
+            $tempFile = $this->downloadFileFromUrl($url);
+            
+            if (!$tempFile) {
+                return $this->error('Failed to download file from URL', 400);
+            }
+
+            // Create file entry
+            $createAction = app(CreateFileEntry::class);
+            $fileEntry = $createAction->execute([
+                'name' => $filename,
+                'file_size' => filesize($tempFile),
+                'mime' => mime_content_type($tempFile),
+                'parent_id' => $request->input('parent_id'),
+                'user_id' => $user->id,
+                'disk_prefix' => 'uploads',
+                'path' => $tempFile,
+            ]);
+
+            // Handle Telegram upload if requested
+            $telegramResult = null;
+            if ($request->input('send_to_telegram', false)) {
+                $telegramResult = $this->sendToTelegram($fileEntry, $request->input('telegram_chat_id'));
+            }
+
+            // Clean up temp file
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+
+            return $this->success([
+                'file' => $fileEntry,
+                'telegram' => $telegramResult,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('API URL upload error: ' . $e->getMessage());
+            return $this->error('URL upload failed: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * List user's files
+     */
+    public function list(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'parent_id' => 'nullable|integer|exists:file_entries,id',
+            'per_page' => 'integer|min:1|max:100',
+            'page' => 'integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors(), 422);
+        }
+
+        try {
+            $user = Auth::user();
+            $perPage = $request->input('per_page', 20);
+            
+            $query = FileEntry::where('user_id', $user->id);
+            
+            if ($request->has('parent_id')) {
+                $query->where('parent_id', $request->input('parent_id'));
+            } else {
+                $query->whereNull('parent_id');
+            }
+
+            $files = $query->orderBy('created_at', 'desc')
+                          ->paginate($perPage);
+
+            // Add download URLs
+            $files->getCollection()->transform(function ($file) {
+                $file->download_url = route('api.v1.files.download', $file->id);
+                return $file;
+            });
+
+            return $this->success($files);
+
+        } catch (\Exception $e) {
+            Log::error('API file list error: ' . $e->getMessage());
+            return $this->error('Failed to list files: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get file details
+     */
+    public function show($id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $file = FileEntry::where('id', $id)
+                            ->where('user_id', $user->id)
+                            ->firstOrFail();
+
+            $file->download_url = route('api.v1.files.download', $file->id);
+
+            return $this->success($file);
+
+        } catch (\Exception $e) {
+            Log::error('API file show error: ' . $e->getMessage());
+            return $this->error('File not found', 404);
+        }
+    }
+
+    /**
+     * Download file
+     */
+    public function download($id)
+    {
+        try {
+            $user = Auth::user();
+            $file = FileEntry::where('id', $id)
+                            ->where('user_id', $user->id)
+                            ->firstOrFail();
+
+            $disk = Storage::disk($file->disk_prefix ?? 'uploads');
+            
+            if (!$disk->exists($file->path)) {
+                return $this->error('File not found on storage', 404);
+            }
+
+            return $disk->download($file->path, $file->name);
+
+        } catch (\Exception $e) {
+            Log::error('API file download error: ' . $e->getMessage());
+            return $this->error('Download failed: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Delete file
+     */
+    public function delete($id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $file = FileEntry::where('id', $id)
+                            ->where('user_id', $user->id)
+                            ->firstOrFail();
+
+            // Delete from storage
+            $disk = Storage::disk($file->disk_prefix ?? 'uploads');
+            if ($disk->exists($file->path)) {
+                $disk->delete($file->path);
+            }
+
+            // Delete from database
+            $file->delete();
+
+            return $this->success(['message' => 'File deleted successfully']);
+
+        } catch (\Exception $e) {
+            Log::error('API file delete error: ' . $e->getMessage());
+            return $this->error('Delete failed: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Send file to Telegram
+     */
+    protected function sendToTelegram(FileEntry $fileEntry, $chatId = null): ?array
+    {
+        try {
+            // Check if Telegram is configured
+            $telegramConfig = [
+                'api_id' => $this->settings->get('storage_telegram_api_id'),
+                'api_hash' => $this->settings->get('storage_telegram_api_hash'),
+                'phone' => $this->settings->get('storage_telegram_phone'),
+            ];
+
+            if (empty($telegramConfig['api_id']) || empty($telegramConfig['api_hash'])) {
+                return ['success' => false, 'message' => 'Telegram not configured'];
+            }
+
+            // Get user's Telegram settings if no chat ID provided
+            if (!$chatId) {
+                $user = Auth::user();
+                $userSettings = UserTelegramSettings::where('user_id', $user->id)->first();
+                $chatId = $userSettings->telegram_chat_id ?? $this->settings->get('storage_telegram_chat_id');
+            }
+
+            if (!$chatId) {
+                return ['success' => false, 'message' => 'No Telegram chat ID specified'];
+            }
+
+            // Get file path
+            $disk = Storage::disk($fileEntry->disk_prefix ?? 'uploads');
+            $filePath = $disk->path($fileEntry->path);
+
+            // Upload to Telegram
+            $driver = new TelegramStorageDriver($telegramConfig);
+            $result = $driver->uploadFile($filePath, $fileEntry->name, $chatId);
+
+            return $result;
+
+        } catch (\Exception $e) {
+            Log::error('Telegram upload error: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Download file from URL
+     */
+    protected function downloadFileFromUrl($url): ?string
+    {
+        try {
+            $tempFile = tempnam(sys_get_temp_dir(), 'api_download_');
+            
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 30,
+                    'user_agent' => 'BeDrive File Downloader',
+                ]
+            ]);
+
+            $data = file_get_contents($url, false, $context);
+            
+            if ($data === false) {
+                return null;
+            }
+
+            file_put_contents($tempFile, $data);
+            return $tempFile;
+
+        } catch (\Exception $e) {
+            Log::error('URL download error: ' . $e->getMessage());
+            return null;
+        }
+    }
+}
+

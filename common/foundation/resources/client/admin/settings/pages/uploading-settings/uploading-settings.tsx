@@ -97,9 +97,13 @@ function Form({data}: FormProps) {
           data.server.storage_dropbox_app_secret ?? '',
         storage_dropbox_refresh_token:
           data.server.storage_dropbox_refresh_token ?? '',
-        telegram_api_id: data.server.telegram_api_id ?? '',
-        telegram_api_hash: data.server.telegram_api_hash ?? '',
-        telegram_channel: data.server.telegram_channel ?? '',
+        
+        // telegram
+        storage_telegram_api_id: data.server.storage_telegram_api_id ?? '',
+        storage_telegram_api_hash: data.server.storage_telegram_api_hash ?? '',
+        storage_telegram_phone: data.server.storage_telegram_phone ?? '',
+        storage_telegram_chat_id: data.server.storage_telegram_chat_id ?? '',
+
       },
     },
   });
@@ -226,6 +230,7 @@ function PrivateUploadSection() {
       <Item value="backblaze_s3">Backblaze</Item>
       <Item value="s3">Amazon S3 (Or compatible service)</Item>
       <Item value="dropbox">Dropbox</Item>
+      <Item value="telegram">Telegram</Item>
       <Item value="rackspace">Rackspace</Item>
       <Item value="telegram">Telegram</Item>
     </FormSelect>
@@ -257,6 +262,7 @@ function PublicUploadSection() {
       <Item value="ftp">FTP</Item>
       <Item value="digitalocean_s3">DigitalOcean Spaces</Item>
       <Item value="backblaze_s3">Backblaze</Item>
+      <Item value="telegram">Telegram</Item>
     </FormSelect>
   );
 }
@@ -524,28 +530,54 @@ function FtpForm({isInvalid}: CredentialFormProps) {
 
 function TelegramForm({isInvalid}: CredentialFormProps) {
   return (
-    <Fragment>
+
+    <>
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
-        name="server.telegram_api_id"
+        name="server.storage_telegram_api_id"
         label={<Trans message="Telegram API ID" />}
+        description={
+          <Trans message="Get this from https://my.telegram.org/apps" />
+        }
+
         required
       />
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
-        name="server.telegram_api_hash"
+
+        name="server.storage_telegram_api_hash"
         label={<Trans message="Telegram API Hash" />}
+        description={
+          <Trans message="Get this from https://my.telegram.org/apps" />
+        }
+
         required
       />
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
-        name="server.telegram_channel"
-        label={<Trans message="Telegram Channel ID" />}
+
+        name="server.storage_telegram_phone"
+        label={<Trans message="Phone Number" />}
+        description={
+          <Trans message="Your Telegram phone number (with country code, e.g., +1234567890)" />
+        }
+        placeholder="+1234567890"
         required
       />
-    </Fragment>
+      <FormTextField
+        invalid={isInvalid}
+        className="mb-30"
+        name="server.storage_telegram_chat_id"
+        label={<Trans message="Default Chat ID" />}
+        description={
+          <Trans message="Default chat/channel ID for file uploads. Users can override this. Use @username for public channels or numeric ID for private chats." />
+        }
+        placeholder="@mychannel or -1001234567890"
+      />
+    </>
+
   );
 }

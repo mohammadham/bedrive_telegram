@@ -21,6 +21,13 @@ export default defineConfig({
   base: '',
   resolve: {
     preserveSymlinks: true,
+    alias:
+    {
+      '@app': '/resources/client',
+      '@common': '/common/foundation/resources/client',
+      '@ui': '/common/foundation/resources/client/ui/library',
+
+    }
   },
   build: {
     sourcemap: true,
