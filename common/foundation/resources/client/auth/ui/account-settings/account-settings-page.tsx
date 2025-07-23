@@ -14,9 +14,12 @@ import {SessionsPanel} from '@common/auth/ui/account-settings/sessions-panel/ses
 import {useContext} from 'react';
 import {SiteConfigContext} from '@common/core/settings/site-config-context';
 import {TwoFactorPanel} from '@common/auth/ui/account-settings/two-factor-panel';
+import {TelegramSettingsPanel} from '@common/auth/ui/account-settings/telegram-settings-panel';
+import {useSettings} from '@ui/settings/use-settings';
 
 export function AccountSettingsPage() {
-  const {auth} = useContext(SiteConfigContext);
+  const {auth, settings} = useContext(SiteConfigContext);
+  const {uploads} = useSettings();
   const {data, isLoading} = useUser('me', {
     with: ['roles', 'social_profiles', 'tokens'],
   });
@@ -27,7 +30,7 @@ export function AccountSettingsPage() {
       </StaticPageTitle>
       <Navbar menuPosition="account-settings-page" />
       <div>
-        <div className="container mx-auto px-24 py-24">
+        <div className="container px-24 py-24 mx-auto">
           <h1 className="text-3xl">
             <Trans message="Account settings" />
           </h1>
@@ -53,6 +56,9 @@ export function AccountSettingsPage() {
                 <TwoFactorPanel user={data.user} />
                 <SessionsPanel />
                 <LocalizationPanel user={data.user} />
+                {uploads.uploads_driver === 'telegram' && (
+                  <TelegramSettingsPanel user={data.user} />
+                )}
                 <AccessTokenPanel user={data.user} />
                 <DangerZonePanel />
               </main>

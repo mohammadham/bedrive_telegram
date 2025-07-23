@@ -1,35 +1,35 @@
 {
-  "_ArrowBack-f8953068.js": {
-    "file": "assets/ArrowBack-f8953068.js",
+  "_ArrowBack-dc49b097.js": {
+    "file": "assets/ArrowBack-dc49b097.js",
     "imports": [
       "resources/client/main.tsx"
     ]
   },
-  "_CalendarToday-80c14787.js": {
-    "file": "assets/CalendarToday-80c14787.js",
+  "_CalendarToday-6836c69d.js": {
+    "file": "assets/CalendarToday-6836c69d.js",
     "imports": [
       "resources/client/main.tsx"
     ]
   },
-  "_GridView-28f91440.js": {
-    "file": "assets/GridView-28f91440.js",
+  "_GridView-d9a5d806.js": {
+    "file": "assets/GridView-d9a5d806.js",
     "imports": [
       "resources/client/main.tsx"
     ]
   },
-  "_TaskAlt-683eb12c.js": {
-    "file": "assets/TaskAlt-683eb12c.js",
+  "_TaskAlt-cabe2d55.js": {
+    "file": "assets/TaskAlt-cabe2d55.js",
     "imports": [
       "resources/client/main.tsx"
     ]
   },
-  "_TrendingFlat-b9307ea0.js": {
-    "file": "assets/TrendingFlat-b9307ea0.js",
+  "_TrendingFlat-37669adb.js": {
+    "file": "assets/TrendingFlat-37669adb.js",
     "imports": [
       "resources/client/main.tsx"
     ]
   },
-  "_app-admin-routes.lazy-b221e030.js": {
+  "_app-admin-routes.lazy-1ea6cc56.js": {
     "assets": [
       "assets/team-de984127.svg",
       "assets/dropdown-menu-c9b3bd6a.svg",
@@ -49,58 +49,58 @@
       "common/foundation/resources/client/article-editor/article-body-editor.tsx",
       "common/foundation/resources/client/article-editor/article-body-editor.tsx"
     ],
-    "file": "assets/app-admin-routes.lazy-b221e030.js",
+    "file": "assets/app-admin-routes.lazy-1ea6cc56.js",
     "imports": [
       "resources/client/main.tsx",
-      "_dashboard-layout-c8082f96.js",
-      "_ArrowBack-f8953068.js",
-      "_breadcrumb-45532185.js",
-      "_formatted-bytes-46a912ab.js",
-      "_use-resume-subscription-6adaa4a8.js"
+      "_dashboard-layout-e7b2516a.js",
+      "_ArrowBack-dc49b097.js",
+      "_breadcrumb-fe09ba7c.js",
+      "_formatted-bytes-d2b96cbe.js",
+      "_use-resume-subscription-b3679e3b.js"
     ],
     "isDynamicEntry": true
   },
-  "_billing-redirect-message-ff05e28d.js": {
-    "file": "assets/billing-redirect-message-ff05e28d.js",
+  "_billing-redirect-message-82647666.js": {
+    "file": "assets/billing-redirect-message-82647666.js",
     "imports": [
       "resources/client/main.tsx",
-      "_TaskAlt-683eb12c.js"
+      "_TaskAlt-cabe2d55.js"
     ]
   },
-  "_breadcrumb-45532185.js": {
-    "file": "assets/breadcrumb-45532185.js",
+  "_breadcrumb-fe09ba7c.js": {
+    "file": "assets/breadcrumb-fe09ba7c.js",
     "imports": [
       "resources/client/main.tsx"
     ]
   },
-  "_c-13048abc.js": {
-    "file": "assets/c-13048abc.js",
+  "_c-6f8e4606.js": {
+    "file": "assets/c-6f8e4606.js",
     "imports": [
       "resources/client/main.tsx"
     ]
   },
-  "_dashboard-layout-c8082f96.js": {
-    "file": "assets/dashboard-layout-c8082f96.js",
+  "_dashboard-layout-e7b2516a.js": {
+    "file": "assets/dashboard-layout-e7b2516a.js",
     "imports": [
       "resources/client/main.tsx",
-      "_ArrowBack-f8953068.js",
-      "_breadcrumb-45532185.js"
+      "_ArrowBack-dc49b097.js",
+      "_breadcrumb-fe09ba7c.js"
     ]
   },
-  "_formatted-bytes-46a912ab.js": {
-    "file": "assets/formatted-bytes-46a912ab.js",
+  "_formatted-bytes-d2b96cbe.js": {
+    "file": "assets/formatted-bytes-d2b96cbe.js",
     "imports": [
       "resources/client/main.tsx"
     ]
   },
-  "_index-d7060285.js": {
-    "file": "assets/index-d7060285.js",
+  "_index-d840c343.js": {
+    "file": "assets/index-d840c343.js",
     "imports": [
       "resources/client/main.tsx"
     ]
   },
-  "_use-resume-subscription-6adaa4a8.js": {
-    "file": "assets/use-resume-subscription-6adaa4a8.js",
+  "_use-resume-subscription-b3679e3b.js": {
+    "file": "assets/use-resume-subscription-b3679e3b.js",
     "imports": [
       "resources/client/main.tsx"
     ]
@@ -112,10 +112,10 @@
       "assets/worker-php-47e5dfe7.js",
       "assets/worker-javascript-c4599136.js"
     ],
-    "file": "assets/ace-editor-075f3512.js",
+    "file": "assets/ace-editor-583d4a7e.js",
     "imports": [
       "resources/client/main.tsx",
-      "_index-d7060285.js"
+      "_index-d840c343.js"
     ],
     "isDynamicEntry": true,
     "src": "common/foundation/resources/client/ace-editor/ace-editor.tsx"
@@ -124,12 +124,12 @@
     "dynamicImports": [
       "common/foundation/resources/client/charts/lazy-chart.tsx"
     ],
-    "file": "assets/admin-report-page-243b37ac.js",
+    "file": "assets/admin-report-page-b192c380.js",
     "imports": [
       "resources/client/main.tsx",
-      "_TrendingFlat-b9307ea0.js",
-      "_ArrowBack-f8953068.js",
-      "_formatted-bytes-46a912ab.js"
+      "_TrendingFlat-37669adb.js",
+      "_ArrowBack-dc49b097.js",
+      "_formatted-bytes-d2b96cbe.js"
     ],
     "isDynamicEntry": true,
     "src": "common/foundation/resources/client/admin/analytics/admin-report-page.tsx"
@@ -182,10 +182,10 @@
     "css": [
       "assets/article-body-editor-c0ff5600.css"
     ],
-    "file": "assets/article-body-editor-fb74d22d.js",
+    "file": "assets/article-body-editor-b17814a2.js",
     "imports": [
       "resources/client/main.tsx",
-      "_c-13048abc.js"
+      "_c-6f8e4606.js"
     ],
     "isDynamicEntry": true,
     "src": "common/foundation/resources/client/article-editor/article-body-editor.tsx"
@@ -206,30 +206,30 @@
     "assets": [
       "assets/paypal-c2a77c63.svg"
     ],
-    "file": "assets/billing-page-routes.lazy-ae8bf9a2.js",
+    "file": "assets/billing-page-routes.lazy-c1d8e927.js",
     "imports": [
       "resources/client/main.tsx",
-      "_CalendarToday-80c14787.js",
-      "_breadcrumb-45532185.js",
-      "_use-resume-subscription-6adaa4a8.js",
-      "_billing-redirect-message-ff05e28d.js",
-      "_TaskAlt-683eb12c.js"
+      "_CalendarToday-6836c69d.js",
+      "_breadcrumb-fe09ba7c.js",
+      "_use-resume-subscription-b3679e3b.js",
+      "_billing-redirect-message-82647666.js",
+      "_TaskAlt-cabe2d55.js"
     ],
     "isDynamicEntry": true,
     "src": "common/foundation/resources/client/billing/billing-page/routes/billing-page-routes.lazy.tsx"
   },
   "common/foundation/resources/client/billing/checkout/routes/checkout-routes.lazy.tsx": {
-    "file": "assets/checkout-routes.lazy-a3fb375e.js",
+    "file": "assets/checkout-routes.lazy-6c3a4384.js",
     "imports": [
       "resources/client/main.tsx",
-      "_billing-redirect-message-ff05e28d.js",
-      "_TaskAlt-683eb12c.js"
+      "_billing-redirect-message-82647666.js",
+      "_TaskAlt-cabe2d55.js"
     ],
     "isDynamicEntry": true,
     "src": "common/foundation/resources/client/billing/checkout/routes/checkout-routes.lazy.tsx"
   },
   "common/foundation/resources/client/charts/lazy-chart.tsx": {
-    "file": "assets/lazy-chart-4da16d9b.js",
+    "file": "assets/lazy-chart-9f3dd700.js",
     "imports": [
       "resources/client/main.tsx"
     ],
@@ -248,10 +248,10 @@
     "css": [
       "assets/swagger-api-docs-page-34ffaf07.css"
     ],
-    "file": "assets/swagger-api-docs-page-ce543269.js",
+    "file": "assets/swagger-api-docs-page-4fc6a9fc.js",
     "imports": [
       "resources/client/main.tsx",
-      "_index-d7060285.js"
+      "_index-d840c343.js"
     ],
     "isDynamicEntry": true,
     "src": "common/foundation/resources/client/swagger/swagger-api-docs-page.tsx"
@@ -264,9 +264,9 @@
     "css": [
       "assets/highlight-b5e2c008.css"
     ],
-    "file": "assets/highlight-282fe850.js",
+    "file": "assets/highlight-5c7d694f.js",
     "imports": [
-      "_c-13048abc.js",
+      "_c-6f8e4606.js",
       "resources/client/main.tsx"
     ],
     "isDynamicEntry": true,
@@ -277,19 +277,19 @@
     "src": "common/foundation/resources/client/ui/font-selector/font.svg"
   },
   "common/foundation/resources/client/ui/icon-picker/icon-list.tsx": {
-    "file": "assets/icon-list-01ff5e86.js",
+    "file": "assets/icon-list-fd62747d.js",
     "imports": [
       "resources/client/main.tsx",
-      "_dashboard-layout-c8082f96.js",
-      "_ArrowBack-f8953068.js",
-      "_GridView-28f91440.js",
-      "_CalendarToday-80c14787.js",
-      "_breadcrumb-45532185.js",
-      "_app-admin-routes.lazy-b221e030.js",
-      "_use-resume-subscription-6adaa4a8.js",
-      "_TaskAlt-683eb12c.js",
-      "_TrendingFlat-b9307ea0.js",
-      "_formatted-bytes-46a912ab.js"
+      "_dashboard-layout-e7b2516a.js",
+      "_ArrowBack-dc49b097.js",
+      "_GridView-d9a5d806.js",
+      "_CalendarToday-6836c69d.js",
+      "_breadcrumb-fe09ba7c.js",
+      "_app-admin-routes.lazy-1ea6cc56.js",
+      "_use-resume-subscription-b3679e3b.js",
+      "_TaskAlt-cabe2d55.js",
+      "_TrendingFlat-37669adb.js",
+      "_formatted-bytes-d2b96cbe.js"
     ],
     "isDynamicEntry": true,
     "src": "common/foundation/resources/client/ui/icon-picker/icon-list.tsx"
@@ -365,13 +365,13 @@
       "assets/detailed-examination-33c85772.svg",
       "assets/my-files-88476671.svg"
     ],
-    "file": "assets/drive-routes.lazy-e6d683fb.js",
+    "file": "assets/drive-routes.lazy-936951b0.js",
     "imports": [
       "resources/client/main.tsx",
-      "_GridView-28f91440.js",
-      "_dashboard-layout-c8082f96.js",
-      "_breadcrumb-45532185.js",
-      "_ArrowBack-f8953068.js"
+      "_GridView-d9a5d806.js",
+      "_dashboard-layout-e7b2516a.js",
+      "_breadcrumb-fe09ba7c.js",
+      "_ArrowBack-dc49b097.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/client/drive/drive-routes.lazy.tsx"
@@ -407,11 +407,11 @@
       "resources/client/drive/drive-routes.lazy.tsx",
       "common/foundation/resources/client/billing/checkout/routes/checkout-routes.lazy.tsx",
       "common/foundation/resources/client/billing/billing-page/routes/billing-page-routes.lazy.tsx",
-      "_app-admin-routes.lazy-b221e030.js",
+      "_app-admin-routes.lazy-1ea6cc56.js",
       "common/foundation/resources/client/admin/analytics/admin-report-page.tsx",
       "common/foundation/resources/client/swagger/swagger-api-docs-page.tsx"
     ],
-    "file": "assets/main-0cc7ea94.js",
+    "file": "assets/main-e8d50a07.js",
     "isEntry": true,
     "src": "resources/client/main.tsx"
   }
