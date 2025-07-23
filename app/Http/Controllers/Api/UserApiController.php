@@ -71,6 +71,12 @@ class UserApiController extends BaseController
         $user = Auth::user();
         $settings = UserTelegramSettings::where('user_id', $user->id)->first();
 
+        if (!$settings) {
+            return $this->success([
+                'telegram_chat_id' => '',
+                'auto_send_to_telegram' => false,
+            ]);
+        }
         return $this->success([
             'telegram_chat_id' => $settings->telegram_chat_id ?? '',
             'auto_send_to_telegram' => $settings->auto_send_to_telegram ?? false,

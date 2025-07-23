@@ -137,12 +137,15 @@ To authenticate with the API, you need to obtain an API token by sending a `POST
 ### Telegram Operations
 
 *   **Check Status:** Send a `GET` request to `/api/v1/telegram/status` to check the status of the Telegram integration.
-*   **Upload to Telegram:** Send a `POST` request to `/api/v1/telegram/upload` with the `file_id` and `chat_id` to upload a file to Telegram.
+*   **Install `telegram-upload`:** Send a `POST` request to `/api/v1/telegram/install` to install the `telegram-upload` script.
+*   **Configure Session:** Send a `POST` request to `/api/v1/telegram/configure-session` to configure the Telegram session.
+*   **Test Upload:** Send a `POST` request to `/api/v1/telegram/test-upload` to test the upload functionality.
 
 ### Short Links
 
-*   **Create a Short Link:** Send a `POST` request to `/api/v1/short-links/create` with the `file_id` and other options to create a short link.
-*   **Access a Short Link:** Send a `GET` request to `/s/{short_code}` to access a short link.
+*   **Create a Short Link:** Send a `POST` request to `/api/v1/short-links` with the `file_id` and other options to create a short link.
+*   **Access a Short Link:** Send a `GET` request to `/api/v1/s/{shortCode}` to access a short link.
+*   **Download from a Short Link:** Send a `POST` request to `/api/v1/s/{shortCode}/download` to download the file from a short link.
 
 ## 🧪 Testing
 

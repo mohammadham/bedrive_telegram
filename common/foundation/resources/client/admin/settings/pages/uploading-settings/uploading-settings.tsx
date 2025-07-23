@@ -529,7 +529,32 @@ function FtpForm({isInvalid}: CredentialFormProps) {
     </>
   );
 }
-
+function useInstallTelegramUpload() {
+  const {trans} = useTrans();
+  return useMutation({
+    mutationFn: () => apiClient.post('telegram/install'),
+    onSuccess: (data) => {
+      toast.positive(
+        trans(
+          message(
+            data?.data?.message ||
+              'telegram-upload package installed successfully.'
+          )
+        )
+      );
+    },
+    onError: err => {
+      toast.danger(
+        trans(
+          message(
+            err?.message ||
+              'Failed to install telegram-upload package.'
+          )
+        )
+      );
+    },
+  });
+}
 function useTestTelegramConnection() {
   return useMutation({
     mutationFn: () => apiClient.get('telegram/status'),
@@ -539,11 +564,38 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
   const {trans} = useTrans();
   const form = useFormContext<AdminSettings>();
   const testConnection = useTestTelegramConnection();
+  const installTelegramUpload = useInstallTelegramUpload();
 
-  const handleTestConnection = () => {
+  // وضعیت نصب نبودن پکیج را در state نگه می‌داریم
+  const [showInstallButton, setShowInstallButton] = React.useState(false);
+  const handleTestConnection =() => {
     testConnection.mutate(undefined, {
-      onSuccess: () => {
-        toast.positive(trans(message('Telegram connection successful.')));
+      onSuccess: (data) => {
+        // فرض بر این است که data.data همان پاسخ API است
+        const status = data?.data?.status || {};
+        const configured = status.configured;
+        const sessionExists = status.session_exists;
+        const telegramUploadInstalled = status.telegram_upload_installed;
+
+        if (!telegramUploadInstalled) {
+          toast.danger(
+            trans(
+              message(
+                'telegram-upload package is not installed on the server.'
+              )
+            )
+          );
+          setShowInstallButton(true);
+        } else {
+          setShowInstallButton(false);
+        }
+         if (!configured) {
+          toast.danger(trans(message('Telegram API credentials are not configured.')));
+        } else if (!sessionExists) {
+          toast.danger(trans(message('Telegram session is not configured. Please complete the session setup.')));
+        } else {
+          toast.positive(trans(message('Telegram connection successful.')));
+        }
       },
       onError: err => {
         toast.danger(
@@ -551,6 +603,23 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
             err,
             trans(message('Could not connect to Telegram.'))
           ) ?? trans(message('Could not connect to Telegram.'))
+        );
+      },
+    });
+  };
+  const handleInstallTelegramUpload = () => {
+    installTelegramUpload.mutate(undefined, {
+      onSuccess: () => {
+        setShowInstallButton(false);
+        // پس از نصب موفق، مجدد تست اتصال انجام شود
+        handleTestConnection();
+      },
+      onError: err => {
+        toast.danger(
+          getAxiosErrorMessage(
+            err,
+            trans(message('Could not install Telegram-upload .'))
+          ) ?? trans(message('Could not install Telegram-upload .'))
         );
       },
     });
@@ -598,15 +667,32 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
         }
         placeholder="@mychannel or -1001234567890"
       />
+          <div className="flex items-center gap-10 mt-10">
         <Button
-        variant="flat"
-        color="primary"
-        size="xs"
-        onClick={handleTestConnection}
-        disabled={testConnection.isPending}
-      >
-        <Trans message="Test Connection" />
-      </Button>
+          variant="flat"
+          color="primary"
+          size="xs"
+          onClick={handleTestConnection}
+          disabled={testConnection.isPending || installTelegramUpload.isPending}
+        >
+          <Trans message="Test Connection" />
+        </Button>
+        {showInstallButton && (
+          <Button
+            variant="outline"
+            color="primary"
+            size="xs"
+            onClick={handleInstallTelegramUpload}
+            disabled={installTelegramUpload.isPending}
+          >
+            {installTelegramUpload.isPending ? (
+              <Trans message="Installing..." />
+            ) : (
+              <Trans message="Install telegram-upload" />
+            )}
+          </Button>
+        )}
+      </div>
     </>
   );
 }
