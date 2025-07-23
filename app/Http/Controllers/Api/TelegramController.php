@@ -124,7 +124,7 @@ class TelegramController extends BaseController
             if ($result) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Telegram session configured successfully'
+                    'message' => 'Telegram session configured successfully. Please check your phone for a confirmation code.'
                 ]);
             } else {
                 return response()->json([

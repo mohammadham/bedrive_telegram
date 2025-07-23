@@ -18,12 +18,12 @@ class TelegramStorageDriver
     {
         $this->config = $config;
         $this->sessionPath = storage_path('app/telegram_sessions');
-        
+
         // Create session directory if it doesn't exist
         if (!file_exists($this->sessionPath)) {
             mkdir($this->sessionPath, 0755, true);
         }
-        
+
         $this->checkConfiguration();
     }
 
@@ -85,7 +85,7 @@ class TelegramStorageDriver
 
         try {
             $sessionFile = $this->sessionPath . '/bedrive_session.session';
-            
+
             // Set environment variables for telegram-upload
             $env = [
                 'TELEGRAM_API_ID' => $this->config['api_id'],
@@ -102,9 +102,9 @@ class TelegramStorageDriver
             file_put_contents($testFile, 'Test file for Telegram configuration');
 
             $command = 'telegram-upload --session ' . $sessionFile . ' ' . $testFile;
-            
+
             $result = Process::env($env)->run($command);
-            
+
             // Clean up test file
             if (file_exists($testFile)) {
                 unlink($testFile);
@@ -134,7 +134,7 @@ class TelegramStorageDriver
 
         try {
             $sessionFile = $this->sessionPath . '/bedrive_session.session';
-            
+
             if (!file_exists($sessionFile)) {
                 throw new Exception('Telegram session not found. Please configure session first.');
             }
@@ -145,22 +145,22 @@ class TelegramStorageDriver
             ];
 
             $command = 'telegram-upload --session ' . $sessionFile;
-            
+
             if ($chatId) {
                 $command .= ' --to ' . escapeshellarg($chatId);
             }
-            
+
             $command .= ' ' . escapeshellarg($filePath);
 
             $result = Process::env($env)->run($command);
 
             if ($result->successful()) {
                 Log::info('File uploaded to Telegram successfully: ' . $filePath);
-                
+
                 // Parse output to get file info
                 $output = $result->output();
                 $fileId = $this->parseFileIdFromOutput($output);
-                
+
                 return [
                     'success' => true,
                     'file_id' => $fileId,
@@ -168,8 +168,9 @@ class TelegramStorageDriver
                     'output' => $output
                 ];
             } else {
-                Log::error('Failed to upload file to Telegram: ' . $result->errorOutput());
-                throw new Exception('Upload failed: ' . $result->errorOutput());
+                $error = $result->errorOutput();
+                Log::error('Failed to upload file to Telegram: ' . $error);
+                throw new Exception('Upload failed: ' . $this->parseErrorMessage($error));
             }
         } catch (Exception $e) {
             Log::error('Error uploading file to Telegram: ' . $e->getMessage());
@@ -188,7 +189,7 @@ class TelegramStorageDriver
 
         try {
             $sessionFile = $this->sessionPath . '/bedrive_session.session';
-            
+
             if (!file_exists($sessionFile)) {
                 throw new Exception('Telegram session not found. Please configure session first.');
             }
@@ -220,10 +221,37 @@ class TelegramStorageDriver
      */
     public function deleteFile($fileId)
     {
-        // Note: telegram-upload doesn't support direct file deletion
-        // This would require custom implementation using Telethon directly
-        Log::warning('File deletion from Telegram is not supported by telegram-upload package');
-        return false;
+        if (!$this->isConfigured) {
+            throw new Exception('Telegram is not properly configured');
+        }
+
+        try {
+            $sessionFile = $this->sessionPath . '/bedrive_session.session';
+
+            if (!file_exists($sessionFile)) {
+                throw new Exception('Telegram session not found. Please configure session first.');
+            }
+
+            $env = [
+                'TELEGRAM_API_ID' => $this->config['api_id'],
+                'TELEGRAM_API_HASH' => $this->config['api_hash'],
+            ];
+
+            $command = 'telegram-delete --session ' . $sessionFile . ' ' . escapeshellarg($fileId);
+
+            $result = Process::env($env)->run($command);
+
+            if ($result->successful()) {
+                Log::info('File deleted from Telegram successfully: ' . $fileId);
+                return true;
+            } else {
+                Log::error('Failed to delete file from Telegram: ' . $result->errorOutput());
+                throw new Exception('Delete failed: ' . $result->errorOutput());
+            }
+        } catch (Exception $e) {
+            Log::error('Error deleting file from Telegram: ' . $e->getMessage());
+            throw $e;
+        }
     }
 
     /**
@@ -231,9 +259,31 @@ class TelegramStorageDriver
      */
     public function fileExists($fileId)
     {
-        // This would require custom implementation
-        // For now, we'll assume the file exists if we have a file_id
-        return !empty($fileId);
+        if (!$this->isConfigured) {
+            throw new Exception('Telegram is not properly configured');
+        }
+
+        try {
+            $sessionFile = $this->sessionPath . '/bedrive_session.session';
+
+            if (!file_exists($sessionFile)) {
+                throw new Exception('Telegram session not found. Please configure session first.');
+            }
+
+            $env = [
+                'TELEGRAM_API_ID' => $this->config['api_id'],
+                'TELEGRAM_API_HASH' => $this->config['api_hash'],
+            ];
+
+            $command = 'telegram-get --session ' . $sessionFile . ' ' . escapeshellarg($fileId);
+
+            $result = Process::env($env)->run($command);
+
+            return $result->successful();
+        } catch (Exception $e) {
+            Log::error('Error checking if file exists in Telegram: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -253,7 +303,7 @@ class TelegramStorageDriver
         // telegram-upload typically outputs file information
         // We'll need to parse this to extract a usable file identifier
         $lines = explode("\n", $output);
-        
+
         foreach ($lines as $line) {
             if (strpos($line, 'Message ID:') !== false) {
                 return trim(str_replace('Message ID:', '', $line));
@@ -262,7 +312,7 @@ class TelegramStorageDriver
                 return trim(str_replace('File ID:', '', $line));
             }
         }
-        
+
         // Fallback: generate a unique identifier
         return 'tg_' . Str::random(16) . '_' . time();
     }
