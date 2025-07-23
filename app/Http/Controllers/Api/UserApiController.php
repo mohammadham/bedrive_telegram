@@ -20,10 +20,10 @@ class UserApiController extends BaseController
     public function generateApiToken(): JsonResponse
     {
         $user = Auth::user();
-        
+
         // Generate a new API token
         $token = Str::random(60);
-        
+
         $user->update([
             'api_token' => Hash::make($token),
             'api_token_created_at' => now(),
@@ -41,7 +41,7 @@ class UserApiController extends BaseController
     public function revokeApiToken(): JsonResponse
     {
         $user = Auth::user();
-        
+
         $user->update([
             'api_token' => null,
             'api_token_created_at' => null,
@@ -56,7 +56,7 @@ class UserApiController extends BaseController
     public function getApiTokenStatus(): JsonResponse
     {
         $user = Auth::user();
-        
+
         return $this->success([
             'has_token' => !empty($user->api_token),
             'created_at' => $user->api_token_created_at,
@@ -92,7 +92,49 @@ class UserApiController extends BaseController
         }
 
         $user = Auth::user();
-        
+
+        UserTelegramSettings::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'telegram_chat_id' => $request->input('telegram_chat_id'),
+                'auto_send_to_telegram' => $request->input('auto_send_to_telegram', false),
+            ]
+        );
+
+        return $this->success(['message' => 'Telegram settings updated successfully']);
+    }
+
+    /**
+     * Get user's Telegram settings
+     */
+    public function userGetTelegramSettings(User $user): JsonResponse
+    {
+        $this->authorize('update', $user);
+        $settings = UserTelegramSettings::where('user_id', $user->id)->first();
+
+        return $this->success([
+            'settings' => [
+                'telegram_chat_id' => $settings->telegram_chat_id ?? '',
+                'auto_send_to_telegram' => $settings->auto_send_to_telegram ?? false,
+            ]
+        ]);
+    }
+
+    /**
+     * Update user's Telegram settings
+     */
+    public function userUpdateTelegramSettings(Request $request, User $user): JsonResponse
+    {
+        $this->authorize('update', $user);
+        $validator = Validator::make($request->all(), [
+            'telegram_chat_id' => 'nullable|string|max:255',
+            'auto_send_to_telegram' => 'boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->error($validator->errors(), 422);
+        }
+
         UserTelegramSettings::updateOrCreate(
             ['user_id' => $user->id],
             [

@@ -120,6 +120,8 @@ Route::group(['prefix' => 'v1'], function() {
     Route::get('user/api-token-status', [UserApiController::class, 'getApiTokenStatus']);
     Route::get('user/telegram-settings', [UserApiController::class, 'getTelegramSettings']);
     Route::put('user/telegram-settings', [UserApiController::class, 'updateTelegramSettings']);
+    Route::get('users/{user}/telegram-settings', [UserApiController::class, 'userGetTelegramSettings']);
+    Route::put('users/{user}/telegram-settings', [UserApiController::class, 'userUpdateTelegramSettings']);
 
     // URL UPLOAD
     Route::post('upload-from-url', [UrlUploadController::class, 'upload']);

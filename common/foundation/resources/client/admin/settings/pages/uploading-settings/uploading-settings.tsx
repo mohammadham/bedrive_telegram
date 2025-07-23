@@ -24,6 +24,10 @@ import {useAdminSettings} from '@common/admin/settings/requests/use-admin-settin
 import {FormSwitch} from '@ui/forms/toggle/switch';
 import {Button} from '@ui/buttons/button';
 import {Item} from '@ui/forms/listbox/item';
+import {useMutation} from '@tanstack/react-query';
+import {apiClient} from '@common/http/query-client';
+import {toast} from '@ui/toast/toast';
+import {getAxiosErrorMessage} from '@common/http/get-axios-error-message';
 
 export function UploadingSettings() {
   return (
@@ -97,13 +101,12 @@ function Form({data}: FormProps) {
           data.server.storage_dropbox_app_secret ?? '',
         storage_dropbox_refresh_token:
           data.server.storage_dropbox_refresh_token ?? '',
-        
+
         // telegram
         storage_telegram_api_id: data.server.storage_telegram_api_id ?? '',
         storage_telegram_api_hash: data.server.storage_telegram_api_hash ?? '',
         storage_telegram_phone: data.server.storage_telegram_phone ?? '',
         storage_telegram_chat_id: data.server.storage_telegram_chat_id ?? '',
-
       },
     },
   });
@@ -232,7 +235,6 @@ function PrivateUploadSection() {
       <Item value="dropbox">Dropbox</Item>
       <Item value="telegram">Telegram</Item>
       <Item value="rackspace">Rackspace</Item>
-      <Item value="telegram">Telegram</Item>
     </FormSelect>
   );
 }
@@ -528,9 +530,32 @@ function FtpForm({isInvalid}: CredentialFormProps) {
   );
 }
 
+function useTestTelegramConnection() {
+  return useMutation({
+    mutationFn: () => apiClient.get('telegram/status'),
+  });
+}
 function TelegramForm({isInvalid}: CredentialFormProps) {
-  return (
+  const {trans} = useTrans();
+  const form = useFormContext<AdminSettings>();
+  const testConnection = useTestTelegramConnection();
 
+  const handleTestConnection = () => {
+    testConnection.mutate(undefined, {
+      onSuccess: () => {
+        toast.positive(trans(message('Telegram connection successful.')));
+      },
+      onError: err => {
+        toast.danger(
+          getAxiosErrorMessage(
+            err,
+            trans(message('Could not connect to Telegram.'))
+          ) ?? trans(message('Could not connect to Telegram.'))
+        );
+      },
+    });
+  };
+  return (
     <>
       <FormTextField
         invalid={isInvalid}
@@ -540,25 +565,21 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
         description={
           <Trans message="Get this from https://my.telegram.org/apps" />
         }
-
         required
       />
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
-
         name="server.storage_telegram_api_hash"
         label={<Trans message="Telegram API Hash" />}
         description={
           <Trans message="Get this from https://my.telegram.org/apps" />
         }
-
         required
       />
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
-
         name="server.storage_telegram_phone"
         label={<Trans message="Phone Number" />}
         description={
@@ -577,7 +598,15 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
         }
         placeholder="@mychannel or -1001234567890"
       />
+        <Button
+        variant="flat"
+        color="primary"
+        size="xs"
+        onClick={handleTestConnection}
+        disabled={testConnection.isPending}
+      >
+        <Trans message="Test Connection" />
+      </Button>
     </>
-
   );
 }

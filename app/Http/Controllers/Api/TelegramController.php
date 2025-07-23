@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use Common\Core\BaseController;
 use App\Services\Storage\TelegramStorageDriver;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Common\Settings\Settings;
 
-class TelegramController extends Controller
+class TelegramController extends BaseController
 {
     protected $settings;
 
@@ -118,7 +118,7 @@ class TelegramController extends Controller
 
             $driver = new TelegramStorageDriver($config);
             $phone = $request->input('phone') ?: $config['phone'];
-            
+
             $result = $driver->configureSession($phone);
 
             if ($result) {
