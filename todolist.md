@@ -14,17 +14,17 @@ This to-do list outlines the remaining tasks to complete the project and address
 ## 📱 Telegram Integration
 
 *   [ ] **User Settings UI:**
-    *   [ ] Create a new settings panel in the user's account settings page to allow users to configure their Telegram settings.
-    *   [ ] Add a link to the new Telegram settings panel in the `account-settings-sidenav.tsx` file.
     *   [ ] Create a dedicated test file to test the user-facing Telegram settings functionality.
 *   [ ] **Backend:**
     *   [ ] Refactor the `TelegramStorageServiceProvider` to be the single source of truth for the Telegram storage driver.
-    *   [ ] Implement the `deleteFile` and `fileExists` methods in `TelegramStorageDriver.php` to properly delete files from Telegram and check if they exist.
     *   [ ] Improve the error handling in the `TelegramStorageDriver` to parse the output of the `telegram-upload` script and provide more specific error messages.
     *   [ ] Fix the `add_telegram_settings_to_settings_table` migration to ensure that the Telegram settings are added to the `settings` table correctly.
-    *   [ ] Add user feedback for the session configuration process, such as "Please check your phone for a confirmation code."
 *   [ ] **Security:**
     *   [ ] Conduct a security review of the `Process::run` calls in `TelegramStorageDriver.php` to ensure that the input is properly sanitized.
+## 🚨 Telegram Deficiencies
+
+*   [ ] **`deleteFile` method is not implemented**: The `deleteFile` method in `TelegramStorageDriver.php` is a placeholder and does not actually delete the file from Telegram.
+*   [ ] **`fileExists` method is not implemented**: The `fileExists` method in `TelegramStorageDriver.php` is a placeholder and does not actually check if the file exists in Telegram.
 
 ## 🧪 Testing & Quality Assurance
 
@@ -55,3 +55,12 @@ This to-do list outlines the remaining tasks to complete the project and address
 *   [ ] **Final Review:**
     *   [ ] Conduct a final review of the application to ensure that it is ready for production.
     *   [ ] Create a final `tar.gz` package for the application.
+  
+
+## 🔌 Telegram Integration Deficiencies
+
+*   [ ] **Inconsistent `TelegramStorageServiceProvider`**: The `TelegramStorageServiceProvider` is registered in `config/app.php`, but its `boot` method is commented out. The actual registration is handled by the `DynamicStorageDiskProvider`. This is confusing and should be cleaned up. Either the provider should be removed from `config/app.php`, or the logic in `DynamicStorageDiskProvider` should be moved to `TelegramStorageServiceProvider`.
+*   [ ] **Placeholder `deleteFile` and `fileExists` methods**: The `deleteFile` and `fileExists` methods in `TelegramStorageDriver.php` are placeholders and do not actually perform the intended actions. This means that files cannot be deleted from Telegram through the application, and the application cannot accurately check if a file exists in Telegram. This could lead to orphaned files in Telegram and incorrect file status in the application.
+*   [ ] **Lack of Error Handling in `telegram-upload` script**: The `TelegramStorageDriver` relies on the `telegram-upload` script, but there is no robust error handling for the script's output. The driver simply checks if the process was successful, but it does not parse the output for specific error messages. This can make it difficult to debug issues with the Telegram integration.
+*   [ ] **No user feedback on session configuration**: When configuring the Telegram session, you are not given any feedback on the progress. The application simply runs the `telegram-upload` script and hopes for the best. It would be better to provide some feedback to you, such as "Please check your phone for a confirmation code."
+*   [ ] **Security Concern**: The `telegram-upload` script is executed using `Process::run`, which can be a security risk if the input is not properly sanitized. While the code seems to be using `escapeshellarg`, it's always a good practice to be extra cautious when executing external commands.
