@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use Exception;
-
+use Common\Settings\Settings;
 class TelegramStorageDriver
 {
     protected $config;
@@ -23,10 +23,24 @@ class TelegramStorageDriver
         if (!file_exists($this->sessionPath)) {
             mkdir($this->sessionPath, 0755, true);
         }
-
+        // Load settings from the database
+        $this->loadSettingsFromDatabase();
         $this->checkConfiguration();
     }
-
+  /**
+    * Load Telegram settings from the database
+    */
+   protected function loadSettingsFromDatabase()
+   {
+       try {
+           $settings = app(Settings::class);
+           $this->config['api_id'] = $settings->get('storage_telegram_api_id');
+           $this->config['api_hash'] = $settings->get('storage_telegram_api_hash');
+           $this->config['phone'] = $settings->get('storage_telegram_phone');
+       } catch (Exception $e) {
+           Log::error('Could not load Telegram settings from database: ' . $e->getMessage());
+       }
+   }
     /**
      * Check if telegram-upload is properly configured
      */
@@ -34,9 +48,10 @@ class TelegramStorageDriver
     {
         try {
             // Check if telegram-upload is installed
-            $result = Process::run('which telegram-upload');
-            if ($result->failed()) {
-                Log::warning('telegram-upload is not installed');
+            // Check if telegram-upload is installed and executable
+            $telegramUploadPath = rtrim(shell_exec('which telegram-upload'));
+            if (empty($telegramUploadPath) || !is_executable($telegramUploadPath)) {
+                Log::warning('telegram-upload is not installed or not executable');
                 return false;
             }
 
@@ -52,6 +67,16 @@ class TelegramStorageDriver
             Log::error('Error checking telegram configuration: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Check if Telegram is properly configured.
+     *
+     * @return bool
+     */
+    public function isConfigured()
+    {
+        return $this->isConfigured;
     }
 
     /**
@@ -86,29 +111,25 @@ class TelegramStorageDriver
         try {
             $sessionFile = $this->sessionPath . '/bedrive_session.session';
 
-            // Set environment variables for telegram-upload
-            $env = [
-                'TELEGRAM_API_ID' => $this->config['api_id'],
-                'TELEGRAM_API_HASH' => $this->config['api_hash'],
-                'TELEGRAM_SESSION' => $sessionFile,
-            ];
+          // Command to configure the session
+          $command = [
+            'telegram-upload',
+            '--config-file',
+            $sessionFile, // Using session file for config
+            '--api-id',
+            $this->config['api_id'],
+            '--api-hash',
+            $this->config['api_hash'],
+        ];
 
-            if ($phoneNumber) {
-                $env['TELEGRAM_PHONE'] = $phoneNumber;
-            }
+        if ($phoneNumber) {
+            $command[] = '--phone';
+            $command[] = $phoneNumber;
+        }
 
-            // Create a simple test upload to verify session
-            $testFile = storage_path('app/telegram_test.txt');
-            file_put_contents($testFile, 'Test file for Telegram configuration');
-
-            $command = 'telegram-upload --session ' . $sessionFile . ' ' . $testFile;
-
-            $result = Process::env($env)->run($command);
-
-            // Clean up test file
-            if (file_exists($testFile)) {
-                unlink($testFile);
-            }
+        // This command will initiate an interactive session if the phone number is not provided
+        // or if 2FA is enabled. The user will need to enter the code in the terminal.
+        $result = Process::run($command);
 
             if ($result->successful()) {
                 Log::info('Telegram session configured successfully');
@@ -129,7 +150,7 @@ class TelegramStorageDriver
     public function uploadFile($filePath, $destination = null, $chatId = null)
     {
         if (!$this->isConfigured) {
-            throw new Exception('Telegram is not properly configured');
+            throw new Exception('Upload File Telegram is not properly configured');
         }
 
         try {
@@ -139,20 +160,16 @@ class TelegramStorageDriver
                 throw new Exception('Telegram session not found. Please configure session first.');
             }
 
-            $env = [
-                'TELEGRAM_API_ID' => $this->config['api_id'],
-                'TELEGRAM_API_HASH' => $this->config['api_hash'],
+            $command = [
+                'telegram-upload',
+                '--session',
+                $sessionFile,
+                '--to',
+                escapeshellarg($chatId ?: 'me'),
+                escapeshellarg($filePath)
             ];
 
-            $command = 'telegram-upload --session ' . $sessionFile;
-
-            if ($chatId) {
-                $command .= ' --to ' . escapeshellarg($chatId);
-            }
-
-            $command .= ' ' . escapeshellarg($filePath);
-
-            $result = Process::env($env)->run($command);
+            $result = Process::run($command);
 
             if ($result->successful()) {
                 Log::info('File uploaded to Telegram successfully: ' . $filePath);
@@ -184,7 +201,7 @@ class TelegramStorageDriver
     public function downloadFile($fileId, $destination)
     {
         if (!$this->isConfigured) {
-            throw new Exception('Telegram is not properly configured');
+            throw new Exception('Download File Telegram is not properly configured');
         }
 
         try {
@@ -222,7 +239,7 @@ class TelegramStorageDriver
     public function deleteFile($fileId)
     {
         if (!$this->isConfigured) {
-            throw new Exception('Telegram is not properly configured');
+            throw new Exception('Delete File Telegram is not properly configured');
         }
 
         try {
@@ -260,7 +277,7 @@ class TelegramStorageDriver
     public function fileExists($fileId)
     {
         if (!$this->isConfigured) {
-            throw new Exception('Telegram is not properly configured');
+            throw new Exception('File Exist Telegram is not properly configured');
         }
 
         try {

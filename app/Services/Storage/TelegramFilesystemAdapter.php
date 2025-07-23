@@ -100,9 +100,32 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
     public function writeStream(string $path, $contents, Config $config): void
     {
         try {
-            // Convert stream to string and use write method
-            $stringContents = stream_get_contents($contents);
-            $this->write($path, $stringContents, $config);
+            // Create a temporary file and write the stream to it
+            $tempFile = tempnam(sys_get_temp_dir(), 'telegram_upload_stream_');
+            $tempHandle = fopen($tempFile, 'w');
+            stream_copy_to_stream($contents, $tempHandle);
+            fclose($tempHandle);
+
+            // Upload to Telegram
+            $result = $this->driver->uploadFile($tempFile, $path, $this->chatId);
+
+            // Get file size
+            $size = filesize($tempFile);
+
+            // Clean up temp file
+            unlink($tempFile);
+
+            if ($result['success']) {
+                // Update file registry
+                $this->updateFileRegistry($path, [
+                    'file_id' => $result['file_id'],
+                    'size' => $size,
+                    'uploaded_at' => time(),
+                    'mime_type' => $config->get('mimetype', 'application/octet-stream')
+                ]);
+            } else {
+                throw new UnableToWriteFile('Failed to upload stream to Telegram');
+            }
         } catch (Exception $e) {
             Log::error('Error writing stream to Telegram: ' . $e->getMessage());
             throw new UnableToWriteFile('Unable to write stream to Telegram: ' . $e->getMessage());
