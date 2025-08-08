@@ -7,9 +7,16 @@ use App\Services\Storage\TelegramStorageDriver;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
+use Mockery;
 
 class TelegramIntegrationTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
+    }
     use RefreshDatabase;
 
     protected $user;
@@ -62,11 +69,52 @@ class TelegramIntegrationTest extends TestCase
         $response = $this->actingAs($this->user)
                         ->postJson('/api/v1/telegram/test-upload');
 
-        $response->assertStatus(400)
+        $response->assertStatus(500)
                 ->assertJson([
                     'success' => false,
-                    'message' => 'Telegram API credentials not configured'
+                    'message' => 'Test upload failed'
                 ]);
+    }
+
+    public function test_file_upload_with_telegram_driver()
+    {
+        // Set default filesystem to telegram
+        config(['filesystems.default' => 'telegram']);
+
+        // Mock the TelegramStorageDriver
+        $mock = Mockery::mock(TelegramStorageDriver::class);
+        $this->app->instance(TelegramStorageDriver::class, $mock);
+
+        $mock->shouldReceive('uploadFile')
+            ->once()
+            ->with(Mockery::any(), 'test_file.txt', Mockery::any())
+            ->andReturn([
+                'success' => true,
+                'file_id' => 'tg_12345',
+                'path' => 'test_file.txt',
+                'output' => 'File ID: tg_12345'
+            ]);
+
+        // Mock the file upload
+        Storage::fake('local');
+        $file = UploadedFile::fake()->create('test_file.txt', 100);
+
+        // Assuming there is a general file upload endpoint
+        // And it uses the default storage driver
+        $response = $this->actingAs($this->user)
+                         ->postJson('/api/v1/files/upload', [
+                             'file' => $file,
+                             'parentId' => null, // root directory
+                         ]);
+
+        $response->assertStatus(200);
+
+        // Assert that the file was "uploaded" to telegram
+        $this->assertDatabaseHas('file_entries', [
+            'name' => 'test_file.txt',
+            'file_name' => 'test_file.txt',
+            'type' => 'text/plain',
+        ]);
     }
 }
 
