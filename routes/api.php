@@ -113,6 +113,7 @@ Route::group(['prefix' => 'v1'], function() {
     Route::post('telegram/install', [TelegramController::class, 'install']);
     Route::post('telegram/configure-session', [TelegramController::class, 'configureSession']);
     Route::post('telegram/test-upload', [TelegramController::class, 'testUpload']);
+    Route::post('telegram/configure-bot', [TelegramController::class, 'configureBot']);
 
     // USER API MANAGEMENT
     Route::post('user/generate-api-token', [UserApiController::class, 'generateApiToken']);

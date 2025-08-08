@@ -35,16 +35,18 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
         }
     }
 
-    /**
-     * I have modified this function to reflect the limitations of the `telegram-upload` driver.
-     * Since the driver no longer has a `fileExists` method, this function now only checks
-     * if a file exists in the local JSON registry. It does not verify if the file is actually
-     * still available on Telegram's servers.
-     */
     public function fileExists(string $path): bool
     {
-        $registry = $this->getFileRegistry();
-        return isset($registry[$path]);
+        try {
+            $registry = $this->getFileRegistry();
+            if (!isset($registry[$path])) {
+                return false;
+            }
+            return $this->driver->fileExists($registry[$path]['file_id'], $this->chatId);
+        } catch (Exception $e) {
+            Log::error('Error checking file existence in Telegram: ' . $e->getMessage());
+            return false;
+        }
     }
 
     public function directoryExists(string $path): bool
@@ -169,20 +171,24 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
         }
     }
 
-    /**
-     * I have modified this function to reflect the limitations of the `telegram-upload` driver.
-     * The driver no longer has a `deleteFile` method. This function will now only remove the
-     * file from the local JSON registry. It will not delete the file from Telegram's servers.
-     * A warning is logged to reflect this behavior.
-     */
     public function delete(string $path): void
     {
-        $registry = $this->getFileRegistry();
+        try {
+            $registry = $this->getFileRegistry();
 
-        if (isset($registry[$path])) {
-            Log::warning("Removing file '{$path}' from registry, but it will not be deleted from Telegram servers due to driver limitations.");
-            unset($registry[$path]);
-            $this->saveFileRegistry($registry);
+            if (isset($registry[$path])) {
+                $fileInfo = $registry[$path];
+                if ($this->driver->deleteFile($fileInfo['file_id'], $this->chatId)) {
+                    // Remove from registry
+                    unset($registry[$path]);
+                    $this->saveFileRegistry($registry);
+                } else {
+                    throw new UnableToDeleteFile('Failed to delete file from Telegram');
+                }
+            }
+        } catch (Exception $e) {
+            Log::error('Error deleting file from Telegram: ' . $e->getMessage());
+            throw new UnableToDeleteFile('Unable to delete file from Telegram: ' . $e->getMessage());
         }
     }
 

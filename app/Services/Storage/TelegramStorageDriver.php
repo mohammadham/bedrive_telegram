@@ -8,11 +8,14 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use Exception;
 use Common\Settings\Settings;
+use Illuminate\Support\Facades\Http;
+
 class TelegramStorageDriver
 {
     protected $config;
     protected $sessionPath;
     protected $isConfigured = false;
+    protected $botToken;
 
     public function __construct($config = [])
     {
@@ -37,6 +40,7 @@ class TelegramStorageDriver
            $this->config['api_id'] = $settings->get('storage_telegram_api_id');
            $this->config['api_hash'] = $settings->get('storage_telegram_api_hash');
            $this->config['phone'] = $settings->get('storage_telegram_phone');
+           $this->botToken = $settings->get('telegram_bot_token');
        } catch (Exception $e) {
            Log::error('Could not load Telegram settings from database: ' . $e->getMessage());
        }
@@ -281,17 +285,95 @@ class TelegramStorageDriver
     }
 
     /**
-     * I have removed the `deleteFile` method.
-     * The `telegram-upload` package does not provide a command to delete a specific message from Telegram.
-     * The `--delete-on-success` flag is only for deleting the local file after an upload or
-     * the remote message after a download, which doesn't fit the requirements of a generic delete method.
+     * Delete a file from Telegram using the Bot API.
+     *
+     * @param string $fileId The message ID to delete.
+     * @param string|null $chatId The chat ID where the message is located.
+     * @return bool
+     * @throws Exception
      */
+    public function deleteFile($fileId, $chatId = null): bool
+    {
+        $token = $this->getBotToken();
+        $chatId = $chatId ?: app(Settings::class)->get('storage_telegram_chat_id', 'me');
+
+        try {
+            $response = Http::post("https://api.telegram.org/bot{$token}/deleteMessage", [
+                'chat_id' => $chatId,
+                'message_id' => $fileId,
+            ]);
+
+            if ($response->successful() && $response->json('ok')) {
+                Log::info("File deleted from Telegram: message_id {$fileId}");
+                return true;
+            } else {
+                $error = $response->json('description') ?: 'Failed to delete file from Telegram.';
+                Log::error("Telegram delete error for message {$fileId}: {$error}");
+                return false;
+            }
+        } catch (Exception $e) {
+            Log::error("Error deleting file from Telegram: " . $e->getMessage());
+            throw $e;
+        }
+    }
 
     /**
-     * I have removed the `fileExists` method.
-     * The `telegram-upload` package does not provide a command to check if a specific message or file exists.
-     * This functionality cannot be implemented with the current tool.
+     * Check if a file exists in Telegram using the Bot API.
+     *
+     * @param string $fileId The message ID to check.
+     * @param string|null $chatId The chat ID where the message is located.
+     * @return bool
+     * @throws Exception
      */
+    public function fileExists($fileId, $chatId = null): bool
+    {
+        $token = $this->getBotToken();
+        $chatId = $chatId ?: app(Settings::class)->get('storage_telegram_chat_id', 'me');
+
+        try {
+            // We can check for existence by trying to forward the message to the same chat.
+            // If it succeeds, the message exists. If it fails, it likely doesn't.
+            $response = Http::post("https://api.telegram.org/bot{$token}/forwardMessage", [
+                'chat_id' => $chatId,
+                'from_chat_id' => $chatId,
+                'message_id' => $fileId,
+            ]);
+
+            // If the forward was successful, we should delete the forwarded message to avoid spam.
+            if ($response->successful() && $response->json('ok')) {
+                $forwardedMessageId = $response->json('result.message_id');
+                $this->deleteFile($forwardedMessageId, $chatId);
+                return true;
+            }
+
+            // Check for specific error message "message to forward not found"
+            if (str_contains($response->body(), 'message to forward not found')) {
+                return false;
+            }
+
+            // For other errors, we can assume it exists but something else went wrong.
+            // Or we can return false. Let's be conservative and say it doesn't exist.
+            return false;
+
+        } catch (Exception $e) {
+            Log::error("Error checking file existence in Telegram: " . $e->getMessage());
+            return false; // In case of exception, assume it doesn't exist.
+        }
+    }
+
+    /**
+     * Get the configured bot token.
+     *
+     * @return string
+     * @throws Exception
+     */
+    protected function getBotToken(): string
+    {
+        if (empty($this->botToken)) {
+            throw new Exception('Telegram bot token is not configured.');
+        }
+        return $this->botToken;
+    }
 
     /**
      * Get file URL (for Telegram, this would be a file_id or message link)

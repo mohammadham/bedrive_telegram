@@ -2,9 +2,13 @@
 
 use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\ShareableLinksController;
+use App\Http\Controllers\Webhooks\TelegramWebhookController;
 use Common\Core\Controllers\HomeController;
 use Common\Pages\CustomPageController;
 use Illuminate\Support\Facades\Route;
+
+//WEBHOOKS
+Route::post('/api/webhooks/telegram', [TelegramWebhookController::class, 'handle']);
 
 //FRONT-END ROUTES THAT NEED TO BE PRE-RENDERED
 Route::get('/', LandingPageController::class);
