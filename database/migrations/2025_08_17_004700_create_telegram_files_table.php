@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('telegram_files', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('file_entry_id');
+            $table->unsignedInteger('file_entry_id');
             $table->string('telegram_file_id');
             $table->string('telegram_chat_id');
             $table->timestamps();
