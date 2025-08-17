@@ -27,12 +27,12 @@ import {RestoreIcon} from '@ui/icons/material/Restore';
 import {downloadFileFromUrl} from '@ui/utils/files/download-file-from-url';
 import {TelegramIcon} from '@ui/icons/social/telegram';
 import {useMutation} from '@tanstack/react-query';
-import {api} from '@common/http/api-client';
+import {apiClient} from '../../../../common/foundation/resources/client/http/query-client';
 
 const useForwardToTelegram = (entries: DriveEntry[]) => {
   return useMutation({
     mutationFn: (entryId: number) =>
-      api().post(`files/${entryId}/forward`),
+      apiClient.post(`files/${entryId}/forward`),
     onSuccess: () => {
       toast(message('File forwarded to your Telegram chat.'));
     },

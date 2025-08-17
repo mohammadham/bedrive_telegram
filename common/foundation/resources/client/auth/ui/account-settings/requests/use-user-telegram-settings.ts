@@ -8,8 +8,8 @@ import {BackendResponse} from '@common/http/backend-response/backend-response';
 
 interface Response extends BackendResponse {
   settings: {
-    telegram_chat_id: string;
-    auto_send_to_telegram: boolean;
+    telegram_user_chat_id: string;
+    telegram_auto_forward: boolean;
   };
 }
 

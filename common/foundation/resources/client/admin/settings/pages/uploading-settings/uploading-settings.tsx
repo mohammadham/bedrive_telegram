@@ -28,6 +28,9 @@ import {useMutation} from '@tanstack/react-query';
 import {apiClient} from '@common/http/query-client';
 import {toast} from '@ui/toast/toast';
 import {getAxiosErrorMessage} from '@common/http/get-axios-error-message';
+import {ProgressCircle} from '@ui/progress/progress-circle';
+import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
+import {ErrorIcon} from '@ui/icons/material/Error';
 
 export function UploadingSettings() {
   return (
@@ -573,7 +576,10 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
       form.setValue('server.telegram_webhook_set', true);
     },
     onError: err => {
-      toast.danger(getAxiosErrorMessage(err, 'Could not configure bot'));
+      toast.danger(
+        getAxiosErrorMessage(err) ||
+          trans(message('Could not configure bot')),
+      );
     },
   });
 
