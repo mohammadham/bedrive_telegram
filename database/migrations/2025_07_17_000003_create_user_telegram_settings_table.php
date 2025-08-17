@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('user_telegram_settings', function (Blueprint $table) {
             $table->id();
             $table->unsignedInteger('user_id');
-            $table->string('telegram_chat_id')->nullable();
-            $table->boolean('auto_send_to_telegram')->default(false);
+            $table->string('telegram_user_chat_id')->nullable();
+            $table->boolean('telegram_auto_forward')->default(false);
             $table->timestamps();
 
             $table->unique('user_id');

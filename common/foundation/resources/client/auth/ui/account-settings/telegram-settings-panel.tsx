@@ -21,8 +21,8 @@ export function TelegramSettingsPanel({user}: Props) {
   const {data, isLoading} = useUserTelegramSettings(user.id);
   const form = useForm<Partial<TelegramSettingsPayload>>({
     defaultValues: {
-      telegram_chat_id: data?.settings.telegram_chat_id || '',
-      auto_send_to_telegram: data?.settings.auto_send_to_telegram || false,
+      telegram_user_chat_id: data?.settings.telegram_user_chat_id || '',
+      telegram_auto_forward: data?.settings.telegram_auto_forward || false,
     },
   });
   const updateUserTelegramSettings = useUpdateUserTelegramSettings(form, user.id);
@@ -69,15 +69,15 @@ export function TelegramSettingsPanel({user}: Props) {
             id={formId}
           >
         <FormTextField
-          name="telegram_chat_id"
+          name="telegram_user_chat_id"
           label={<Trans message="Telegram Chat ID" />}
           description={
-            <Trans message="Your personal chat/channel ID for file uploads (e.g., @mychannel or a numeric ID)." />
+            <Trans message="Your personal chat/channel ID for forwarding files (e.g., @mychannel or a numeric ID)." />
           }
           className="mb-20"
         />
-        <FormSwitch name="auto_send_to_telegram">
-          <Trans message="Automatically send uploads to Telegram" />
+        <FormSwitch name="telegram_auto_forward">
+          <Trans message="Automatically forward uploads to your chat" />
         </FormSwitch>
       </Form>
         )}

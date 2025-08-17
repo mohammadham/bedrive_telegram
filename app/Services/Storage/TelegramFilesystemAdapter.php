@@ -17,32 +17,28 @@ use League\Flysystem\UnableToCheckFileExistence;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
+use App\Models\TelegramFile;
+use App\Models\FileEntry;
+
 class TelegramFilesystemAdapter implements FilesystemAdapter
 {
     protected $driver;
     protected $chatId;
-    protected $fileRegistry;
 
     public function __construct(TelegramStorageDriver $driver, $chatId = null)
     {
         $this->driver = $driver;
         $this->chatId = $chatId;
-        $this->fileRegistry = storage_path('app/telegram_file_registry.json');
-
-        // Initialize file registry if it doesn't exist
-        if (!file_exists($this->fileRegistry)) {
-            file_put_contents($this->fileRegistry, json_encode([]));
-        }
     }
 
     public function fileExists(string $path): bool
     {
         try {
-            $registry = $this->getFileRegistry();
-            if (!isset($registry[$path])) {
+            $fileEntry = FileEntry::where('path', $path)->first();
+            if (!$fileEntry || !$fileEntry->telegramFile) {
                 return false;
             }
-            return $this->driver->fileExists($registry[$path]['file_id'], $this->chatId);
+            return $this->driver->fileExists($fileEntry->telegramFile->telegram_file_id, $fileEntry->telegramFile->telegram_chat_id);
         } catch (Exception $e) {
             Log::error('Error checking file existence in Telegram: ' . $e->getMessage());
             return false;
@@ -75,19 +71,21 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
             file_put_contents($tempFile, $contents);
 
             // Upload to Telegram
-            $result = $this->driver->uploadFile($tempFile, $path, $this->chatId);
+            $forwardToChatId = $config->get('forward_to_chat_id');
+            $result = $this->driver->uploadFile($tempFile, $path, $this->chatId, $forwardToChatId);
 
             // Clean up temp file
             unlink($tempFile);
 
             if ($result['success']) {
-                // Update file registry
-                $this->updateFileRegistry($path, [
-                    'file_id' => $result['file_id'],
-                    'size' => strlen($contents),
-                    'uploaded_at' => time(),
-                    'mime_type' => $config->get('mimetype', 'application/octet-stream')
-                ]);
+                $fileEntry = FileEntry::where('path', $path)->first();
+                if ($fileEntry) {
+                    TelegramFile::create([
+                        'file_entry_id' => $fileEntry->id,
+                        'telegram_file_id' => $result['file_id'],
+                        'telegram_chat_id' => $this->chatId ?: 'me',
+                    ]);
+                }
             } else {
                 throw new UnableToWriteFile('Failed to upload file to Telegram');
             }
@@ -107,7 +105,8 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
             fclose($tempHandle);
 
             // Upload to Telegram
-            $result = $this->driver->uploadFile($tempFile, $path, $this->chatId);
+            $forwardToChatId = $config->get('forward_to_chat_id');
+            $result = $this->driver->uploadFile($tempFile, $path, $this->chatId, $forwardToChatId);
 
             // Get file size
             $size = filesize($tempFile);
@@ -116,13 +115,14 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
             unlink($tempFile);
 
             if ($result['success']) {
-                // Update file registry
-                $this->updateFileRegistry($path, [
-                    'file_id' => $result['file_id'],
-                    'size' => $size,
-                    'uploaded_at' => time(),
-                    'mime_type' => $config->get('mimetype', 'application/octet-stream')
-                ]);
+                $fileEntry = FileEntry::where('path', $path)->first();
+                if ($fileEntry) {
+                    TelegramFile::create([
+                        'file_entry_id' => $fileEntry->id,
+                        'telegram_file_id' => $result['file_id'],
+                        'telegram_chat_id' => $this->chatId ?: 'me',
+                    ]);
+                }
             } else {
                 throw new UnableToWriteFile('Failed to upload stream to Telegram');
             }
@@ -135,16 +135,15 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
     public function read(string $path): string
     {
         try {
-            $registry = $this->getFileRegistry();
-
-            if (!isset($registry[$path])) {
+            $fileEntry = FileEntry::where('path', $path)->first();
+            if (!$fileEntry || !$fileEntry->telegramFile) {
                 throw new UnableToReadFile('File not found in Telegram registry: ' . $path);
             }
 
-            $fileInfo = $registry[$path];
+            $telegramFile = $fileEntry->telegramFile;
             $tempFile = tempnam(sys_get_temp_dir(), 'telegram_download_');
 
-            if ($this->driver->downloadFile($fileInfo['file_id'], $tempFile)) {
+            if ($this->driver->downloadFile($telegramFile->telegram_file_id, $tempFile, $telegramFile->telegram_chat_id)) {
                 $contents = file_get_contents($tempFile);
                 unlink($tempFile);
                 return $contents;
@@ -174,14 +173,11 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
     public function delete(string $path): void
     {
         try {
-            $registry = $this->getFileRegistry();
-
-            if (isset($registry[$path])) {
-                $fileInfo = $registry[$path];
-                if ($this->driver->deleteFile($fileInfo['file_id'], $this->chatId)) {
-                    // Remove from registry
-                    unset($registry[$path]);
-                    $this->saveFileRegistry($registry);
+            $fileEntry = FileEntry::where('path', $path)->first();
+            if ($fileEntry && $fileEntry->telegramFile) {
+                $telegramFile = $fileEntry->telegramFile;
+                if ($this->driver->deleteFile($telegramFile->telegram_file_id, $telegramFile->telegram_chat_id)) {
+                    $telegramFile->delete();
                 } else {
                     throw new UnableToDeleteFile('Failed to delete file from Telegram');
                 }
@@ -236,115 +232,77 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
 
     public function mimeType(string $path): FileAttributes
     {
-        try {
-            $registry = $this->getFileRegistry();
-
-            if (isset($registry[$path])) {
-                $mimeType = $registry[$path]['mime_type'] ?? 'application/octet-stream';
-                return new FileAttributes($path, null, null, null, $mimeType);
-            }
-
-            throw new UnableToCheckFileExistence('File not found in registry: ' . $path);
-        } catch (Exception $e) {
-            Log::error('Error getting mime type from Telegram: ' . $e->getMessage());
-            return new FileAttributes($path, null, null, null, 'application/octet-stream');
+        $fileEntry = FileEntry::where('path', $path)->first();
+        if (!$fileEntry) {
+            throw new UnableToCheckFileExistence('File not found: ' . $path);
         }
+        return new FileAttributes($path, null, null, null, $fileEntry->mime);
     }
 
     public function lastModified(string $path): FileAttributes
     {
-        try {
-            $registry = $this->getFileRegistry();
-
-            if (isset($registry[$path])) {
-                $timestamp = $registry[$path]['uploaded_at'] ?? time();
-                return new FileAttributes($path, null, null, $timestamp);
-            }
-
-            throw new UnableToCheckFileExistence('File not found in registry: ' . $path);
-        } catch (Exception $e) {
-            Log::error('Error getting last modified from Telegram: ' . $e->getMessage());
-            return new FileAttributes($path, null, null, time());
+        $fileEntry = FileEntry::where('path', $path)->first();
+        if (!$fileEntry) {
+            throw new UnableToCheckFileExistence('File not found: ' . $path);
         }
+        return new FileAttributes($path, null, null, $fileEntry->updated_at->getTimestamp());
     }
 
     public function fileSize(string $path): FileAttributes
     {
-        try {
-            $registry = $this->getFileRegistry();
-
-            if (isset($registry[$path])) {
-                $size = $registry[$path]['size'] ?? 0;
-                return new FileAttributes($path, $size);
-            }
-
-            throw new UnableToCheckFileExistence('File not found in registry: ' . $path);
-        } catch (Exception $e) {
-            Log::error('Error getting file size from Telegram: ' . $e->getMessage());
-            return new FileAttributes($path, 0);
+        $fileEntry = FileEntry::where('path', $path)->first();
+        if (!$fileEntry) {
+            throw new UnableToCheckFileExistence('File not found: ' . $path);
         }
+        return new FileAttributes($path, $fileEntry->file_size);
     }
 
     public function listContents(string $path, bool $deep): iterable
     {
-        try {
-            $registry = $this->getFileRegistry();
-            $contents = [];
+        $query = FileEntry::where('parent_id', function ($query) use ($path) {
+            $query->select('id')
+                ->from('file_entries')
+                ->where('path', $path)
+                ->limit(1);
+        });
 
-            foreach ($registry as $filePath => $fileInfo) {
-                if ($path === '' || strpos($filePath, $path . '/') === 0) {
-                    $relativePath = $path === '' ? $filePath : substr($filePath, strlen($path) + 1);
-
-                    // Skip if this is a nested file and we're not doing deep listing
-                    if (!$deep && strpos($relativePath, '/') !== false) {
-                        continue;
-                    }
-
-                    $contents[] = new FileAttributes(
-                        $filePath,
-                        $fileInfo['size'] ?? 0,
-                        null,
-                        $fileInfo['uploaded_at'] ?? time(),
-                        $fileInfo['mime_type'] ?? 'application/octet-stream'
-                    );
-                }
-            }
-
-            return $contents;
-        } catch (Exception $e) {
-            Log::error('Error listing contents from Telegram: ' . $e->getMessage());
-            return [];
+        if ($deep) {
+            // This is a simplification. A true deep list would require a recursive query.
+            $query->orWhere('path', 'like', "$path/%");
         }
+
+        return $query->get()->map(function (FileEntry $entry) {
+            return new FileAttributes(
+                $entry->path,
+                $entry->file_size,
+                null,
+                $entry->updated_at->getTimestamp(),
+                $entry->mime
+            );
+        });
     }
 
     public function move(string $source, string $destination, Config $config): void
     {
-        try {
-            $registry = $this->getFileRegistry();
-
-            if (isset($registry[$source])) {
-                $registry[$destination] = $registry[$source];
-                unset($registry[$source]);
-                $this->saveFileRegistry($registry);
-            } else {
-                throw new UnableToMoveFile('Source file not found: ' . $source);
-            }
-        } catch (Exception $e) {
-            Log::error('Error moving file in Telegram: ' . $e->getMessage());
-            throw new UnableToMoveFile('Unable to move file in Telegram: ' . $e->getMessage());
-        }
+        // The "move" operation is handled by changing the path in the `file_entries` table.
+        // The link to the `telegram_files` table is via `file_entry_id`, so no changes
+        // are needed here. This adapter does not need to be aware of path changes.
     }
 
     public function copy(string $source, string $destination, Config $config): void
     {
         try {
-            $registry = $this->getFileRegistry();
+            $sourceEntry = FileEntry::where('path', $source)->first();
+            $destinationEntry = FileEntry::where('path', 'like', "$destination%")->first();
 
-            if (isset($registry[$source])) {
-                $registry[$destination] = $registry[$source];
-                $this->saveFileRegistry($registry);
+            if ($sourceEntry && $sourceEntry->telegramFile && $destinationEntry) {
+                 TelegramFile::create([
+                    'file_entry_id' => $destinationEntry->id,
+                    'telegram_file_id' => $sourceEntry->telegramFile->telegram_file_id,
+                    'telegram_chat_id' => $sourceEntry->telegramFile->telegram_chat_id,
+                ]);
             } else {
-                throw new UnableToCopyFile('Source file not found: ' . $source);
+                throw new UnableToCopyFile('Source file not found in Telegram registry.');
             }
         } catch (Exception $e) {
             Log::error('Error copying file in Telegram: ' . $e->getMessage());
@@ -352,31 +310,5 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
         }
     }
 
-    protected function getFileRegistry(): array
-    {
-        try {
-            $contents = file_get_contents($this->fileRegistry);
-            return json_decode($contents, true) ?: [];
-        } catch (Exception $e) {
-            Log::error('Error reading file registry: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    protected function saveFileRegistry(array $registry): void
-    {
-        try {
-            file_put_contents($this->fileRegistry, json_encode($registry, JSON_PRETTY_PRINT));
-        } catch (Exception $e) {
-            Log::error('Error saving file registry: ' . $e->getMessage());
-        }
-    }
-
-    protected function updateFileRegistry(string $path, array $fileInfo): void
-    {
-        $registry = $this->getFileRegistry();
-        $registry[$path] = $fileInfo;
-        $this->saveFileRegistry($registry);
-    }
 }
 

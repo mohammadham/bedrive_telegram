@@ -25,6 +25,20 @@ import {useFileEntryUrls} from '@common/uploads/file-entry-urls';
 import {useRestoreEntries} from '../files/queries/use-restore-entries';
 import {RestoreIcon} from '@ui/icons/material/Restore';
 import {downloadFileFromUrl} from '@ui/utils/files/download-file-from-url';
+import {TelegramIcon} from '@ui/icons/social/telegram';
+import {useMutation} from '@tanstack/react-query';
+import {api} from '@common/http/api-client';
+
+const useForwardToTelegram = (entries: DriveEntry[]) => {
+  return useMutation({
+    mutationFn: (entryId: number) =>
+      api().post(`files/${entryId}/forward`),
+    onSuccess: () => {
+      toast(message('File forwarded to your Telegram chat.'));
+    },
+    onError: (err) => showHttpErrorToast(err),
+  });
+};
 
 export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
   const preview = usePreviewAction(entries);
@@ -39,6 +53,7 @@ export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
   const deleteAction = useDeleteEntriesAction(entries);
   const removeSharedEntries = useRemoveSharedEntriesAction(entries);
   const restoreEntries = useRestoreEntriesAction(entries);
+  const forwardToTelegram = useForwardToTelegramAction(entries);
 
   return [
     preview,
@@ -50,10 +65,34 @@ export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
     rename,
     makeCopy,
     download,
+    forwardToTelegram,
     deleteAction,
     removeSharedEntries,
     restoreEntries,
   ].filter(action => !!action) as EntryAction[];
+}
+
+function useForwardToTelegramAction(
+  entries: DriveEntry[],
+): EntryAction | undefined {
+  const forwardToTelegram = useForwardToTelegram(entries);
+  const activePage = useDriveStore(s => s.activePage);
+  if (
+    entries.length > 1 ||
+    entries[0].type === 'folder' ||
+    activePage === TrashPage
+  ) {
+    return;
+  }
+  return {
+    label: message('Forward to Telegram'),
+    icon: TelegramIcon,
+    key: 'forwardToTelegram',
+    execute: () => {
+      forwardToTelegram.mutate(entries[0].id);
+      driveState().selectEntries([]);
+    },
+  };
 }
 
 export function usePreviewAction(

@@ -12,12 +12,12 @@ class UserTelegramSettings extends Model
 
     protected $fillable = [
         'user_id',
-        'telegram_chat_id',
-        'auto_send_to_telegram',
+        'telegram_user_chat_id',
+        'telegram_auto_forward',
     ];
 
     protected $casts = [
-        'auto_send_to_telegram' => 'boolean',
+        'telegram_auto_forward' => 'boolean',
     ];
 
     /**

@@ -254,6 +254,45 @@ class FileApiController extends BaseController
     }
 
     /**
+     * Forward file to user's Telegram chat
+     */
+    public function forward($id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $file = FileEntry::where('id', $id)
+                            ->where('user_id', $user->id)
+                            ->firstOrFail();
+
+            $userSettings = UserTelegramSettings::where('user_id', $user->id)->first();
+            $targetChatId = $userSettings->telegram_user_chat_id ?? null;
+
+            if (!$targetChatId) {
+                return $this->error('User has not configured their Telegram chat ID.', 400);
+            }
+
+            $telegramFileId = $file->telegramFile->telegram_file_id ?? null;
+
+            if (!$telegramFileId) {
+                return $this->error('This file does not have a Telegram message ID associated with it.', 400);
+            }
+
+            $driver = app(TelegramStorageDriver::class);
+            $success = $driver->forwardFile($telegramFileId, $targetChatId);
+
+            if ($success) {
+                return $this->success(['message' => 'File forwarded successfully.']);
+            } else {
+                return $this->error('Failed to forward file to Telegram.', 500);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('API file forward error: ' . $e->getMessage());
+            return $this->error('Forwarding failed: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Send file to Telegram
      */
     protected function sendToTelegram(FileEntry $fileEntry, $chatId = null): ?array

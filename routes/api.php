@@ -145,6 +145,7 @@ Route::group(['prefix' => 'v1'], function() {
     Route::get('files/{id}', [FileApiController::class, 'show'])->name('api.v1.files.show');
     Route::get('files/{id}/download', [FileApiController::class, 'download'])->name('api.v1.files.download');
     Route::delete('files/{id}', [FileApiController::class, 'delete'])->name('api.v1.files.delete');
+    Route::post('files/{id}/forward', [FileApiController::class, 'forward'])->name('api.v1.files.forward');
   });
 
   //SHAREABLE LINKS PREVIEW (NO AUTH NEEDED)

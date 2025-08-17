@@ -79,6 +79,13 @@ class TelegramIntegrationTest extends TestCase
 
     public function test_file_upload_with_telegram_driver()
     {
+        // Enable auto-forwarding for the user
+        \App\Models\UserTelegramSettings::create([
+            'user_id' => $this->user->id,
+            'telegram_user_chat_id' => 'user-chat-id',
+            'telegram_auto_forward' => true,
+        ]);
+
         // Set default filesystem to telegram
         config(['filesystems.default' => 'telegram']);
 
@@ -86,9 +93,10 @@ class TelegramIntegrationTest extends TestCase
         $mock = Mockery::mock(TelegramStorageDriver::class);
         $this->app->instance(TelegramStorageDriver::class, $mock);
 
+        // Expect uploadFile to be called with the user's chat ID for forwarding
         $mock->shouldReceive('uploadFile')
             ->once()
-            ->with(Mockery::any(), 'test_file.txt', Mockery::any())
+            ->with(Mockery::any(), Mockery::any(), Mockery::any(), 'user-chat-id')
             ->andReturn([
                 'success' => true,
                 'file_id' => 'tg_12345',
@@ -169,6 +177,50 @@ class TelegramIntegrationTest extends TestCase
         $result = $driver->fileExists('12345', 'test-chat');
 
         $this->assertTrue($result);
+    }
+
+    public function test_user_can_update_their_telegram_settings()
+    {
+        $response = $this->actingAs($this->user)
+            ->putJson('/api/v1/user/telegram-settings', [
+                'telegram_user_chat_id' => 'my-chat-id',
+                'telegram_auto_forward' => true,
+            ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('user_telegram_settings', [
+            'user_id' => $this->user->id,
+            'telegram_user_chat_id' => 'my-chat-id',
+            'telegram_auto_forward' => true,
+        ]);
+    }
+
+    public function test_manual_forward_endpoint()
+    {
+        Http::fake();
+
+        $fileEntry = \App\Models\FileEntry::factory()->create(['user_id' => $this->user->id]);
+        \App\Models\TelegramFile::create([
+            'file_entry_id' => $fileEntry->id,
+            'telegram_file_id' => 'tg-file-id-123',
+            'telegram_chat_id' => 'main-storage-chat',
+        ]);
+        \App\Models\UserTelegramSettings::create([
+            'user_id' => $this->user->id,
+            'telegram_user_chat_id' => 'user-chat-id',
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->postJson("/api/v1/files/{$fileEntry->id}/forward");
+
+        $response->assertStatus(200);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://api.telegram.org/bot/forwardMessage' &&
+                   $request['message_id'] === 'tg-file-id-123' &&
+                   $request['chat_id'] === 'user-chat-id';
+        });
     }
 }
 

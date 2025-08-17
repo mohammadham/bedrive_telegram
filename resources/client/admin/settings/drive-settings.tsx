@@ -37,17 +37,11 @@ interface FormProps {
 function Form({data}: FormProps) {
   const form = useForm<AdminSettings>({
     defaultValues: {
-      client: {
-        drive: {
-          default_view: data.client.drive?.default_view ?? 'list',
-          send_share_notification:
-            data.client.drive?.send_share_notification ?? false,
-        },
-        share: {
-          suggest_emails: data.client.share?.suggest_emails ?? false,
-        },
-      },
       server: {
+        storage_telegram_api_id: data.server.storage_telegram_api_id,
+        storage_telegram_api_hash: data.server.storage_telegram_api_hash,
+        storage_telegram_phone: data.server.storage_telegram_phone,
+        storage_telegram_chat_id: data.server.storage_telegram_chat_id,
         telegram_bot_token: data.server.telegram_bot_token,
         telegram_webhook_set: data.server.telegram_webhook_set,
       },
@@ -68,86 +62,82 @@ function Form({data}: FormProps) {
 
   return (
     <AdminSettingsForm form={form}>
-      <FormRadioGroup
-        required
-        className="mb-30"
-        size="md"
-        name="client.drive.default_view"
-        orientation="vertical"
-        label={<Trans message="Default view mode" />}
-        description={
-          <Trans message="Which view mode should user drive use by default." />
-        }
-      >
-        <FormRadio value="list">
-          <Trans message="List" />
-        </FormRadio>
-        <FormRadio value="grid">
-          <Trans message="Grid" />
-        </FormRadio>
-      </FormRadioGroup>
-      <FormSwitch
-        className="mb-30"
-        name="client.drive.send_share_notification"
-        description={
-          <Trans message="Send a notification to user when a file or folder is shared with them." />
-        }
-      >
-        <Trans message="Share notifications" />
-      </FormSwitch>
-      <FormSwitch
-        name="client.share.suggest_emails"
-        description={
-          <Trans message="Suggest email address of existing users when sharing a file or folder." />
-        }
-      >
-        <Trans message="Suggest emails" />
-      </FormSwitch>
-
-      <div className="mt-40 border-t pt-40">
-        <h2 className="text-xl font-semibold mb-4">
-          <Trans message="Telegram Bot Settings" />
+      <div>
+        <h2 className="text-xl font-semibold mb-10">
+          <Trans message="Telegram Storage Settings" />
         </h2>
         <div className="mb-20">
-          <Trans message="Configure a Telegram bot to enable advanced features like reliable file deletion and existence checks." />
+          <Trans message="Configure credentials for using Telegram as a storage provider." />
         </div>
         <FormTextField
-          name="server.telegram_bot_token"
-          label={<Trans message="Bot Token" />}
+          name="server.storage_telegram_api_id"
+          label={<Trans message="API ID" />}
+          className="mb-20"
+        />
+        <FormTextField
+          name="server.storage_telegram_api_hash"
+          label={<Trans message="API Hash" />}
+          className="mb-20"
+        />
+        <FormTextField
+          name="server.storage_telegram_phone"
+          label={<Trans message="Phone Number" />}
+          className="mb-20"
+        />
+        <FormTextField
+          name="server.storage_telegram_chat_id"
+          label={<Trans message="Main Storage Chat ID" />}
           description={
-            <Trans message="Your Telegram bot token from @BotFather." />
+            <Trans message="The ID of the channel or chat where all files will be stored. Can be 'me' for saved messages." />
           }
           className="mb-20"
         />
-        <div className="flex items-center gap-10">
-          <Button
-            variant="flat"
-            color="primary"
-            onClick={() => {
-              const token = form.getValues('server.telegram_bot_token');
-              if (token) {
-                configureBot.mutate(token);
-              } else {
-                toast.danger('Please enter a bot token first.');
+
+        <div className="mt-20 border-t pt-20">
+            <h3 className="text-lg font-semibold mb-4">
+              <Trans message="Bot Settings" />
+            </h3>
+            <div className="mb-20">
+              <Trans message="Configure a Telegram bot to enable advanced features like reliable file deletion and existence checks." />
+            </div>
+            <FormTextField
+              name="server.telegram_bot_token"
+              label={<Trans message="Bot Token" />}
+              description={
+                <Trans message="Your Telegram bot token from @BotFather." />
               }
-            }}
-            disabled={configureBot.isPending}
-          >
-            <Trans message="Save Token and Set Webhook" />
-          </Button>
-          {configureBot.isPending && <ProgressCircle isIndeterminate size="sm" />}
-          {form.watch('server.telegram_webhook_set') && !configureBot.isPending && (
-            <div className="flex items-center gap-4 text-positive">
-              <CheckCircleIcon size="sm" />
-              <Trans message="Webhook is active" />
+              className="mb-20"
+            />
+            <div className="flex items-center gap-10">
+              <Button
+                variant="flat"
+                color="primary"
+                onClick={() => {
+                  const token = form.getValues('server.telegram_bot_token');
+                  if (token) {
+                    configureBot.mutate(token);
+                  } else {
+                    toast.danger('Please enter a bot token first.');
+                  }
+                }}
+                disabled={configureBot.isPending}
+              >
+                <Trans message="Save Token and Set Webhook" />
+              </Button>
+              {configureBot.isPending && <ProgressCircle isIndeterminate size="sm" />}
+              {form.watch('server.telegram_webhook_set') && !configureBot.isPending && (
+                <div className="flex items-center gap-4 text-positive">
+                  <CheckCircleIcon size="sm" />
+                  <Trans message="Webhook is active" />
+                </div>
+              )}
+              {configureBot.isError && !configureBot.isPending && (
+                <div className="flex items-center gap-4 text-danger">
+                  <ErrorIcon size="sm" />
+                  <Trans message="Webhook setup failed" />
+                </div>
+              )}
             </div>
-          )}
-          {configureBot.isError && !configureBot.isPending && (
-            <div className="flex items-center gap-4 text-danger">
-              <ErrorIcon size="sm" />
-              <Trans message="Webhook setup failed" />
-            </div>
-          )}
         </div>
       </div>
     </AdminSettingsForm>

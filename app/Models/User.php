@@ -5,12 +5,33 @@ namespace App\Models;
 use Common\Auth\BaseUser;
 use Common\Workspaces\Workspace;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends BaseUser
 {
     use HasApiTokens, HasFactory;
+
+    public function telegramSettings(): HasOne
+    {
+        return $this->hasOne(UserTelegramSettings::class);
+    }
+
+    protected function telegramUserChatId(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->telegramSettings?->telegram_user_chat_id,
+        );
+    }
+
+    protected function telegramAutoForward(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->telegramSettings?->telegram_auto_forward,
+        );
+    }
 
     public function workspaces(): HasMany
     {

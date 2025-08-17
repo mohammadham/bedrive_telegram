@@ -32,6 +32,10 @@ class StoreFile
             'visibility' => $payload->visibility,
         ];
 
+        if (isset($fileOptions['forward_to_chat_id'])) {
+            $this->diskOptions['forward_to_chat_id'] = $fileOptions['forward_to_chat_id'];
+        }
+
         $this->payload = $payload;
 
         if (

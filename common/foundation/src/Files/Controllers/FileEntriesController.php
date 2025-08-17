@@ -91,7 +91,15 @@ class FileEntriesController extends BaseController
             'relativePath' => 'nullable|string',
         ]);
 
-        app(StoreFile::class)->execute($payload, ['file' => $file]);
+        $fileOptions = ['file' => $file];
+        $user = Auth::user();
+
+        // Add telegram forwarding info if user has it enabled
+        if ($user && $user->telegram_auto_forward && $user->telegram_user_chat_id) {
+            $fileOptions['forward_to_chat_id'] = $user->telegram_user_chat_id;
+        }
+
+        app(StoreFile::class)->execute($payload, $fileOptions);
 
         $fileEntry = app(CreateFileEntry::class)->execute($payload);
 

@@ -73,13 +73,13 @@ class UserApiController extends BaseController
 
         if (!$settings) {
             return $this->success([
-                'telegram_chat_id' => '',
-                'auto_send_to_telegram' => false,
+                'telegram_user_chat_id' => '',
+                'telegram_auto_forward' => false,
             ]);
         }
         return $this->success([
-            'telegram_chat_id' => $settings->telegram_chat_id ?? '',
-            'auto_send_to_telegram' => $settings->auto_send_to_telegram ?? false,
+            'telegram_user_chat_id' => $settings->telegram_user_chat_id ?? '',
+            'telegram_auto_forward' => $settings->telegram_auto_forward ?? false,
         ]);
     }
 
@@ -89,8 +89,8 @@ class UserApiController extends BaseController
     public function updateTelegramSettings(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'telegram_chat_id' => 'nullable|string|max:255',
-            'auto_send_to_telegram' => 'boolean',
+            'telegram_user_chat_id' => 'nullable|string|max:255',
+            'telegram_auto_forward' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -102,8 +102,8 @@ class UserApiController extends BaseController
         UserTelegramSettings::updateOrCreate(
             ['user_id' => $user->id],
             [
-                'telegram_chat_id' => $request->input('telegram_chat_id'),
-                'auto_send_to_telegram' => $request->input('auto_send_to_telegram', false),
+                'telegram_user_chat_id' => $request->input('telegram_user_chat_id'),
+                'telegram_auto_forward' => $request->input('telegram_auto_forward', false),
             ]
         );
 
@@ -120,8 +120,8 @@ class UserApiController extends BaseController
 
         return $this->success([
             'settings' => [
-                'telegram_chat_id' => $settings->telegram_chat_id ?? '',
-                'auto_send_to_telegram' => $settings->auto_send_to_telegram ?? false,
+                'telegram_user_chat_id' => $settings->telegram_user_chat_id ?? '',
+                'telegram_auto_forward' => $settings->telegram_auto_forward ?? false,
             ]
         ]);
     }
@@ -133,8 +133,8 @@ class UserApiController extends BaseController
     {
         $this->authorize('update', $user);
         $validator = Validator::make($request->all(), [
-            'telegram_chat_id' => 'nullable|string|max:255',
-            'auto_send_to_telegram' => 'boolean',
+            'telegram_user_chat_id' => 'nullable|string|max:255',
+            'telegram_auto_forward' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -144,8 +144,8 @@ class UserApiController extends BaseController
         UserTelegramSettings::updateOrCreate(
             ['user_id' => $user->id],
             [
-                'telegram_chat_id' => $request->input('telegram_chat_id'),
-                'auto_send_to_telegram' => $request->input('auto_send_to_telegram', false),
+                'telegram_user_chat_id' => $request->input('telegram_user_chat_id'),
+                'telegram_auto_forward' => $request->input('telegram_auto_forward', false),
             ]
         );
 

@@ -162,28 +162,46 @@ class TelegramStorageDriver
      * - It adds a `--caption` with the file's destination path, which helps simulate a directory structure.
      * - The command is now built as an array to avoid shell argument injection issues.
      */
-    public function uploadFile($filePath, $destination = null, $chatId = null)
+    public function uploadFile($filePath, $destination = null, $chatId = null, $forwardToChatId = null)
     {
         if (!$this->isConfigured) {
             throw new Exception('Upload File Telegram is not properly configured');
         }
 
         try {
-            $sessionFile = $this->sessionPath . '/bedrive_session.session';
-            if (!file_exists($sessionFile)) {
+            $configFile = $this->sessionPath . '/telegram-upload.json';
+            // Assuming the session file itself can be used as the config for session details
+            // This is based on the provided docs.
+            // A more robust solution would be to manage a separate config file.
+            if (!file_exists($this->sessionPath . '/bedrive_session.session')) {
                 throw new Exception('Telegram session not found. Please configure session first.');
             }
+            // Let's create a minimal config file if it doesn't exist
+            if (!file_exists($configFile)) {
+                file_put_contents($configFile, json_encode([
+                    'api_id' => $this->config['api_id'],
+                    'api_hash' => $this->config['api_hash'],
+                    'session' => $this->sessionPath . '/bedrive_session.session'
+                ]));
+            }
+
 
             $caption = $destination ?: basename($filePath);
 
             $command = [
                 'telegram-upload',
-                '--session', $sessionFile,
+                '--config', $configFile,
                 '--to', $chatId ?: 'me',
                 '--caption', $caption,
                 '--print-file-id',
-                $filePath
             ];
+
+            if ($forwardToChatId) {
+                $command[] = '--forward';
+                $command[] = $forwardToChatId;
+            }
+
+            $command[] = $filePath;
 
             $result = Process::run($command);
 
@@ -243,9 +261,14 @@ class TelegramStorageDriver
                 throw new \RuntimeException(sprintf('Directory "%s" was not created', $tempDir));
             }
 
+            $configFile = $this->sessionPath . '/telegram-upload.json';
+            if (!file_exists($configFile)) {
+                 throw new Exception('Telegram config file not found. Please upload a file first to generate it.');
+            }
+
             $command = [
                 'telegram-download',
-                '--session', $sessionFile,
+                '--config', $configFile,
                 '--from', $chatId ?: 'me',
             ];
 
@@ -325,6 +348,44 @@ class TelegramStorageDriver
      * @return bool
      * @throws Exception
      */
+    /**
+     * Forward a message from the main storage channel to another chat using the Bot API.
+     *
+     * @param string $fileId The message ID to forward.
+     * @param string $targetChatId The chat to forward the message to.
+     * @return bool
+     * @throws Exception
+     */
+    public function forwardFile($fileId, $targetChatId): bool
+    {
+        $token = $this->getBotToken();
+        $sourceChatId = app(Settings::class)->get('storage_telegram_chat_id');
+
+        if (!$sourceChatId) {
+            throw new Exception('Main storage chat ID is not configured.');
+        }
+
+        try {
+            $response = Http::post("https://api.telegram.org/bot{$token}/forwardMessage", [
+                'chat_id' => $targetChatId,
+                'from_chat_id' => $sourceChatId,
+                'message_id' => $fileId,
+            ]);
+
+            if ($response->successful() && $response->json('ok')) {
+                Log::info("File forwarded from {$sourceChatId} to {$targetChatId}: message_id {$fileId}");
+                return true;
+            } else {
+                $error = $response->json('description') ?: 'Failed to forward file via bot.';
+                Log::error("Telegram forward error for message {$fileId}: {$error}");
+                return false;
+            }
+        } catch (Exception $e) {
+            Log::error("Error forwarding file via bot: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
     public function fileExists($fileId, $chatId = null): bool
     {
         $token = $this->getBotToken();

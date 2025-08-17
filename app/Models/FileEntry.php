@@ -21,6 +21,11 @@ class FileEntry extends CommonFileEntry
         return $this->hasOne(ShareableLink::class, 'entry_id');
     }
 
+    public function telegramFile(): HasOne
+    {
+        return $this->hasOne(TelegramFile::class);
+    }
+
     /**
      * Get only entries that are not children of another entry.
      */
