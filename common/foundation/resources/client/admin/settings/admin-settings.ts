@@ -149,6 +149,8 @@ export interface AdminServerSettings {
     storage_telegram_api_hash?: string;
     storage_telegram_phone?: string;
     storage_telegram_chat_id?: string;
+    telegram_bot_token?: string;
+    telegram_webhook_set?: boolean;
 }
 
 export interface AdminSettings {

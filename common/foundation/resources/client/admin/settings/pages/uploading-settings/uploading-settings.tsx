@@ -565,6 +565,17 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
   const form = useFormContext<AdminSettings>();
   const testConnection = useTestTelegramConnection();
   const installTelegramUpload = useInstallTelegramUpload();
+  const configureBot = useMutation({
+    mutationFn: (token: string) =>
+      apiClient.post('telegram/configure-bot', {token}),
+    onSuccess: () => {
+      toast('Bot configured successfully');
+      form.setValue('server.telegram_webhook_set', true);
+    },
+    onError: err => {
+      toast.danger(getAxiosErrorMessage(err, 'Could not configure bot'));
+    },
+  });
 
   // وضعیت نصب نبودن پکیج را در state نگه می‌داریم
   const [showInstallButton, setShowInstallButton] = React.useState(false);
@@ -692,6 +703,54 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
             )}
           </Button>
         )}
+      </div>
+
+      <div className="mt-20 border-t pt-20">
+        <h3 className="text-lg font-semibold mb-4">
+          <Trans message="Bot Settings" />
+        </h3>
+        <div className="mb-20 text-sm">
+          <Trans message="Configure a Telegram bot to enable advanced features like reliable file deletion and existence checks." />
+        </div>
+        <FormTextField
+          name="server.telegram_bot_token"
+          label={<Trans message="Bot Token" />}
+          description={
+            <Trans message="Your Telegram bot token from @BotFather." />
+          }
+          className="mb-20"
+        />
+        <div className="flex items-center gap-10">
+          <Button
+            variant="flat"
+            color="primary"
+            size="xs"
+            onClick={() => {
+              const token = form.getValues('server.telegram_bot_token');
+              if (token) {
+                configureBot.mutate(token);
+              } else {
+                toast.danger('Please enter a bot token first.');
+              }
+            }}
+            disabled={configureBot.isPending}
+          >
+            <Trans message="Save Token and Set Webhook" />
+          </Button>
+          {configureBot.isPending && <ProgressCircle isIndeterminate size="sm" />}
+          {form.watch('server.telegram_webhook_set') && !configureBot.isPending && (
+            <div className="flex items-center gap-4 text-positive text-sm">
+              <CheckCircleIcon size="sm" />
+              <Trans message="Webhook is active" />
+            </div>
+          )}
+          {configureBot.isError && !configureBot.isPending && (
+            <div className="flex items-center gap-4 text-danger text-sm">
+              <ErrorIcon size="sm" />
+              <Trans message="Webhook setup failed" />
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

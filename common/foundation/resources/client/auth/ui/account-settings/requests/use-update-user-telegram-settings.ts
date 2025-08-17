@@ -11,8 +11,8 @@ interface Response extends BackendResponse {
 }
 
 export interface Payload {
-  telegram_chat_id?: string;
-  auto_send_to_telegram?: boolean;
+  telegram_user_chat_id?: string;
+  telegram_auto_forward?: boolean;
 }
 
 export function useUpdateUserTelegramSettings(
