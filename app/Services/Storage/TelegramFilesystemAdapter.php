@@ -47,20 +47,9 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
 
     public function directoryExists(string $path): bool
     {
-        // Telegram doesn't have traditional directories
-        // We'll simulate this by checking if any files exist with this path prefix
-        try {
-            $registry = $this->getFileRegistry();
-            foreach (array_keys($registry) as $filePath) {
-                if (strpos($filePath, $path . '/') === 0) {
-                    return true;
-                }
-            }
-            return false;
-        } catch (Exception $e) {
-            Log::error('Error checking directory existence in Telegram: ' . $e->getMessage());
-            return false;
-        }
+        // A directory exists if there's at least one file entry whose path
+        // starts with the directory path.
+        return FileEntry::where('path', 'like', "$path/%")->exists();
     }
 
     public function write(string $path, string $contents, Config $config): void
@@ -191,18 +180,14 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
     public function deleteDirectory(string $path): void
     {
         try {
-            $registry = $this->getFileRegistry();
-            $deletedFiles = [];
+            $entries = FileEntry::where('path', 'like', "$path/%")->get();
 
-            foreach (array_keys($registry) as $filePath) {
-                if (strpos($filePath, $path . '/') === 0) {
-                    $this->delete($filePath);
-                    $deletedFiles[] = $filePath;
-                }
+            if ($entries->isEmpty()) {
+                throw new UnableToDeleteDirectory('Directory not found or empty: ' . $path);
             }
 
-            if (empty($deletedFiles)) {
-                throw new UnableToDeleteDirectory('Directory not found or empty: ' . $path);
+            foreach ($entries as $entry) {
+                $this->delete($entry->path);
             }
         } catch (Exception $e) {
             Log::error('Error deleting directory from Telegram: ' . $e->getMessage());

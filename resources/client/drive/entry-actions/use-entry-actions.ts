@@ -27,7 +27,7 @@ import {RestoreIcon} from '@ui/icons/material/Restore';
 import {downloadFileFromUrl} from '@ui/utils/files/download-file-from-url';
 import {TelegramIcon} from '@ui/icons/social/telegram';
 import {useMutation} from '@tanstack/react-query';
-import {apiClient} from '../../../../common/foundation/resources/client/http/query-client';
+import {apiClient} from '@common/http/query-client';
 
 const useForwardToTelegram = (entries: DriveEntry[]) => {
   return useMutation({
