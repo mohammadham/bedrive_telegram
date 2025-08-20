@@ -71,7 +71,8 @@ class TelegramStorageDriver
         } else {
             $error = $result->errorOutput();
             Log::error("Failed to upload file to Telegram: $error");
-            throw new Exception("Upload failed: " . $this->parseErrorMessage($error));
+            $parsedError = $this->parseErrorMessage($error);
+            throw new Exception("Upload failed: $parsedError");
         }
     }
 
@@ -247,13 +248,18 @@ class TelegramStorageDriver
      */
     protected function parseErrorMessage($error)
     {
+        if (empty(trim($error))) {
+            return 'An unknown error occurred (empty error output).';
+        }
+
         $lines = explode("\n", $error);
         foreach ($lines as $line) {
             if (str_contains($line, 'telethon.errors')) {
                 return $line;
             }
         }
-        return 'An unknown error occurred.';
+        // Return the full error if no specific telethon error is found
+        return "An unknown error occurred. Full error: $error";
     }
 
     /**

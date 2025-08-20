@@ -144,17 +144,19 @@ export interface AdminServerSettings {
   spotify_id?: string;
   spotify_secret?: string;
   lastfm_api_key?: string;
-    // Telegram storage
-    storage_telegram_api_id?: string;
-    storage_telegram_api_hash?: string;
-    storage_telegram_phone?: string;
-    storage_telegram_chat_id?: string;
-    telegram_bot_token?: string;
-    telegram_webhook_set?: boolean;
+}
+
+export interface TelegramClientSettings {
+  storage_telegram_chat_id?: string;
+  storage_telegram_config_path?: string;
+  telegram_bot_token?: string;
+  telegram_webhook_set?: boolean;
 }
 
 export interface AdminSettings {
-  client: Omit<Settings, 'menus' | 'base_url' | 'site'>;
+  client: Omit<Settings, 'menus' | 'base_url' | 'site'> & {
+    telegram?: TelegramClientSettings;
+  };
   server: AdminServerSettings;
   files: Record<string, any>;
 }
