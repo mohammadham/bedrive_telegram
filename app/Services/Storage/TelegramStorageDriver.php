@@ -12,298 +12,95 @@ use Illuminate\Support\Facades\Http;
 
 class TelegramStorageDriver
 {
-    protected $config;
-    protected $sessionPath;
-    protected $isConfigured = false;
     protected $botToken;
+    protected $configPath;
 
-    public function __construct($config = [])
+    public function __construct()
     {
-        $this->config = $config;
-        $this->sessionPath = storage_path('app/telegram_sessions');
-
-        // Create session directory if it doesn't exist
-        if (!file_exists($this->sessionPath)) {
-            mkdir($this->sessionPath, 0755, true);
-        }
-        // Load settings from the database
         $this->loadSettingsFromDatabase();
-        $this->checkConfiguration();
     }
-  /**
-    * Load Telegram settings from the database
-    */
-   protected function loadSettingsFromDatabase()
-   {
-       try {
-           $settings = app(Settings::class);
-           $this->config['api_id'] = $settings->get('storage_telegram_api_id');
-           $this->config['api_hash'] = $settings->get('storage_telegram_api_hash');
-           $this->config['phone'] = $settings->get('storage_telegram_phone');
-           $this->botToken = $settings->get('telegram_bot_token');
-       } catch (Exception $e) {
-           Log::error('Could not load Telegram settings from database: ' . $e->getMessage());
-       }
-   }
-    /**
-     * Check if telegram-upload is properly configured
-     */
-    protected function checkConfiguration()
+
+    protected function loadSettingsFromDatabase()
     {
         try {
-            // Check if telegram-upload is installed
-            // Check if telegram-upload is installed and executable
-            $telegramUploadPath = rtrim(shell_exec('which telegram-upload'));
-            if (empty($telegramUploadPath) || !is_executable($telegramUploadPath)) {
-                Log::warning('telegram-upload is not installed or not executable');
-                return false;
-            }
-
-            // Check if we have required config
-            if (empty($this->config['api_id']) || empty($this->config['api_hash'])) {
-                Log::warning('Telegram API credentials not configured');
-                return false;
-            }
-
-            $this->isConfigured = true;
-            return true;
+            $settings = app(Settings::class);
+            $this->botToken = $settings->get('telegram_bot_token');
+            $this->configPath = $settings->get('storage_telegram_config_path');
         } catch (Exception $e) {
-            Log::error('Error checking telegram configuration: ' . $e->getMessage());
-            return false;
+            Log::error('Could not load Telegram settings from database: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Check if Telegram is properly configured.
-     *
-     * @return bool
-     */
-    public function isConfigured()
+    protected function buildCommand(string $baseCommand, array $args = []): array
     {
-        return $this->isConfigured;
+        $command = [$baseCommand];
+        if ($this->configPath && file_exists($this->configPath)) {
+            $command[] = '--config';
+            $command[] = $this->configPath;
+        }
+        return array_merge($command, $args);
     }
 
-    /**
-     * Install telegram-upload if not already installed
-     */
-    public function installTelegramUpload()
-    {
-        try {
-            $result = Process::run('pip3 install telegram-upload');
-            if ($result->successful()) {
-                Log::info('telegram-upload installed successfully');
-                return true;
-            } else {
-                Log::error('Failed to install telegram-upload: ' . $result->errorOutput());
-                return false;
-            }
-        } catch (Exception $e) {
-            Log::error('Error installing telegram-upload: ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Configure telegram session
-     */
-    public function configureSession($phoneNumber = null)
-    {
-        if (!$this->isConfigured) {
-            throw new Exception('Telegram configuration is incomplete');
-        }
-
-        try {
-            $sessionFile = $this->sessionPath . '/bedrive_session.session';
-
-          // Command to configure the session
-          $command = [
-            'telegram-upload',
-            '--config-file',
-            $sessionFile, // Using session file for config
-            '--api-id',
-            $this->config['api_id'],
-            '--api-hash',
-            $this->config['api_hash'],
-        ];
-
-        if ($phoneNumber) {
-            $command[] = '--phone';
-            $command[] = $phoneNumber;
-        }
-
-        // This command will initiate an interactive session if the phone number is not provided
-        // or if 2FA is enabled. The user will need to enter the code in the terminal.
-        $result = Process::run($command);
-
-            if ($result->successful()) {
-                Log::info('Telegram session configured successfully');
-                return true;
-            } else {
-                Log::error('Failed to configure telegram session: ' . $result->errorOutput());
-                return false;
-            }
-        } catch (Exception $e) {
-            Log::error('Error configuring telegram session: ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Upload file to Telegram
-     *
-     * @param string $filePath Absolute path to the file.
-     * @param string|null $destination The path to store the file under in the registry.
-     * @param string|null $chatId The chat to upload the file to.
-     * @return array
-     * @throws Exception
-     *
-     * I have modified this function to be compatible with the `telegram-upload` package.
-     * - It now uses `--print-file-id` to reliably get the message ID.
-     * - It adds a `--caption` with the file's destination path, which helps simulate a directory structure.
-     * - The command is now built as an array to avoid shell argument injection issues.
-     */
     public function uploadFile($filePath, $destination = null, $chatId = null, $forwardToChatId = null)
     {
-        if (!$this->isConfigured) {
-            throw new Exception('Upload File Telegram is not properly configured');
+        $caption = $destination ?: basename($filePath);
+        $args = [
+            '--to', $chatId ?: 'me',
+            '--caption', $caption,
+            '--print-file-id',
+        ];
+
+        if ($forwardToChatId) {
+            $args[] = '--forward';
+            $args[] = $forwardToChatId;
         }
 
-        try {
-            $configFile = $this->sessionPath . '/telegram-upload.json';
-            // Assuming the session file itself can be used as the config for session details
-            // This is based on the provided docs.
-            // A more robust solution would be to manage a separate config file.
-            if (!file_exists($this->sessionPath . '/bedrive_session.session')) {
-                throw new Exception('Telegram session not found. Please configure session first.');
-            }
-            // Let's create a minimal config file if it doesn't exist
-            if (!file_exists($configFile)) {
-                file_put_contents($configFile, json_encode([
-                    'api_id' => $this->config['api_id'],
-                    'api_hash' => $this->config['api_hash'],
-                    'session' => $this->sessionPath . '/bedrive_session.session'
-                ]));
-            }
+        $args[] = $filePath;
 
+        $command = $this->buildCommand('telegram-upload', $args);
+        $result = Process::run($command);
 
-            $caption = $destination ?: basename($filePath);
-
-            $command = [
-                'telegram-upload',
-                '--config', $configFile,
-                '--to', $chatId ?: 'me',
-                '--caption', $caption,
-                '--print-file-id',
+        if ($result->successful()) {
+            $fileId = trim($result->output());
+            Log::info("File uploaded to Telegram: $filePath with ID: $fileId");
+            return [
+                'success' => true,
+                'file_id' => $fileId,
+                'path' => $destination ?: basename($filePath),
             ];
-
-            if ($forwardToChatId) {
-                $command[] = '--forward';
-                $command[] = $forwardToChatId;
-            }
-
-            $command[] = $filePath;
-
-            $result = Process::run($command);
-
-            if ($result->successful()) {
-                $fileId = trim($result->output());
-                Log::info('File uploaded to Telegram successfully: ' . $filePath . ' with ID: ' . $fileId);
-                return [
-                    'success' => true,
-                    'file_id' => $fileId,
-                    'path' => $destination ?: basename($filePath),
-                    'output' => $result->output()
-                ];
-            } else {
-                $error = $result->errorOutput();
-                Log::error('Failed to upload file to Telegram: ' . $error);
-                throw new Exception('Upload failed: ' . $this->parseErrorMessage($error));
-            }
-        } catch (Exception $e) {
-            Log::error('Error uploading file to Telegram: ' . $e->getMessage());
-            throw $e;
+        } else {
+            $error = $result->errorOutput();
+            Log::error("Failed to upload file to Telegram: $error");
+            throw new Exception("Upload failed: " . $this->parseErrorMessage($error));
         }
     }
 
-    /**
-     * Download file from Telegram.
-     *
-     * @param string $fileId The message ID of the file to download.
-     * @param string $destination The absolute path to save the downloaded file.
-     * @param string|null $chatId The chat to download from.
-     * @return bool
-     * @throws Exception
-     *
-     * I have rewritten this function to align with `telegram-download`'s capabilities.
-     * - The `telegram-download` command does not support downloading a specific file by its ID.
-     *   It downloads the latest files from a chat. This implementation assumes the desired file
-     *   is the most recent one in the specified chat. This is a significant limitation.
-     * - It now uses the `--from` parameter as specified in the documentation.
-     * - The downloaded file is moved to the requested destination path.
-     */
     public function downloadFile($fileId, $destination, $chatId = null)
     {
-        if (!$this->isConfigured) {
-            throw new Exception('Download File Telegram is not properly configured');
+        $tempDir = sys_get_temp_dir() . '/telegram_downloads_' . Str::random(8);
+        if (!mkdir($tempDir, 0777, true) && !is_dir($tempDir)) {
+            throw new \RuntimeException("Could not create temp directory: $tempDir");
         }
 
-        try {
-            $sessionFile = $this->sessionPath . '/bedrive_session.session';
-            if (!file_exists($sessionFile)) {
-                throw new Exception('Telegram session not found. Please configure session first.');
+        $args = ['--from', $chatId ?: 'me'];
+        $command = $this->buildCommand('telegram-download', $args);
+        $result = Process::setWorkingDirectory($tempDir)->run($command);
+
+        if ($result->successful()) {
+            $files = array_diff(scandir($tempDir), ['.', '..']);
+            if (empty($files)) {
+                throw new Exception('Downloaded file not found in temp directory.');
             }
-
-            // `telegram-download` downloads to the current directory.
-            // We need to run it in a temporary directory to avoid filename conflicts
-            // and then move the file to the desired destination.
-            $tempDir = sys_get_temp_dir() . '/telegram_downloads_' . Str::random(8);
-            if (!mkdir($tempDir, 0777, true) && !is_dir($tempDir)) {
-                throw new \RuntimeException(sprintf('Directory "%s" was not created', $tempDir));
-            }
-
-            $configFile = $this->sessionPath . '/telegram-upload.json';
-            if (!file_exists($configFile)) {
-                 throw new Exception('Telegram config file not found. Please upload a file first to generate it.');
-            }
-
-            $command = [
-                'telegram-download',
-                '--config', $configFile,
-                '--from', $chatId ?: 'me',
-            ];
-
-            $result = Process::setWorkingDirectory($tempDir)->run($command);
-
-            if ($result->successful()) {
-                // Find the downloaded file. We assume it's the first and only file.
-                $files = scandir($tempDir);
-                $downloadedFile = null;
-                foreach ($files as $file) {
-                    if ($file !== '.' && $file !== '..') {
-                        $downloadedFile = $tempDir . '/' . $file;
-                        break;
-                    }
-                }
-
-                if ($downloadedFile) {
-                    rename($downloadedFile, $destination);
-                    // Clean up the temp directory
-                    rmdir($tempDir);
-                    Log::info('File downloaded from Telegram successfully: ' . $fileId);
-                    return true;
-                } else {
-                    throw new Exception('Downloaded file not found in temp directory.');
-                }
-            } else {
-                // Clean up the temp directory
-                rmdir($tempDir);
-                $error = $result->errorOutput();
-                Log::error('Failed to download file from Telegram: ' . $error);
-                throw new Exception('Download failed: ' . $this->parseErrorMessage($error));
-            }
-        } catch (Exception $e) {
-            Log::error('Error downloading file from Telegram: ' . $e->getMessage());
-            throw $e;
+            $downloadedFile = $tempDir . '/' . reset($files);
+            rename($downloadedFile, $destination);
+            rmdir($tempDir);
+            Log::info("File downloaded from Telegram: $fileId");
+            return true;
+        } else {
+            rmdir($tempDir);
+            $error = $result->errorOutput();
+            Log::error("Failed to download file from Telegram: $error");
+            throw new Exception("Download failed: " . $this->parseErrorMessage($error));
         }
     }
 
@@ -462,25 +259,35 @@ class TelegramStorageDriver
     /**
      * Get configuration status
      */
-    public function getStatus()
+    public function runHealthCheck(): string
     {
-        return [
-            'configured' => $this->isConfigured,
-            'session_exists' => file_exists($this->sessionPath . '/bedrive_session.session'),
-            'telegram_upload_installed' => $this->isTelegramUploadInstalled(),
-        ];
-    }
+        // 1. Check if telegram-upload is installed
+        $result = Process::run('which telegram-upload');
+        if (!$result->successful()) {
+            return 'The "telegram-upload" package is not installed on the server or is not in the system\'s PATH.';
+        }
 
-    /**
-     * Check if telegram-upload is installed
-     */
-    protected function isTelegramUploadInstalled()
-    {
+        // 2. Try to upload a test file
+        $testFile = tempnam(sys_get_temp_dir(), 'telegram_test_');
+        file_put_contents($testFile, 'Health check from BeDrive at ' . now());
+        $chatId = app(Settings::class)->get('storage_telegram_chat_id', 'me');
+
         try {
-            $result = Process::run('which telegram-upload');
-            return $result->successful();
+            $uploadResult = $this->uploadFile($testFile, 'health_check.txt', $chatId);
+            unlink($testFile);
+
+            if ($uploadResult['success']) {
+                // 3. Try to delete the test file
+                $this->deleteFile($uploadResult['file_id'], $chatId);
+                return 'Connection successful. A test file was uploaded and deleted.';
+            } else {
+                 return 'Could not upload a test file. Check your config file path and permissions.';
+            }
         } catch (Exception $e) {
-            return false;
+            if (file_exists($testFile)) {
+                unlink($testFile);
+            }
+            return "An error occurred during the test upload: " . $e->getMessage();
         }
     }
 }

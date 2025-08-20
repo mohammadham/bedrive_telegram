@@ -36,7 +36,7 @@ class TelegramStorageServiceProvider extends ServiceProvider
             $driver = new TelegramStorageDriver($telegramConfig);
             $adapter = new TelegramFilesystemAdapter($driver, $chatId);
 
-            return new Filesystem($adapter, $config);
+            return new IlluminateFilesystem($adapter);
         });
     }
 }

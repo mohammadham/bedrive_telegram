@@ -109,10 +109,7 @@ Route::group(['prefix' => 'v1'], function() {
     Route::post('fcm-token', [FcmTokenController::class, 'store']);
 
     // TELEGRAM MANAGEMENT
-    Route::get('telegram/status', [TelegramController::class, 'status']);
-    Route::post('telegram/install', [TelegramController::class, 'install']);
-    Route::post('telegram/configure-session', [TelegramController::class, 'configureSession']);
-    Route::post('telegram/test-upload', [TelegramController::class, 'testUpload']);
+    Route::post('telegram/test', [TelegramController::class, 'test']);
     Route::post('telegram/configure-bot', [TelegramController::class, 'configureBot']);
 
     // USER API MANAGEMENT

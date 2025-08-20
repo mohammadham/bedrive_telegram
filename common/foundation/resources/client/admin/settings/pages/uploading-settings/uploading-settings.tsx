@@ -560,7 +560,7 @@ function useInstallTelegramUpload() {
 }
 function useTestTelegramConnection() {
   return useMutation({
-    mutationFn: () => apiClient.get('telegram/status'),
+    mutationFn: () => apiClient.post('telegram/test'),
   });
 }
 function TelegramForm({isInvalid}: CredentialFormProps) {
@@ -583,132 +583,60 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
     },
   });
 
-  // وضعیت نصب نبودن پکیج را در state نگه می‌داریم
-  const [showInstallButton, setShowInstallButton] = React.useState(false);
-  const handleTestConnection =() => {
+  const [testResult, setTestResult] = React.useState<string | null>(null);
+  const [isTesting, setIsTesting] = React.useState(false);
+
+  const handleTestConnection = () => {
+    setIsTesting(true);
+    setTestResult(null);
     testConnection.mutate(undefined, {
       onSuccess: (data) => {
-        // فرض بر این است که data.data همان پاسخ API است
-        const status = data?.data?.status || {};
-        const configured = status.configured;
-        const sessionExists = status.session_exists;
-        const telegramUploadInstalled = status.telegram_upload_installed;
+        const result = data?.data?.result || 'Unknown success state.';
+        setTestResult(result);
+        toast.positive(result);
+        setIsTesting(false);
+      },
+      onError: err => {
+        const result = getAxiosErrorMessage(err) || 'Connection failed.';
+        setTestResult(result);
+        toast.danger(result);
+        setIsTesting(false);
+      },
+    });
+  };
 
-        if (!telegramUploadInstalled) {
-          toast.danger(
-            trans(
-              message(
-                'telegram-upload package is not installed on the server.'
-              )
-            )
-          );
-          setShowInstallButton(true);
-        } else {
-          setShowInstallButton(false);
-        }
-         if (!configured) {
-          toast.danger(trans(message('Telegram API credentials are not configured.')));
-        } else if (!sessionExists) {
-          toast.danger(trans(message('Telegram session is not configured. Please complete the session setup.')));
-        } else {
-          toast.positive(trans(message('Telegram connection successful.')));
-        }
-      },
-      onError: err => {
-        toast.danger(
-          getAxiosErrorMessage(
-            err,
-            trans(message('Could not connect to Telegram.'))
-          ) ?? trans(message('Could not connect to Telegram.'))
-        );
-      },
-    });
-  };
-  const handleInstallTelegramUpload = () => {
-    installTelegramUpload.mutate(undefined, {
-      onSuccess: () => {
-        setShowInstallButton(false);
-        // پس از نصب موفق، مجدد تست اتصال انجام شود
-        handleTestConnection();
-      },
-      onError: err => {
-        toast.danger(
-          getAxiosErrorMessage(
-            err,
-            trans(message('Could not install Telegram-upload .'))
-          ) ?? trans(message('Could not install Telegram-upload .'))
-        );
-      },
-    });
-  };
   return (
     <>
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
-        name="server.storage_telegram_api_id"
-        label={<Trans message="Telegram API ID" />}
+        name="server.storage_telegram_config_path"
+        label={<Trans message="Telegram Config Path" />}
         description={
-          <Trans message="Get this from https://my.telegram.org/apps" />
+          <Trans message="Optional. Absolute path to your telegram-upload config file (.json or .session). If not provided, the default system path will be used." />
         }
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_telegram_api_hash"
-        label={<Trans message="Telegram API Hash" />}
-        description={
-          <Trans message="Get this from https://my.telegram.org/apps" />
-        }
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_telegram_phone"
-        label={<Trans message="Phone Number" />}
-        description={
-          <Trans message="Your Telegram phone number (with country code, e.g., +1234567890)" />
-        }
-        placeholder="+1234567890"
-        required
       />
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
         name="server.storage_telegram_chat_id"
-        label={<Trans message="Default Chat ID" />}
+        label={<Trans message="Default Storage Chat ID" />}
         description={
-          <Trans message="Default chat/channel ID for file uploads. Users can override this. Use @username for public channels or numeric ID for private chats." />
+          <Trans message="The ID of the channel or chat where all files will be stored. Can be 'me' for saved messages." />
         }
         placeholder="@mychannel or -1001234567890"
       />
-          <div className="flex items-center gap-10 mt-10">
+      <div className="flex items-center gap-10 mt-10">
         <Button
           variant="flat"
           color="primary"
           size="xs"
           onClick={handleTestConnection}
-          disabled={testConnection.isPending || installTelegramUpload.isPending}
+          disabled={isTesting}
         >
-          <Trans message="Test Connection" />
+          {isTesting ? <Trans message="Testing..." /> : <Trans message="Test Upload" />}
         </Button>
-        {showInstallButton && (
-          <Button
-            variant="outline"
-            color="primary"
-            size="xs"
-            onClick={handleInstallTelegramUpload}
-            disabled={installTelegramUpload.isPending}
-          >
-            {installTelegramUpload.isPending ? (
-              <Trans message="Installing..." />
-            ) : (
-              <Trans message="Install telegram-upload" />
-            )}
-          </Button>
-        )}
+        {testResult && <p className="text-sm">{testResult}</p>}
       </div>
 
       <div className="mt-20 border-t pt-20">
@@ -743,14 +671,15 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
           >
             <Trans message="Save Token and Set Webhook" />
           </Button>
-          {configureBot.isPending && <ProgressCircle isIndeterminate size="sm" />}
-          {form.watch('server.telegram_webhook_set') && !configureBot.isPending && (
+          {configureBot.isPending ? (
+            <ProgressCircle isIndeterminate size="sm" />
+          ) : form.getValues('server.telegram_webhook_set') ? (
             <div className="flex items-center gap-4 text-positive text-sm">
               <CheckCircleIcon size="sm" />
               <Trans message="Webhook is active" />
             </div>
-          )}
-          {configureBot.isError && !configureBot.isPending && (
+          ) : null}
+          {configureBot.isError && (
             <div className="flex items-center gap-4 text-danger text-sm">
               <ErrorIcon size="sm" />
               <Trans message="Webhook setup failed" />
