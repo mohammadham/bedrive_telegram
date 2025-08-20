@@ -24,8 +24,8 @@ class TelegramStorageDriver
     {
         try {
             $settings = app(Settings::class);
-            $this->botToken = $settings->get('telegram_bot_token');
-            $this->configPath = $settings->get('storage_telegram_config_path');
+            $this->botToken = $settings->get('telegram.telegram_bot_token');
+            $this->configPath = $settings->get('telegram.storage_telegram_config_path');
         } catch (Exception $e) {
             Log::error('Could not load Telegram settings from database: ' . $e->getMessage());
         }
@@ -115,7 +115,7 @@ class TelegramStorageDriver
     public function deleteFile($fileId, $chatId = null): bool
     {
         $token = $this->getBotToken();
-        $chatId = $chatId ?: app(Settings::class)->get('storage_telegram_chat_id', 'me');
+        $chatId = $chatId ?: app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
 
         try {
             $response = Http::post("https://api.telegram.org/bot{$token}/deleteMessage", [
@@ -156,7 +156,7 @@ class TelegramStorageDriver
     public function forwardFile($fileId, $targetChatId): bool
     {
         $token = $this->getBotToken();
-        $sourceChatId = app(Settings::class)->get('storage_telegram_chat_id');
+        $sourceChatId = app(Settings::class)->get('telegram.storage_telegram_chat_id');
 
         if (!$sourceChatId) {
             throw new Exception('Main storage chat ID is not configured.');
@@ -186,7 +186,7 @@ class TelegramStorageDriver
     public function fileExists($fileId, $chatId = null): bool
     {
         $token = $this->getBotToken();
-        $chatId = $chatId ?: app(Settings::class)->get('storage_telegram_chat_id', 'me');
+        $chatId = $chatId ?: app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
 
         try {
             // We can check for existence by trying to forward the message to the same chat.
@@ -270,7 +270,7 @@ class TelegramStorageDriver
         // 2. Try to upload a test file
         $testFile = tempnam(sys_get_temp_dir(), 'telegram_test_');
         file_put_contents($testFile, 'Health check from BeDrive at ' . now());
-        $chatId = app(Settings::class)->get('storage_telegram_chat_id', 'me');
+        $chatId = app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
 
         try {
             $uploadResult = $this->uploadFile($testFile, 'health_check.txt', $chatId);

@@ -52,19 +52,19 @@ class TelegramController extends BaseController
 
             if ($response->successful() && $response->json('ok')) {
                 $this->settings->save([
-                    'telegram_bot_token' => $token,
-                    'telegram_webhook_set' => true,
+                    'telegram.telegram_bot_token' => $token,
+                    'telegram.telegram_webhook_set' => true,
                 ]);
 
                 return response()->json(['success' => true, 'message' => 'Webhook set successfully']);
             } else {
-                $this->settings->save(['telegram_webhook_set' => false]);
+                $this->settings->save(['telegram.telegram_webhook_set' => false]);
                 $description = $response->json('description') ?: 'Could not communicate with Telegram API.';
                 return response()->json(['success' => false, 'message' => $description], 400);
             }
         } catch (\Exception $e) {
             Log::error('Error setting Telegram webhook: ' . $e->getMessage());
-            $this->settings->save(['telegram_webhook_set' => false]);
+            $this->settings->save(['telegram.telegram_webhook_set' => false]);
             return response()->json(['success' => false, 'message' => 'Failed to set webhook', 'error' => $e->getMessage()], 500);
         }
     }

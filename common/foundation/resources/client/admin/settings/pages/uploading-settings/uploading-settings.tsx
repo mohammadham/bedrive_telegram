@@ -61,6 +61,15 @@ function Form({data}: FormProps) {
           blocked_extensions: data.client.uploads.blocked_extensions ?? [],
           s3_direct_upload: data.client.uploads.s3_direct_upload ?? false,
         },
+        telegram: {
+          storage_telegram_chat_id:
+            data.client.telegram?.storage_telegram_chat_id ?? '',
+          storage_telegram_config_path:
+            data.client.telegram?.storage_telegram_config_path ?? '',
+          telegram_bot_token: data.client.telegram?.telegram_bot_token ?? '',
+          telegram_webhook_set:
+            data.client.telegram?.telegram_webhook_set ?? false,
+        },
       },
       server: {
         static_file_delivery: data.server.static_file_delivery ?? '',
@@ -104,12 +113,6 @@ function Form({data}: FormProps) {
           data.server.storage_dropbox_app_secret ?? '',
         storage_dropbox_refresh_token:
           data.server.storage_dropbox_refresh_token ?? '',
-
-        // telegram
-        storage_telegram_api_id: data.server.storage_telegram_api_id ?? '',
-        storage_telegram_api_hash: data.server.storage_telegram_api_hash ?? '',
-        storage_telegram_phone: data.server.storage_telegram_phone ?? '',
-        storage_telegram_chat_id: data.server.storage_telegram_chat_id ?? '',
       },
     },
   });
@@ -573,7 +576,7 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
       apiClient.post('telegram/configure-bot', {token}),
     onSuccess: () => {
       toast('Bot configured successfully');
-      form.setValue('server.telegram_webhook_set', true);
+      form.setValue('client.telegram.telegram_webhook_set', true);
     },
     onError: err => {
       toast.danger(
@@ -590,7 +593,7 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
     setIsTesting(true);
     setTestResult(null);
     testConnection.mutate(undefined, {
-      onSuccess: (data) => {
+      onSuccess: data => {
         const result = data?.data?.result || 'Unknown success state.';
         setTestResult(result);
         toast.positive(result);
@@ -610,7 +613,7 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
-        name="server.storage_telegram_config_path"
+        name="client.telegram.storage_telegram_config_path"
         label={<Trans message="Telegram Config Path" />}
         description={
           <Trans message="Optional. Absolute path to your telegram-upload config file (.json or .session). If not provided, the default system path will be used." />
@@ -619,7 +622,7 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
       <FormTextField
         invalid={isInvalid}
         className="mb-30"
-        name="server.storage_telegram_chat_id"
+        name="client.telegram.storage_telegram_chat_id"
         label={<Trans message="Default Storage Chat ID" />}
         description={
           <Trans message="The ID of the channel or chat where all files will be stored. Can be 'me' for saved messages." />
@@ -634,7 +637,11 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
           onClick={handleTestConnection}
           disabled={isTesting}
         >
-          {isTesting ? <Trans message="Testing..." /> : <Trans message="Test Upload" />}
+          {isTesting ? (
+            <Trans message="Testing..." />
+          ) : (
+            <Trans message="Test Upload" />
+          )}
         </Button>
         {testResult && <p className="text-sm">{testResult}</p>}
       </div>
@@ -647,7 +654,7 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
           <Trans message="Configure a Telegram bot to enable advanced features like reliable file deletion and existence checks." />
         </div>
         <FormTextField
-          name="server.telegram_bot_token"
+          name="client.telegram.telegram_bot_token"
           label={<Trans message="Bot Token" />}
           description={
             <Trans message="Your Telegram bot token from @BotFather." />
@@ -660,7 +667,7 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
             color="primary"
             size="xs"
             onClick={() => {
-              const token = form.getValues('server.telegram_bot_token');
+              const token = form.getValues('client.telegram.telegram_bot_token');
               if (token) {
                 configureBot.mutate(token);
               } else {
@@ -673,7 +680,7 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
           </Button>
           {configureBot.isPending ? (
             <ProgressCircle isIndeterminate size="sm" />
-          ) : form.getValues('server.telegram_webhook_set') ? (
+          ) : form.getValues('client.telegram.telegram_webhook_set') ? (
             <div className="flex items-center gap-4 text-positive text-sm">
               <CheckCircleIcon size="sm" />
               <Trans message="Webhook is active" />

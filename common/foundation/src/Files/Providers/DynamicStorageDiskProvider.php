@@ -29,21 +29,12 @@ class DynamicStorageDiskProvider extends ServiceProvider
 
           // ----- add telegram driver here -----
     Storage::extend('telegram', function ($app, $config) {
-        $telegramConfig = [
-            'api_id'  => $config['api_id'] ?? env('TELEGRAM_API_ID'),
-            'api_hash'=> $config['api_hash'] ?? env('TELEGRAM_API_HASH'),
-            'phone'   => $config['phone'] ?? env('TELEGRAM_PHONE'),
-        ];
         $chatId = $config['chat_id'] ?? env('TELEGRAM_CHAT_ID');
 
-        $driver  = new \App\Services\Storage\TelegramStorageDriver($telegramConfig);
+        $driver  = new \App\Services\Storage\TelegramStorageDriver();
         $adapter = new \App\Services\Storage\TelegramFilesystemAdapter($driver, $chatId);
 
-        return new \Illuminate\Filesystem\FilesystemAdapter(
-            new \League\Flysystem\Filesystem($adapter, $config),
-            $adapter,
-            $config
-        );
+        return new \League\Flysystem\Filesystem($adapter, $config);
     });
     }
 
@@ -52,7 +43,7 @@ class DynamicStorageDiskProvider extends ServiceProvider
         //
     }
 
-    private function resolveDisk(string $type, array $initialConfig): Filesystem
+    private function resolveDisk(string $type, array $initialConfig): \League\Flysystem\Filesystem
     {
         $driverName = config("common.site.{$type}_disk_driver") ?? 'local';
         $config = array_merge(
@@ -82,6 +73,6 @@ class DynamicStorageDiskProvider extends ServiceProvider
         $dynamicConfigKey = "{$type}_{$driverName}";
         Config::set("filesystems.disks.{$dynamicConfigKey}", $config);
 
-        return Storage::disk($dynamicConfigKey);
+        return Storage::build($dynamicConfigKey);
     }
 }
