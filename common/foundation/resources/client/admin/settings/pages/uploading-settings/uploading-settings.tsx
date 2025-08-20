@@ -561,9 +561,16 @@ function useInstallTelegramUpload() {
     },
   });
 }
+interface TestResult {
+  [key: string]: {
+    success: boolean;
+    message: string;
+  };
+}
+
 function useTestTelegramConnection() {
   return useMutation({
-    mutationFn: () => apiClient.post('telegram/test'),
+    mutationFn: () => apiClient.post<{result: TestResult}>('telegram/test'),
   });
 }
 function TelegramForm({isInvalid}: CredentialFormProps) {
@@ -586,22 +593,31 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
     },
   });
 
-  const [testResult, setTestResult] = React.useState<string | null>(null);
+  const [testResult, setTestResult] = React.useState<TestResult | null>(null);
   const [isTesting, setIsTesting] = React.useState(false);
 
   const handleTestConnection = () => {
     setIsTesting(true);
     setTestResult(null);
     testConnection.mutate(undefined, {
-      onSuccess: data => {
-        const result = data?.data?.result || 'Unknown success state.';
-        setTestResult(result);
-        toast.positive(result);
+      onSuccess: response => {
+        setTestResult(response.data.result);
         setIsTesting(false);
+        const isSuccess = Object.values(response.data.result).every(
+          r => r.success,
+        );
+        if (isSuccess) {
+          toast.positive('Telegram connection successful!');
+        } else {
+          toast.danger('Telegram connection failed. See details.');
+        }
       },
       onError: err => {
-        const result = getAxiosErrorMessage(err) || 'Connection failed.';
-        setTestResult(result);
+        const result =
+          getAxiosErrorMessage(err) || 'Connection failed with an unknown error.';
+        setTestResult({
+          package_check: {success: false, message: result},
+        });
         toast.danger(result);
         setIsTesting(false);
       },
@@ -629,7 +645,7 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
         }
         placeholder="@mychannel or -1001234567890"
       />
-      <div className="flex items-center gap-10 mt-10">
+      <div className="mt-10">
         <Button
           variant="flat"
           color="primary"
@@ -643,7 +659,20 @@ function TelegramForm({isInvalid}: CredentialFormProps) {
             <Trans message="Test Upload" />
           )}
         </Button>
-        {testResult && <p className="text-sm">{testResult}</p>}
+        {testResult && (
+          <div className="text-sm mt-10 space-y-4 rounded border p-10">
+            {Object.entries(testResult).map(([key, result]) => (
+              <div key={key} className="flex items-center gap-8">
+                {result.success ? (
+                  <CheckCircleIcon size="sm" className="text-positive" />
+                ) : (
+                  <ErrorIcon size="sm" className="text-danger" />
+                )}
+                <span>{result.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-20 border-t pt-20">

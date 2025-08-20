@@ -25,10 +25,10 @@ class TelegramController extends BaseController
         try {
             $driver = new TelegramStorageDriver();
             $result = $driver->runHealthCheck();
-            return $this->success(['result' => $result]);
+            return response()->json(['result' => $result]);
         } catch (\Exception $e) {
             Log::error('Error testing Telegram connection: ' . $e->getMessage());
-            return $this->error('Connection test failed: ' . $e->getMessage());
+            return response()->json(['result' => ['package_check' => ['success' => false, 'message' => 'A critical error occurred: ' . $e->getMessage()]]], 500);
         }
     }
 

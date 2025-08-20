@@ -265,12 +265,21 @@ class TelegramStorageDriver
     /**
      * Get configuration status
      */
-    public function runHealthCheck(): string
+    public function runHealthCheck(): array
     {
+        $results = [];
+
         // 1. Check if telegram-upload is installed
-        $result = Process::run('which telegram-upload');
-        if (!$result->successful()) {
-            return 'The "telegram-upload" package is not installed on the server or is not in the system\'s PATH.';
+        $packageCheck = Process::run('which telegram-upload');
+        $results['package_check'] = [
+            'success' => $packageCheck->successful(),
+            'message' => $packageCheck->successful()
+                ? 'The "telegram-upload" package is installed.'
+                : 'The "telegram-upload" package is not installed on the server or is not in the system\'s PATH.',
+        ];
+
+        if (!$packageCheck->successful()) {
+            return $results;
         }
 
         // 2. Try to upload a test file
@@ -280,21 +289,36 @@ class TelegramStorageDriver
 
         try {
             $uploadResult = $this->uploadFile($testFile, 'health_check.txt', $chatId);
-            unlink($testFile);
+            $results['upload_check'] = [
+                'success' => true,
+                'message' => 'Test file uploaded successfully.',
+            ];
 
-            if ($uploadResult['success']) {
-                // 3. Try to delete the test file
+            // 3. Try to delete the test file
+            try {
                 $this->deleteFile($uploadResult['file_id'], $chatId);
-                return 'Connection successful. A test file was uploaded and deleted.';
-            } else {
-                 return 'Could not upload a test file. Check your config file path and permissions.';
+                $results['delete_check'] = [
+                    'success' => true,
+                    'message' => 'Test file deleted successfully.',
+                ];
+            } catch (Exception $e) {
+                $results['delete_check'] = [
+                    'success' => false,
+                    'message' => 'Failed to delete test file: ' . $e->getMessage(),
+                ];
             }
         } catch (Exception $e) {
+            $results['upload_check'] = [
+                'success' => false,
+                'message' => 'Failed to upload test file: ' . $e->getMessage(),
+            ];
+        } finally {
             if (file_exists($testFile)) {
                 unlink($testFile);
             }
-            return "An error occurred during the test upload: " . $e->getMessage();
         }
+
+        return $results;
     }
 }
 
