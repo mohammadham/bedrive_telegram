@@ -419,7 +419,12 @@ class TelegramStorageDriver
         $chatId = app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
 Log::info('Using chat ID: ' . $chatId);
         try {
-            $uploadResult = $this->uploadFile($testFile, 'health_check.txt', $chatId);
+                      $uploadOptions = [
+                'to' => $chatId,
+                'caption' => 'health_check.txt',
+                // سایر گزینه‌ها را می‌توانید بر اساس نیاز اضافه کنید
+            ];
+            $uploadResult = $this->uploadFile($filePath, $uploadOptions);
 
             $results['upload_check'] = [
                 'success' => true,
