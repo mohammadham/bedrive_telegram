@@ -44,6 +44,7 @@ class TelegramStorageDriver
     public function uploadFile($filePath, $destination = null, $chatId = null, $forwardToChatId = null)
     {
         $caption = $destination ?: basename($filePath);
+        Log::info('Uploading file to Telegram: ' . $filePath . ' with caption: ' . $caption);
         $args = [
             '--to', $chatId ?: 'me',
             '--caption', $caption,
@@ -56,7 +57,7 @@ class TelegramStorageDriver
         }
 
         $args[] = $filePath;
-
+Log::info('Running command: ' . implode(' ', $this->buildCommand('telegram-upload', $args)));
         $command = $this->buildCommand('telegram-upload', $args);
         $result = Process::run($command);
 
@@ -286,10 +287,10 @@ class TelegramStorageDriver
         $testFile = tempnam(sys_get_temp_dir(), 'telegram_test_');
         file_put_contents($testFile, 'Health check from BeDrive at ' . now());
         $chatId = app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
-dump($chatId);
-        
+Log::info('Using chat ID: ' . $chatId);
         try {
             $uploadResult = $this->uploadFile($testFile, 'health_check.txt', $chatId);
+
             $results['upload_check'] = [
                 'success' => true,
                 'message' => 'Test file uploaded successfully.',
