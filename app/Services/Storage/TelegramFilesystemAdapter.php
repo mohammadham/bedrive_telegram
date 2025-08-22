@@ -335,4 +335,3 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
     }
 }
 
- 
