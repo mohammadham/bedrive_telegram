@@ -20,10 +20,14 @@ class TelegramController extends BaseController
         $this->settings = $settings;
     }
 
-    public function test(): JsonResponse
+    public function test(Request $request): JsonResponse
     {
         try {
-            $driver = new TelegramStorageDriver();
+            $tempSettings = [
+                'config_path' => $request->input('storage_telegram_config_path'),
+                'chat_id' => $request->input('storage_telegram_chat_id'),
+            ];
+            $driver = new TelegramStorageDriver($tempSettings);
             $result = $driver->runHealthCheck();
             return response()->json(['result' => $result]);
         } catch (\Exception $e) {

@@ -1,728 +1,473 @@
-import {
-  AdminSettingsForm,
-  AdminSettingsLayout,
-} from '@common/admin/settings/form/admin-settings-form';
-import {useTrans} from '@ui/i18n/use-trans';
-import {Trans} from '@ui/i18n/trans';
-import {SettingsErrorGroup} from '@common/admin/settings/form/settings-error-group';
-import {FormRadioGroup} from '@ui/forms/radio-group/radio-group';
-import {FormRadio} from '@ui/forms/radio-group/radio';
-import {FormFileSizeField} from '@common/uploads/components/file-size-field';
-import {SettingsSeparator} from '@common/admin/settings/form/settings-separator';
-import {JsonChipField} from '@common/admin/settings/form/json-chip-field';
-import {message} from '@ui/i18n/message';
-import {useMaxServerUploadSize} from '@common/admin/settings/pages/uploading-settings/max-server-upload-size';
-import {SectionHelper} from '@common/ui/other/section-helper';
-import {useForm, useFormContext} from 'react-hook-form';
-import {AdminSettings} from '@common/admin/settings/admin-settings';
-import {FormSelect} from '@ui/forms/select/select';
-import {DropboxForm} from '@common/admin/settings/pages/uploading-settings/dropbox-form/dropbox-form';
-import React, {Fragment} from 'react';
-import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
-import {useUploadS3Cors} from '@common/admin/settings/pages/uploading-settings/use-upload-s3-cors';
-import {useAdminSettings} from '@common/admin/settings/requests/use-admin-settings';
-import {FormSwitch} from '@ui/forms/toggle/switch';
-import {Button} from '@ui/buttons/button';
-import {Item} from '@ui/forms/listbox/item';
-import {useMutation} from '@tanstack/react-query';
-import {apiClient} from '@common/http/query-client';
-import {toast} from '@ui/toast/toast';
-import {getAxiosErrorMessage} from '@common/http/get-axios-error-message';
-import {ProgressCircle} from '@ui/progress/progress-circle';
-import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
-import {ErrorIcon} from '@ui/icons/material/Error';
+<?php
 
-export function UploadingSettings() {
-  return (
-    <AdminSettingsLayout
-      title={<Trans message="Uploading" />}
-      description={
-        <Trans message="Configure size and type of files that users are able to upload. This will affect all uploads across the site." />
-      }
-    >
-      {data => <Form data={data} />}
-    </AdminSettingsLayout>
-  );
-}
+namespace App\Services\Storage;
 
-interface FormProps {
-  data: AdminSettings;
-}
-function Form({data}: FormProps) {
-  const {trans} = useTrans();
-  const form = useForm<AdminSettings>({
-    defaultValues: {
-      client: {
-        uploads: {
-          max_size: data.client.uploads.max_size ?? 0,
-          chunk_size: data.client.uploads.chunk_size ?? 0,
-          available_space: data.client.uploads.available_space ?? 0,
-          allowed_extensions: data.client.uploads.allowed_extensions ?? [],
-          blocked_extensions: data.client.uploads.blocked_extensions ?? [],
-          s3_direct_upload: data.client.uploads.s3_direct_upload ?? false,
-        },
-        telegram: {
-          storage_telegram_chat_id:
-            data.client.telegram?.storage_telegram_chat_id ?? '',
-          storage_telegram_config_path:
-            data.client.telegram?.storage_telegram_config_path ?? '',
-          telegram_bot_token: data.client.telegram?.telegram_bot_token ?? '',
-          telegram_webhook_set:
-            data.client.telegram?.telegram_webhook_set ?? false,
-        },
-      },
-      server: {
-        static_file_delivery: data.server.static_file_delivery ?? '',
-        uploads_disk_driver: data.server.uploads_disk_driver ?? 'local',
-        public_disk_driver: data.server.public_disk_driver ?? 'local',
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
+use Exception;
+use Common\Settings\Settings;
+use Illuminate\Support\Facades\Http;
 
-        // s3
-        storage_s3_key: data.server.storage_s3_key ?? '',
-        storage_s3_secret: data.server.storage_s3_secret ?? '',
-        storage_s3_region: data.server.storage_s3_region ?? '',
-        storage_s3_bucket: data.server.storage_s3_bucket ?? '',
-        storage_s3_endpoint: data.server.storage_s3_endpoint ?? '',
+class TelegramStorageDriver
+{
+    protected $botToken;
+    protected $configPath;
+    protected $chatId;
 
-        // digitalocean spaces
-        storage_digitalocean_key: data.server.storage_digitalocean_key ?? '',
-        storage_digitalocean_secret:
-          data.server.storage_digitalocean_secret ?? '',
-        storage_digitalocean_region:
-          data.server.storage_digitalocean_region ?? '',
-        storage_digitalocean_bucket:
-          data.server.storage_digitalocean_bucket ?? '',
+    public function __construct(array $tempSettings = [])
+    {
+        if (!empty($tempSettings)) {
+            $this->botToken = $tempSettings['bot_token'] ?? null;
+            $this->configPath = $tempSettings['config_path'] ?? null;
+            $this->chatId = $tempSettings['chat_id'] ?? null;
+        }
+        $this->loadSettingsFromDatabase();
+    }
 
-        // backblaze
-        storage_backblaze_key: data.server.storage_backblaze_key ?? '',
-        storage_backblaze_secret: data.server.storage_backblaze_secret ?? '',
-        storage_backblaze_region: data.server.storage_backblaze_region ?? '',
-        storage_backblaze_bucket: data.server.storage_backblaze_bucket ?? '',
-
-        // ftp
-        storage_ftp_host: data.server.storage_ftp_host ?? '',
-        storage_ftp_username: data.server.storage_ftp_username ?? '',
-        storage_ftp_password: data.server.storage_ftp_password ?? '',
-        storage_ftp_root: data.server.storage_ftp_root ?? '',
-        storage_ftp_port: data.server.storage_ftp_port ?? '21',
-        storage_ftp_passive: data.server.storage_ftp_passive ?? false,
-        storage_ftp_ssl: data.server.storage_ftp_ssl ?? false,
-
-        // dropbox
-        storage_dropbox_app_key: data.server.storage_dropbox_app_key ?? '',
-        storage_dropbox_app_secret:
-          data.server.storage_dropbox_app_secret ?? '',
-        storage_dropbox_refresh_token:
-          data.server.storage_dropbox_refresh_token ?? '',
-      },
-    },
-  });
-
-  return (
-    <AdminSettingsForm form={form}>
-      <PrivateUploadSection />
-      <PublicUploadSection />
-      <CredentialsSection />
-      <SettingsErrorGroup name="static_delivery_group">
-        {isInvalid => (
-          <FormRadioGroup
-            invalid={isInvalid}
-            size="sm"
-            name="server.static_file_delivery"
-            orientation="vertical"
-            label={<Trans message="File delivery optimization" />}
-            description={
-              <Trans message="Both X-Sendfile and X-Accel need to be enabled on the server first. When enabled, it will reduce server memory and CPU usage when previewing or downloading files, especially for large files." />
+    protected function loadSettingsFromDatabase()
+    {
+        try {
+            $settings = app(Settings::class);
+            if (empty($this->botToken)) {
+                $this->botToken = $settings->get('telegram.telegram_bot_token');
             }
-          >
-            <FormRadio value="">
-              <Trans message="None" />
-            </FormRadio>
-            <FormRadio value="xsendfile">
-              <Trans message="X-Sendfile (Apache)" />
-            </FormRadio>
-            <FormRadio value="xaccel">
-              <Trans message="X-Accel (Nginx)" />
-            </FormRadio>
-          </FormRadioGroup>
-        )}
-      </SettingsErrorGroup>
-      <FormFileSizeField
-        className="mb-30"
-        name="client.uploads.chunk_size"
-        min={1}
-        label={<Trans message="Chunk size" />}
-        placeholder="Infinity"
-        description={
-          <Trans message="Size (in bytes) for each file chunk. It should only be changed if there is a maximum upload size on your server or proxy (for example cloudflare). If chunk size is larger then limit on the server, uploads will fail." />
+            if (empty($this->configPath)) {
+                $this->configPath = $settings->get('telegram.storage_telegram_config_path');
+            }
+            if (empty($this->chatId)) {
+                $this->chatId = $settings->get('telegram.storage_telegram_chat_id', 'me');
+            }
+        } catch (Exception $e) {
+            Log::error('Could not load Telegram settings from database: ' . $e->getMessage());
         }
-      />
-      <MaxUploadSizeSection />
-      <SettingsSeparator />
-      <FormFileSizeField
-        min={1}
-        name="client.uploads.max_size"
-        className="mb-30"
-        label={<Trans message="Maximum file size" />}
-        description={
-          <Trans message="Maximum size (in bytes) for a single file user can upload." />
+    }
+
+    protected function buildCommand(string $baseCommand, array $args = []): array
+    {
+        $command = [$baseCommand];
+        if ($this->configPath && file_exists($this->configPath)) {
+            $command[] = '--config';
+            $command[] = $this->configPath;
         }
-      />
-      <FormFileSizeField
-        min={1}
-        name="client.uploads.available_space"
-        className="mb-30"
-        label={<Trans message="Available space" />}
-        description={
-          <Trans message="Disk space (in bytes) each user uploads are allowed to take up. This can be overridden per user." />
-        }
-      />
-      <JsonChipField
-        name="client.uploads.allowed_extensions"
-        className="mb-30"
-        label={<Trans message="Allowed extensions" />}
-        placeholder={trans(message('Add extension...'))}
-        description={
-          <Trans message="List of allowed file types (jpg, mp3, pdf etc.). Leave empty to allow all file types." />
-        }
-      />
-      <JsonChipField
-        name="client.uploads.blocked_extensions"
-        label={<Trans message="Blocked extensions" />}
-        placeholder={trans(message('Add extension...'))}
-        description={
-          <Trans message="Prevent uploading of these file types, even if they are allowed above." />
-        }
-      />
-    </AdminSettingsForm>
-  );
-}
+        return array_merge($command, $args);
+    }
 
-function MaxUploadSizeSection() {
-  const {data} = useMaxServerUploadSize();
-  return (
-    <SectionHelper
-      color="warning"
-      description={
-        <Trans
-          message="Maximum upload size on your server currently is set to <b>:size</b>"
-          values={{size: data?.maxSize, b: chunks => <b>{chunks}</b>}}
-        />
-      }
-    />
-  );
-}
 
-function PrivateUploadSection() {
-  const {watch, clearErrors} = useFormContext<AdminSettings>();
-  const isEnabled = watch('server.uploads_disk_driver');
-
-  if (!isEnabled) return null;
-
-  return (
-    <FormSelect
-      className="mb-30"
-      selectionMode="single"
-      name="server.uploads_disk_driver"
-      label={<Trans message="User Uploads Storage Method" />}
-      description={
-        <Trans message="Where should user private file uploads be stored." />
-      }
-      onSelectionChange={() => {
-        clearErrors();
-      }}
-    >
-      <Item value="local">
-        <Trans message="Local Disk (Default)" />
-      </Item>
-      <Item value="ftp">FTP</Item>
-      <Item value="digitalocean_s3">DigitalOcean Spaces</Item>
-      <Item value="backblaze_s3">Backblaze</Item>
-      <Item value="s3">Amazon S3 (Or compatible service)</Item>
-      <Item value="dropbox">Dropbox</Item>
-      <Item value="telegram">Telegram</Item>
-      <Item value="rackspace">Rackspace</Item>
-    </FormSelect>
-  );
-}
-
-function PublicUploadSection() {
-  const {watch, clearErrors} = useFormContext<AdminSettings>();
-  const isEnabled = watch('server.public_disk_driver');
-
-  if (!isEnabled) return null;
-
-  return (
-    <FormSelect
-      label={<Trans message="Public Uploads Storage Method" />}
-      selectionMode="single"
-      name="server.public_disk_driver"
-      description={
-        <Trans message="Where should user public uploads (like avatars) be stored." />
-      }
-      onSelectionChange={() => {
-        clearErrors();
-      }}
-    >
-      <Item value="local">
-        <Trans message="Local Disk (Default)" />
-      </Item>
-      <Item value="s3">Amazon S3</Item>
-      <Item value="ftp">FTP</Item>
-      <Item value="digitalocean_s3">DigitalOcean Spaces</Item>
-      <Item value="backblaze_s3">Backblaze</Item>
-      <Item value="telegram">Telegram</Item>
-    </FormSelect>
-  );
-}
-
-function CredentialsSection() {
-  const {watch} = useFormContext<AdminSettings>();
-  const drives = [
-    watch('server.uploads_disk_driver'),
-    watch('server.public_disk_driver'),
-  ];
-
-  if (drives[0] === 'local' && drives[1] === 'local') {
-    return null;
-  }
-
-  return (
-    <SettingsErrorGroup separatorBottom={false} name="storage_group">
-      {isInvalid => {
-        if (drives.includes('s3')) {
-          return <S3Form isInvalid={isInvalid} />;
-        }
-        if (drives.includes('ftp')) {
-          return <FtpForm isInvalid={isInvalid} />;
-        }
-        if (drives.includes('dropbox')) {
-          return <DropboxForm isInvalid={isInvalid} />;
-        }
-        if (drives.includes('telegram')) {
-          return <TelegramForm isInvalid={isInvalid} />;
-        }
-        if (drives.includes('digitalocean_s3')) {
-          return <DigitalOceanForm isInvalid={isInvalid} />;
-        }
-        if (drives.includes('backblaze_s3')) {
-          return <BackblazeForm isInvalid={isInvalid} />;
-        }
-      }}
-    </SettingsErrorGroup>
-  );
-}
-
-export interface CredentialFormProps {
-  isInvalid: boolean;
-}
-function S3Form({isInvalid}: CredentialFormProps) {
-  return (
-    <Fragment>
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_s3_key"
-        label={<Trans message="Amazon S3 key" />}
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_s3_secret"
-        label={<Trans message="Amazon S3 secret" />}
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_s3_region"
-        label={<Trans message="Amazon S3 region" />}
-        placeholder="us-east-1"
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_s3_bucket"
-        label={<Trans message="Amazon S3 bucket" />}
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        name="server.storage_s3_endpoint"
-        label={<Trans message="Amazon S3 endpoint" />}
-        description={
-          <Trans message="Only change endpoint if you are using another S3 compatible storage service." />
-        }
-      />
-      <S3DirectUploadField invalid={isInvalid} />
-    </Fragment>
-  );
-}
-
-function DigitalOceanForm({isInvalid}: CredentialFormProps) {
-  return (
-    <Fragment>
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_digitalocean_key"
-        label={<Trans message="DigitalOcean key" />}
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_digitalocean_secret"
-        label={<Trans message="DigitalOcean secret" />}
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_digitalocean_region"
-        label={<Trans message="DigitalOcean region" />}
-        pattern="[a-z0-9\-]+"
-        placeholder="us-east-1"
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_digitalocean_bucket"
-        label={<Trans message="DigitalOcean bucket" />}
-        required
-      />
-      <S3DirectUploadField invalid={isInvalid} />
-    </Fragment>
-  );
-}
-
-function BackblazeForm({isInvalid}: CredentialFormProps) {
-  return (
-    <Fragment>
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_backblaze_key"
-        label={<Trans message="Backblaze KeyID" />}
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_backblaze_secret"
-        label={<Trans message="Backblaze applicationKey" />}
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_backblaze_region"
-        label={<Trans message="Backblaze Region" />}
-        pattern="[a-z0-9\-]+"
-        placeholder="us-west-002"
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_backblaze_bucket"
-        label={<Trans message="Backblaze bucket name" />}
-        required
-      />
-      <S3DirectUploadField invalid={isInvalid} />
-    </Fragment>
-  );
-}
-
-interface S3DirectUploadFieldProps {
-  invalid: boolean;
-}
-function S3DirectUploadField({invalid}: S3DirectUploadFieldProps) {
-  const uploadCors = useUploadS3Cors();
-  const {data: defaultSettings} = useAdminSettings();
-
-  const s3DriverEnabled =
-    defaultSettings?.server.uploads_disk_driver?.endsWith('s3') ||
-    defaultSettings?.server.public_disk_driver?.endsWith('s3');
-
-  return (
-    <Fragment>
-      <FormSwitch
-        className="mt-30"
-        invalid={invalid}
-        name="client.uploads.s3_direct_upload"
-        description={
-          <div>
-            <p>
-              <Trans message="Upload files directly from the browser to s3 without going through the server. It will save on server bandwidth and should result in faster upload times. This should be enabled, unless storage provider does not support multipart uploads." />
-            </p>
-            <p className="mt-10">
-              <Trans message="If s3 provider is not configured to allow uploads from browser, this can be done automatically via CORS button below, when valid credentials are saved." />
-            </p>
-          </div>
-        }
-      >
-        <Trans message="Direct upload" />
-      </FormSwitch>
-      <Button
-        variant="flat"
-        color="primary"
-        size="xs"
-        className="mt-20"
-        onClick={() => {
-          uploadCors.mutate();
-        }}
-        disabled={!s3DriverEnabled || uploadCors.isPending}
-      >
-        <Trans message="Configure CORS" />
-      </Button>
-    </Fragment>
-  );
-}
-
-function FtpForm({isInvalid}: CredentialFormProps) {
-  return (
-    <>
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_ftp_host"
-        label={<Trans message="FTP hostname" />}
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_ftp_username"
-        label={<Trans message="FTP username" />}
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_ftp_password"
-        label={<Trans message="FTP password" />}
-        type="password"
-        required
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_ftp_root"
-        label={<Trans message="FTP directory" />}
-        placeholder="/"
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="server.storage_ftp_port"
-        label={<Trans message="FTP port" />}
-        type="number"
-        min={0}
-        placeholder="21"
-      />
-      <FormSwitch
-        invalid={isInvalid}
-        name="server.storage_ftp_passive"
-        className="mb-30"
-      >
-        <Trans message="Passive" />
-      </FormSwitch>
-      <FormSwitch invalid={isInvalid} name="server.storage_ftp_ssl">
-        <Trans message="SSL" />
-      </FormSwitch>
-    </>
-  );
-}
-function useInstallTelegramUpload() {
-  const {trans} = useTrans();
-  return useMutation({
-    mutationFn: () => apiClient.post('telegram/install'),
-    onSuccess: (data) => {
-      toast.positive(
-        trans(
-          message(
-            data?.data?.message ||
-              'telegram-upload package installed successfully.'
-          )
-        )
-      );
-    },
-    onError: err => {
-      toast.danger(
-        trans(
-          message(
-            err?.message ||
-              'Failed to install telegram-upload package.'
-          )
-        )
-      );
-    },
-  });
-}
-interface TestResult {
-  [key: string]: {
-    success: boolean;
-    message: string;
-  };
-}
-
-function useTestTelegramConnection() {
-  return useMutation({
-    mutationFn: () => apiClient.post<{result: TestResult}>('telegram/test'),
-  });
-}
-function TelegramForm({isInvalid}: CredentialFormProps) {
-  const {trans} = useTrans();
-  const form = useFormContext<AdminSettings>();
-  const testConnection = useTestTelegramConnection();
-  const installTelegramUpload = useInstallTelegramUpload();
-  const configureBot = useMutation({
-    mutationFn: (token: string) =>
-      apiClient.post('telegram/configure-bot', {token}),
-    onSuccess: () => {
-      toast('Bot configured successfully');
-      form.setValue('client.telegram.telegram_webhook_set', true);
-    },
-    onError: err => {
-      toast.danger(
-        getAxiosErrorMessage(err) ||
-          trans(message('Could not configure bot')),
-      );
-    },
-  });
-
-  const [testResult, setTestResult] = React.useState<TestResult | null>(null);
-  const [isTesting, setIsTesting] = React.useState(false);
-
-  const handleTestConnection = () => {
-    setIsTesting(true);
-    setTestResult(null);
-    testConnection.mutate(undefined, {
-      onSuccess: response => {
-        setTestResult(response.data.result);
-        setIsTesting(false);
-        const isSuccess = Object.values(response.data.result).every(
-          r => r.success,
-        );
-        if (isSuccess) {
-          toast.positive('Telegram connection successful!');
+    /**
+     * Upload a file to Telegram using telegram-upload.
+     * Supports all documented options.
+     *
+     * @param string $filePath
+     * @param array $options
+     *   Supported keys:
+     *     - to: destination chat/user (default: 'me')
+     *     - caption: file caption
+     *     - delete_on_success: bool
+     *     - print_file_id: bool
+     *     - force_file: bool
+     *     - forward: array|string (can be multiple)
+     *     - directories: 'fail'|'recursive'
+     *     - large_files: 'fail'|'split'
+     *     - no_thumbnail: bool
+     *     - thumbnail_file: string
+     *     - proxy: string
+     *     - album: bool
+     *     - interactive: bool
+     *     - sort: bool
+     * @return array
+     * @throws Exception
+     */
+    public function uploadFile($filePath, $options = [])
+    {
+        $args = [];
+        // --to
+        $args[] = '--to';
+        $args[] = $options['to'] ?? 'me';
+        // --caption
+        if (isset($options['caption'])) {
+            $args[] = '--caption';
+            $args[] = $options['caption'];
         } else {
-          toast.danger('Telegram connection failed. See details.');
+            $args[] = '--caption';
+            $args[] = basename($filePath);
         }
-      },
-      onError: err => {
-        const result =
-          getAxiosErrorMessage(err) || 'Connection failed with an unknown error.';
-        setTestResult({
-          package_check: {success: false, message: result},
-        });
-        toast.danger(result);
-        setIsTesting(false);
-      },
-    });
-  };
+        // --delete-on-success
+        if (!empty($options['delete_on_success'])) {
+            $args[] = '--delete-on-success';
+        }
+        // --print-file-id
+        if (!isset($options['print_file_id']) || $options['print_file_id']) {
+            $args[] = '--print-file-id';
+        }
+        // --force-file
+        if (!empty($options['force_file'])) {
+            $args[] = '--force-file';
+        }
+        // --forward (can be array or string)
+        if (!empty($options['forward'])) {
+            $forwards = is_array($options['forward']) ? $options['forward'] : [$options['forward']];
+            foreach ($forwards as $fwd) {
+                $args[] = '--forward';
+                $args[] = $fwd;
+            }
+        }
+        // --directories
+        if (!empty($options['directories'])) {
+            $args[] = '--directories';
+            $args[] = $options['directories'];
+        }
+        // --large-files
+        if (!empty($options['large_files'])) {
+            $args[] = '--large-files';
+            $args[] = $options['large_files'];
+        }
+        // --no-thumbnail
+        if (!empty($options['no_thumbnail'])) {
+            $args[] = '--no-thumbnail';
+        }
+        // --thumbnail-file
+        if (!empty($options['thumbnail_file'])) {
+            $args[] = '--thumbnail-file';
+            $args[] = $options['thumbnail_file'];
+        }
+        // --proxy
+        if (!empty($options['proxy'])) {
+            $args[] = '--proxy';
+            $args[] = $options['proxy'];
+        }
+        // --album
+        if (!empty($options['album'])) {
+            $args[] = '--album';
+        }
+        // --interactive
+        if (!empty($options['interactive'])) {
+            $args[] = '--interactive';
+        }
+        // --sort
+        if (!empty($options['sort'])) {
+            $args[] = '--sort';
+        }
+        // فایل
+        $args[] = $filePath;
 
-  return (
-    <>
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="client.telegram.storage_telegram_config_path"
-        label={<Trans message="Telegram Config Path" />}
-        description={
-          <Trans message="Optional. Absolute path to your telegram-upload config file (.json or .session). If not provided, the default system path will be used." />
-        }
-      />
-      <FormTextField
-        invalid={isInvalid}
-        className="mb-30"
-        name="client.telegram.storage_telegram_chat_id"
-        label={<Trans message="Default Storage Chat ID" />}
-        description={
-          <Trans message="The ID of the channel or chat where all files will be stored. Can be 'me' for saved messages." />
-        }
-        placeholder="@mychannel or -1001234567890"
-      />
-      <div className="mt-10">
-        <Button
-          variant="flat"
-          color="primary"
-          size="xs"
-          onClick={handleTestConnection}
-          disabled={isTesting}
-        >
-          {isTesting ? (
-            <Trans message="Testing..." />
-          ) : (
-            <Trans message="Test Upload" />
-          )}
-        </Button>
-        {testResult && (
-          <div className="text-sm mt-10 space-y-4 rounded border p-10">
-            {Object.entries(testResult).map(([key, result]) => (
-              <div key={key} className="flex items-center gap-8">
-                {result.success ? (
-                  <CheckCircleIcon size="sm" className="text-positive" />
-                ) : (
-                  <ErrorIcon size="sm" className="text-danger" />
-                )}
-                <span>{result.message}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+        Log::info('Running command: ' . implode(' ', $this->buildCommand('telegram-upload', $args)));
+        $command = $this->buildCommand('telegram-upload', $args);
+        $result = Process::run($command);
 
-      <div className="mt-20 border-t pt-20">
-        <h3 className="text-lg font-semibold mb-4">
-          <Trans message="Bot Settings" />
-        </h3>
-        <div className="mb-20 text-sm">
-          <Trans message="Configure a Telegram bot to enable advanced features like reliable file deletion and existence checks." />
-        </div>
-        <FormTextField
-          name="client.telegram.telegram_bot_token"
-          label={<Trans message="Bot Token" />}
-          description={
-            <Trans message="Your Telegram bot token from @BotFather." />
-          }
-          className="mb-20"
-        />
-        <div className="flex items-center gap-10">
-          <Button
-            variant="flat"
-            color="primary"
-            size="xs"
-            onClick={() => {
-              const token = form.getValues('client.telegram.telegram_bot_token');
-              if (token) {
-                configureBot.mutate(token);
-              } else {
-                toast.danger('Please enter a bot token first.');
-              }
-            }}
-            disabled={configureBot.isPending}
-          >
-            <Trans message="Save Token and Set Webhook" />
-          </Button>
-          {configureBot.isPending ? (
-            <ProgressCircle isIndeterminate size="sm" />
-          ) : form.getValues('client.telegram.telegram_webhook_set') ? (
-            <div className="flex items-center gap-4 text-positive text-sm">
-              <CheckCircleIcon size="sm" />
-              <Trans message="Webhook is active" />
-            </div>
-          ) : null}
-          {configureBot.isError && (
-            <div className="flex items-center gap-4 text-danger text-sm">
-              <ErrorIcon size="sm" />
-              <Trans message="Webhook setup failed" />
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
+        if ($result->successful()) {
+            $fileId = trim($result->output());
+            Log::info("File uploaded to Telegram: $filePath with ID: $fileId");
+            return [
+                'success' => true,
+                'file_id' => $fileId,
+                'path' => $options['caption'] ?? basename($filePath),
+            ];
+        } else {
+            $error = $result->errorOutput();
+            Log::error("Failed to upload file to Telegram: $error");
+            $parsedError = $this->parseErrorMessage($error);
+            throw new Exception("Upload failed: $parsedError");
+        }
+    }
+
+
+    /**
+     * Download files from Telegram using telegram-download.
+     * Supports all documented options.
+     *
+     * @param string $destination Directory to save downloaded files
+     * @param array $options
+     *   Supported keys:
+     *     - from: chat/user to download from (default: 'me')
+     *     - delete_on_success: bool
+     *     - proxy: string
+     *     - split_files: 'keep'|'join'
+     *     - interactive: bool
+     * @return array List of downloaded files (absolute paths)
+     * @throws Exception
+     */
+    public function downloadFile($destination, $options = [])
+    {
+        $tempDir = sys_get_temp_dir() . '/telegram_downloads_' . Str::random(8);
+        if (!mkdir($tempDir, 0777, true) && !is_dir($tempDir)) {
+            throw new \RuntimeException("Could not create temp directory: $tempDir");
+        }
+
+        $args = [];
+        // --from
+        $args[] = '--from';
+        $args[] = $options['from'] ?? 'me';
+        // --delete-on-success
+        if (!empty($options['delete_on_success'])) {
+            $args[] = '--delete-on-success';
+        }
+        // --proxy
+        if (!empty($options['proxy'])) {
+            $args[] = '--proxy';
+            $args[] = $options['proxy'];
+        }
+        // --split-files
+        if (!empty($options['split_files'])) {
+            $args[] = '--split-files';
+            $args[] = $options['split_files'];
+        }
+        // --interactive
+        if (!empty($options['interactive'])) {
+            $args[] = '--interactive';
+        }
+
+        $command = $this->buildCommand('telegram-download', $args);
+        Log::info('Running command: ' . implode(' ', $command));
+        $result = Process::setWorkingDirectory($tempDir)->run($command);
+
+        $downloadedFiles = [];
+        if ($result->successful()) {
+            $files = array_diff(scandir($tempDir), ['.', '..']);
+            if (empty($files)) {
+                throw new Exception('Downloaded file not found in temp directory.');
+            }
+            foreach ($files as $file) {
+                $src = $tempDir . '/' . $file;
+                $dst = rtrim($destination, '/\\') . DIRECTORY_SEPARATOR . $file;
+                rename($src, $dst);
+                $downloadedFiles[] = $dst;
+            }
+            rmdir($tempDir);
+            Log::info("Files downloaded from Telegram: " . implode(', ', $downloadedFiles));
+            return $downloadedFiles;
+        } else {
+            // Clean up temp dir
+            foreach (glob($tempDir . '/*') as $file) {
+                @unlink($file);
+            }
+            @rmdir($tempDir);
+            $error = $result->errorOutput();
+            Log::error("Failed to download file from Telegram: $error");
+            throw new Exception("Download failed: " . $this->parseErrorMessage($error));
+        }
+    }
+
+    /**
+     * Delete a file from Telegram using the Bot API.
+     *
+     * @param string $fileId The message ID to delete.
+     * @param string|null $chatId The chat ID where the message is located.
+     * @return bool
+     * @throws Exception
+     */
+    public function deleteFile($fileId, $chatId = null): bool
+    {
+        $token = $this->getBotToken();
+        $chatId = $chatId ?: app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
+
+        try {
+            $response = Http::post("https://api.telegram.org/bot{$token}/deleteMessage", [
+                'chat_id' => $chatId,
+                'message_id' => $fileId,
+            ]);
+
+            if ($response->successful() && $response->json('ok')) {
+                Log::info("File deleted from Telegram: message_id {$fileId}");
+                return true;
+            } else {
+                $error = $response->json('description') ?: 'Failed to delete file from Telegram.';
+                Log::error("Telegram delete error for message {$fileId}: {$error}");
+                return false;
+            }
+        } catch (Exception $e) {
+            Log::error("Error deleting file from Telegram: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Check if a file exists in Telegram using the Bot API.
+     *
+     * @param string $fileId The message ID to check.
+     * @param string|null $chatId The chat ID where the message is located.
+     * @return bool
+     * @throws Exception
+     */
+    /**
+     * Forward a message from the main storage channel to another chat using the Bot API.
+     *
+     * @param string $fileId The message ID to forward.
+     * @param string $targetChatId The chat to forward the message to.
+     * @return bool
+     * @throws Exception
+     */
+    public function forwardFile($fileId, $targetChatId): bool
+    {
+        $token = $this->getBotToken();
+        $sourceChatId = app(Settings::class)->get('telegram.storage_telegram_chat_id');
+
+        if (!$sourceChatId) {
+            throw new Exception('Main storage chat ID is not configured.');
+        }
+
+        try {
+            $response = Http::post("https://api.telegram.org/bot{$token}/forwardMessage", [
+                'chat_id' => $targetChatId,
+                'from_chat_id' => $sourceChatId,
+                'message_id' => $fileId,
+            ]);
+
+            if ($response->successful() && $response->json('ok')) {
+                Log::info("File forwarded from {$sourceChatId} to {$targetChatId}: message_id {$fileId}");
+                return true;
+            } else {
+                $error = $response->json('description') ?: 'Failed to forward file via bot.';
+                Log::error("Telegram forward error for message {$fileId}: {$error}");
+                return false;
+            }
+        } catch (Exception $e) {
+            Log::error("Error forwarding file via bot: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function fileExists($fileId, $chatId = null): bool
+    {
+        $token = $this->getBotToken();
+        $chatId = $chatId ?: app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
+
+        try {
+            // We can check for existence by trying to forward the message to the same chat.
+            // If it succeeds, the message exists. If it fails, it likely doesn't.
+            $response = Http::post("https://api.telegram.org/bot{$token}/forwardMessage", [
+                'chat_id' => $chatId,
+                'from_chat_id' => $chatId,
+                'message_id' => $fileId,
+            ]);
+
+            // If the forward was successful, we should delete the forwarded message to avoid spam.
+            if ($response->successful() && $response->json('ok')) {
+                $forwardedMessageId = $response->json('result.message_id');
+                $this->deleteFile($forwardedMessageId, $chatId);
+                return true;
+            }
+
+            // Check for specific error message "message to forward not found"
+            if (str_contains($response->body(), 'message to forward not found')) {
+                return false;
+            }
+
+            // For other errors, we can assume it exists but something else went wrong.
+            // Or we can return false. Let's be conservative and say it doesn't exist.
+            return false;
+
+        } catch (Exception $e) {
+            Log::error("Error checking file existence in Telegram: " . $e->getMessage());
+            return false; // In case of exception, assume it doesn't exist.
+        }
+    }
+
+    /**
+     * Get the configured bot token.
+     *
+     * @return string
+     * @throws Exception
+     */
+    protected function getBotToken(): string
+    {
+        if (empty($this->botToken)) {
+            throw new Exception('Telegram bot token is not configured.');
+        }
+        return $this->botToken;
+    }
+
+    /**
+     * Get file URL (for Telegram, this would be a file_id or message link)
+     */
+    public function getFileUrl($fileId)
+    {
+        // Return a telegram file identifier
+        return 'telegram://' . $fileId;
+    }
+
+    /**
+     * Parse a more user-friendly error message from the command output.
+     */
+    protected function parseErrorMessage($error)
+    {
+        if (empty(trim($error))) {
+            return 'An unknown error occurred (empty error output).';
+        }
+
+        $lines = explode("\n", $error);
+        foreach ($lines as $line) {
+            if (str_contains($line, 'telethon.errors')) {
+                return $line;
+            }
+        }
+        // Return the full error if no specific telethon error is found
+        return "An unknown error occurred. Full error: $error";
+    }
+
+    /**
+     * Get configuration status
+     */
+    public function runHealthCheck(): array
+    {
+        $results = [];
+
+        // 1. Check if telegram-upload is installed
+        $packageCheck = Process::run('which telegram-upload');
+        $results['package_check'] = [
+            'success' => $packageCheck->successful(),
+            'message' => $packageCheck->successful()
+                ? 'The "telegram-upload" package is installed.'
+                : 'The "telegram-upload" package is not installed on the server or is not in the system\'s PATH.',
+        ];
+
+        if (!$packageCheck->successful()) {
+            return $results;
+        }
+
+        // 2. Try to upload a test file
+        $testFile = tempnam(sys_get_temp_dir(), 'telegram_test_');
+        file_put_contents($testFile, 'Health check from BeDrive at ' . now());
+        $chatId = $this->chatId ?: 'me';
+        Log::info('Using chat ID for health check: ' . $chatId);
+        try {
+            $uploadOptions = [
+                'to' => $chatId,
+                'caption' => 'health_check.txt',
+            ];
+            $uploadResult = $this->uploadFile($testFile, $uploadOptions);
+
+            $results['upload_check'] = [
+                'success' => true,
+                'message' => 'Test file uploaded successfully.',
+            ];
+
+            // 3. Try to delete the test file
+            try {
+                $this->deleteFile($uploadResult['file_id'], $chatId);
+                $results['delete_check'] = [
+                    'success' => true,
+                    'message' => 'Test file deleted successfully.',
+                ];
+            } catch (Exception $e) {
+                $results['delete_check'] = [
+                    'success' => false,
+                    'message' => 'Failed to delete test file: ' . $e->getMessage(),
+                ];
+            }
+        } catch (Exception $e) {
+            $results['upload_check'] = [
+                'success' => false,
+                'message' => 'Failed to upload test file: ' . $e->getMessage(),
+            ];
+        } finally {
+            if (file_exists($testFile)) {
+                unlink($testFile);
+            }
+        }
+
+        return $results;
+    }
 }
+

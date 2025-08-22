@@ -323,5 +323,16 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
         }
     }
 
+    public function temporaryUrl(string $path, \DateTimeInterface $expiration, array $options = []): string
+    {
+        $fileEntry = FileEntry::where('path', $path)->firstOrFail();
+        
+        return app('url')->temporarySignedRoute(
+            'telegram.download.start',
+            $expiration,
+            ['fileEntry' => $fileEntry->id]
+        );
+    }
 }
 
+ 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\TelegramDownloadController;
 use App\Http\Controllers\DriveEntriesController;
 use App\Http\Controllers\DuplicateEntriesController;
 use App\Http\Controllers\EntrySyncInfoController;
@@ -159,3 +160,18 @@ Route::group(['prefix' => 'v1'], function() {
   Route::get('s/{shortCode}', [ShortLinkController::class, 'access']);
   Route::post('s/{shortCode}/download', [ShortLinkController::class, 'download']);
 });
+
+// TELEGRAM DOWNLOAD FLOW (signed URLs, no auth middleware needed on route)
+Route::get('telegram/download/{fileEntry}', [
+    TelegramDownloadController::class,
+    'startDownload',
+])
+    ->name('telegram.download.start')
+    ->middleware('signed');
+
+Route::get('telegram/download/stream', [
+    TelegramDownloadController::class,
+    'streamFile',
+])
+    ->name('telegram.download.stream')
+    ->middleware('signed');

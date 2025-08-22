@@ -14,9 +14,15 @@ class TelegramStorageDriver
 {
     protected $botToken;
     protected $configPath;
+    protected $chatId;
 
-    public function __construct()
+    public function __construct(array $tempSettings = [])
     {
+        if (!empty($tempSettings)) {
+            $this->botToken = $tempSettings['bot_token'] ?? null;
+            $this->configPath = $tempSettings['config_path'] ?? null;
+            $this->chatId = $tempSettings['chat_id'] ?? null;
+        }
         $this->loadSettingsFromDatabase();
     }
 
@@ -24,8 +30,15 @@ class TelegramStorageDriver
     {
         try {
             $settings = app(Settings::class);
-            $this->botToken = $settings->get('telegram.telegram_bot_token');
-            $this->configPath = $settings->get('telegram.storage_telegram_config_path');
+            if (empty($this->botToken)) {
+                $this->botToken = $settings->get('telegram.telegram_bot_token');
+            }
+            if (empty($this->configPath)) {
+                $this->configPath = $settings->get('telegram.storage_telegram_config_path');
+            }
+            if (empty($this->chatId)) {
+                $this->chatId = $settings->get('telegram.storage_telegram_chat_id', 'me');
+            }
         } catch (Exception $e) {
             Log::error('Could not load Telegram settings from database: ' . $e->getMessage());
         }
@@ -416,15 +429,14 @@ class TelegramStorageDriver
         // 2. Try to upload a test file
         $testFile = tempnam(sys_get_temp_dir(), 'telegram_test_');
         file_put_contents($testFile, 'Health check from BeDrive at ' . now());
-        $chatId = app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
-Log::info('Using chat ID: ' . $chatId);
+        $chatId = $this->chatId ?: 'me';
+        Log::info('Using chat ID for health check: ' . $chatId);
         try {
-                      $uploadOptions = [
+            $uploadOptions = [
                 'to' => $chatId,
                 'caption' => 'health_check.txt',
-                // سایر گزینه‌ها را می‌توانید بر اساس نیاز اضافه کنید
             ];
-            $uploadResult = $this->uploadFile($filePath, $uploadOptions);
+            $uploadResult = $this->uploadFile($testFile, $uploadOptions);
 
             $results['upload_check'] = [
                 'success' => true,
