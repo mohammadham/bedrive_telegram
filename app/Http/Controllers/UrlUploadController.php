@@ -214,10 +214,14 @@ class UrlUploadController extends BaseController
             $disk = Storage::disk($fileEntry->disk_prefix ?? 'uploads');
             $filePath = $disk->path($fileEntry->path);
 
-            // Upload to Telegram
+            // Upload to Telegram (new signature)
             $driver = new TelegramStorageDriver($telegramConfig);
-            $result = $driver->uploadFile($filePath, $fileEntry->name, $chatId);
-
+            $uploadOptions = [
+                'to' => $chatId,
+                'caption' => $fileEntry->name,
+                // سایر گزینه‌ها را می‌توانید بر اساس نیاز اضافه کنید
+            ];
+            $result = $driver->uploadFile($filePath, $uploadOptions);
             return $result;
 
         } catch (\Exception $e) {

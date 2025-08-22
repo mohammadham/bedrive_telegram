@@ -61,7 +61,13 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
 
             // Upload to Telegram
             $forwardToChatId = $config->get('forward_to_chat_id');
-            $result = $this->driver->uploadFile($tempFile, $path, $this->chatId, $forwardToChatId);
+                   $uploadOptions = [
+                'to' => $this->chatId,
+                'caption' => $path,
+                'forward' => $forwardToChatId,
+                // سایر گزینه‌ها را می‌توانید بر اساس نیاز اضافه کنید
+            ];
+            $result = $this->driver->uploadFile($tempFile, $uploadOptions);
 
             // Clean up temp file
             unlink($tempFile);
@@ -95,7 +101,13 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
 
             // Upload to Telegram
             $forwardToChatId = $config->get('forward_to_chat_id');
-            $result = $this->driver->uploadFile($tempFile, $path, $this->chatId, $forwardToChatId);
+                   $uploadOptions = [
+                'to' => $this->chatId,
+                'caption' => $path,
+                'forward' => $forwardToChatId,
+                // سایر گزینه‌ها را می‌توانید بر اساس نیاز اضافه کنید
+            ];
+            $result = $this->driver->uploadFile($tempFile, $uploadOptions);
 
             // Get file size
             $size = filesize($tempFile);
@@ -130,11 +142,27 @@ class TelegramFilesystemAdapter implements FilesystemAdapter
             }
 
             $telegramFile = $fileEntry->telegramFile;
-            $tempFile = tempnam(sys_get_temp_dir(), 'telegram_download_');
+            $tempDir = sys_get_temp_dir();
+            $downloadOptions = [
+                'from' => $telegramFile->telegram_chat_id ?: 'me',
+                // سایر گزینه‌ها را می‌توانید بر اساس نیاز اضافه کنید
+            ];
+            $downloadedFiles = $this->driver->downloadFile($tempDir, $downloadOptions);
 
-            if ($this->driver->downloadFile($telegramFile->telegram_file_id, $tempFile, $telegramFile->telegram_chat_id)) {
-                $contents = file_get_contents($tempFile);
-                unlink($tempFile);
+            // پیدا کردن فایل مناسب (در حالت عادی فقط یک فایل دانلود می‌شود)
+            $foundFile = null;
+            foreach ($downloadedFiles as $file) {
+                if (basename($file) === $fileEntry->name || basename($file) === $fileEntry->path) {
+                    $foundFile = $file;
+                    break;
+                }
+            }
+            if (!$foundFile && count($downloadedFiles) > 0) {
+                $foundFile = $downloadedFiles[0];
+            }
+            if ($foundFile && file_exists($foundFile)) {
+                $contents = file_get_contents($foundFile);
+                unlink($foundFile);
                 return $contents;
             } else {
                 throw new UnableToReadFile('Failed to download file from Telegram');

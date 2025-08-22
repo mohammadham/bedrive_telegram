@@ -41,23 +41,105 @@ class TelegramStorageDriver
         return array_merge($command, $args);
     }
 
-    public function uploadFile($filePath, $destination = null, $chatId = null, $forwardToChatId = null)
+
+    /**
+     * Upload a file to Telegram using telegram-upload.
+     * Supports all documented options.
+     *
+     * @param string $filePath
+     * @param array $options
+     *   Supported keys:
+     *     - to: destination chat/user (default: 'me')
+     *     - caption: file caption
+     *     - delete_on_success: bool
+     *     - print_file_id: bool
+     *     - force_file: bool
+     *     - forward: array|string (can be multiple)
+     *     - directories: 'fail'|'recursive'
+     *     - large_files: 'fail'|'split'
+     *     - no_thumbnail: bool
+     *     - thumbnail_file: string
+     *     - proxy: string
+     *     - album: bool
+     *     - interactive: bool
+     *     - sort: bool
+     * @return array
+     * @throws Exception
+     */
+    public function uploadFile($filePath, $options = [])
     {
-        $caption = $destination ?: basename($filePath);
-        Log::info('Uploading file to Telegram: ' . $filePath . ' with caption: ' . $caption);
-        $args = [
-            '--to', $chatId ?: 'me',
-            '--caption', $caption,
-            '--print-file-id',
-        ];
-
-        if ($forwardToChatId) {
-            $args[] = '--forward';
-            $args[] = $forwardToChatId;
+        $args = [];
+        // --to
+        $args[] = '--to';
+        $args[] = $options['to'] ?? 'me';
+        // --caption
+        if (isset($options['caption'])) {
+            $args[] = '--caption';
+            $args[] = $options['caption'];
+        } else {
+            $args[] = '--caption';
+            $args[] = basename($filePath);
         }
-
+        // --delete-on-success
+        if (!empty($options['delete_on_success'])) {
+            $args[] = '--delete-on-success';
+        }
+        // --print-file-id
+        if (!isset($options['print_file_id']) || $options['print_file_id']) {
+            $args[] = '--print-file-id';
+        }
+        // --force-file
+        if (!empty($options['force_file'])) {
+            $args[] = '--force-file';
+        }
+        // --forward (can be array or string)
+        if (!empty($options['forward'])) {
+            $forwards = is_array($options['forward']) ? $options['forward'] : [$options['forward']];
+            foreach ($forwards as $fwd) {
+                $args[] = '--forward';
+                $args[] = $fwd;
+            }
+        }
+        // --directories
+        if (!empty($options['directories'])) {
+            $args[] = '--directories';
+            $args[] = $options['directories'];
+        }
+        // --large-files
+        if (!empty($options['large_files'])) {
+            $args[] = '--large-files';
+            $args[] = $options['large_files'];
+        }
+        // --no-thumbnail
+        if (!empty($options['no_thumbnail'])) {
+            $args[] = '--no-thumbnail';
+        }
+        // --thumbnail-file
+        if (!empty($options['thumbnail_file'])) {
+            $args[] = '--thumbnail-file';
+            $args[] = $options['thumbnail_file'];
+        }
+        // --proxy
+        if (!empty($options['proxy'])) {
+            $args[] = '--proxy';
+            $args[] = $options['proxy'];
+        }
+        // --album
+        if (!empty($options['album'])) {
+            $args[] = '--album';
+        }
+        // --interactive
+        if (!empty($options['interactive'])) {
+            $args[] = '--interactive';
+        }
+        // --sort
+        if (!empty($options['sort'])) {
+            $args[] = '--sort';
+        }
+        // فایل
         $args[] = $filePath;
-Log::info('Running command: ' . implode(' ', $this->buildCommand('telegram-upload', $args)));
+
+        Log::info('Running command: ' . implode(' ', $this->buildCommand('telegram-upload', $args)));
         $command = $this->buildCommand('telegram-upload', $args);
         $result = Process::run($command);
 
@@ -67,7 +149,7 @@ Log::info('Running command: ' . implode(' ', $this->buildCommand('telegram-uploa
             return [
                 'success' => true,
                 'file_id' => $fileId,
-                'path' => $destination ?: basename($filePath),
+                'path' => $options['caption'] ?? basename($filePath),
             ];
         } else {
             $error = $result->errorOutput();
@@ -77,29 +159,77 @@ Log::info('Running command: ' . implode(' ', $this->buildCommand('telegram-uploa
         }
     }
 
-    public function downloadFile($fileId, $destination, $chatId = null)
+
+    /**
+     * Download files from Telegram using telegram-download.
+     * Supports all documented options.
+     *
+     * @param string $destination Directory to save downloaded files
+     * @param array $options
+     *   Supported keys:
+     *     - from: chat/user to download from (default: 'me')
+     *     - delete_on_success: bool
+     *     - proxy: string
+     *     - split_files: 'keep'|'join'
+     *     - interactive: bool
+     * @return array List of downloaded files (absolute paths)
+     * @throws Exception
+     */
+    public function downloadFile($destination, $options = [])
     {
         $tempDir = sys_get_temp_dir() . '/telegram_downloads_' . Str::random(8);
         if (!mkdir($tempDir, 0777, true) && !is_dir($tempDir)) {
             throw new \RuntimeException("Could not create temp directory: $tempDir");
         }
 
-        $args = ['--from', $chatId ?: 'me'];
+        $args = [];
+        // --from
+        $args[] = '--from';
+        $args[] = $options['from'] ?? 'me';
+        // --delete-on-success
+        if (!empty($options['delete_on_success'])) {
+            $args[] = '--delete-on-success';
+        }
+        // --proxy
+        if (!empty($options['proxy'])) {
+            $args[] = '--proxy';
+            $args[] = $options['proxy'];
+        }
+        // --split-files
+        if (!empty($options['split_files'])) {
+            $args[] = '--split-files';
+            $args[] = $options['split_files'];
+        }
+        // --interactive
+        if (!empty($options['interactive'])) {
+            $args[] = '--interactive';
+        }
+
         $command = $this->buildCommand('telegram-download', $args);
+        Log::info('Running command: ' . implode(' ', $command));
         $result = Process::setWorkingDirectory($tempDir)->run($command);
 
+        $downloadedFiles = [];
         if ($result->successful()) {
             $files = array_diff(scandir($tempDir), ['.', '..']);
             if (empty($files)) {
                 throw new Exception('Downloaded file not found in temp directory.');
             }
-            $downloadedFile = $tempDir . '/' . reset($files);
-            rename($downloadedFile, $destination);
+            foreach ($files as $file) {
+                $src = $tempDir . '/' . $file;
+                $dst = rtrim($destination, '/\\') . DIRECTORY_SEPARATOR . $file;
+                rename($src, $dst);
+                $downloadedFiles[] = $dst;
+            }
             rmdir($tempDir);
-            Log::info("File downloaded from Telegram: $fileId");
-            return true;
+            Log::info("Files downloaded from Telegram: " . implode(', ', $downloadedFiles));
+            return $downloadedFiles;
         } else {
-            rmdir($tempDir);
+            // Clean up temp dir
+            foreach (glob($tempDir . '/*') as $file) {
+                @unlink($file);
+            }
+            @rmdir($tempDir);
             $error = $result->errorOutput();
             Log::error("Failed to download file from Telegram: $error");
             throw new Exception("Download failed: " . $this->parseErrorMessage($error));
