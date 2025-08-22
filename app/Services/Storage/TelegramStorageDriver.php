@@ -286,7 +286,8 @@ class TelegramStorageDriver
         $testFile = tempnam(sys_get_temp_dir(), 'telegram_test_');
         file_put_contents($testFile, 'Health check from BeDrive at ' . now());
         $chatId = app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
-
+dump($chatId);
+        
         try {
             $uploadResult = $this->uploadFile($testFile, 'health_check.txt', $chatId);
             $results['upload_check'] = [
