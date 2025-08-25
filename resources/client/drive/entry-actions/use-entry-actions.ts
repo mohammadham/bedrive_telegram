@@ -95,13 +95,13 @@ function useForwardToTelegramAction(
 ): EntryAction | undefined {
   const {user} = useAuth();
   const {
-    uploads: {default_driver},
+    uploads: {uploads_driver},
   } = useSettings();
   const forwardToTelegram = useForwardToTelegram(entries);
   const activePage = useDriveStore(s => s.activePage);
 
   if (
-    default_driver !== 'telegram' ||
+    uploads_driver !== 'telegram' ||
     !user?.telegram_user_chat_id ||
     entries.length > 1 ||
     entries[0].type === 'folder' ||
@@ -125,13 +125,13 @@ function useTransferToTelegramAction(
   entries: DriveEntry[],
 ): EntryAction | undefined {
   const {
-    uploads: {default_driver},
+    uploads: {uploads_driver},
   } = useSettings();
   const transferToTelegram = useTransferToTelegram();
   const activePage = useDriveStore(s => s.activePage);
 
   if (
-    default_driver !== 'telegram' ||
+    uploads_driver !== 'telegram' ||
     entries.length > 1 ||
     entries[0].type === 'folder' ||
     entries[0].telegram_file || // already on telegram
