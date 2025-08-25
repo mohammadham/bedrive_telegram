@@ -328,6 +328,41 @@ class TelegramStorageDriver
         }
     }
 
+    /**
+     * Edit the caption of a message in Telegram using the Bot API.
+     *
+     * @param string $fileId The message ID to edit.
+     * @param string $newCaption The new caption for the file.
+     * @param string|null $chatId The chat ID where the message is located.
+     * @return bool
+     * @throws Exception
+     */
+    public function editMessageCaption($fileId, $newCaption, $chatId = null): bool
+    {
+        $token = $this->getBotToken();
+        $chatId = $chatId ?: app(Settings::class)->get('telegram.storage_telegram_chat_id', 'me');
+
+        try {
+            $response = Http::post("https://api.telegram.org/bot{$token}/editMessageCaption", [
+                'chat_id' => $chatId,
+                'message_id' => $fileId,
+                'caption' => $newCaption,
+            ]);
+
+            if ($response->successful() && $response->json('ok')) {
+                Log::info("Caption edited for message {$fileId} in chat {$chatId}");
+                return true;
+            } else {
+                $error = $response->json('description') ?: 'Failed to edit caption.';
+                Log::error("Telegram edit caption error for message {$fileId}: {$error}");
+                return false;
+            }
+        } catch (Exception $e) {
+            Log::error("Error editing caption in Telegram: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
     public function fileExists($fileId, $chatId = null): bool
     {
         $token = $this->getBotToken();

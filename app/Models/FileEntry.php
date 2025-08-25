@@ -93,4 +93,21 @@ class FileEntry extends CommonFileEntry
     {
         return CommonFileEntry::MODEL_TYPE;
     }
+
+    /**
+     * Get the human-readable path for the entry.
+     * @return string
+     */
+    public function getHumanReadablePath(): string
+    {
+        $parts = [];
+        $entry = $this;
+
+        while ($entry) {
+            array_unshift($parts, $entry->name);
+            $entry = $entry->parent;
+        }
+
+        return implode('/', $parts);
+    }
 }

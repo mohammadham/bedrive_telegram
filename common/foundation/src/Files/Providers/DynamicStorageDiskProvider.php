@@ -28,14 +28,6 @@ class DynamicStorageDiskProvider extends ServiceProvider
         });
 
           // ----- add telegram driver here -----
-    Storage::extend('telegram', function ($app, $config) {
-        $chatId = $config['chat_id'] ?? env('TELEGRAM_CHAT_ID');
-
-        $driver  = new \App\Services\Storage\TelegramStorageDriver();
-        $adapter = new \App\Services\Storage\TelegramFilesystemAdapter($driver, $chatId);
-
-        return new \League\Flysystem\Filesystem($adapter, $config);
-    });
     }
 
     public function register()

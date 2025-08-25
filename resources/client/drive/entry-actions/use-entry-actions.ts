@@ -26,8 +26,10 @@ import {useRestoreEntries} from '../files/queries/use-restore-entries';
 import {RestoreIcon} from '@ui/icons/material/Restore';
 import {downloadFileFromUrl} from '@ui/utils/files/download-file-from-url';
 import {TelegramIcon} from '@ui/icons/social/telegram';
-import {useMutation} from '@tanstack/react-query';
+import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {apiClient} from '@common/http/query-client';
+import {useSettings} from '@common/core/settings/use-settings';
+import {useAuth} from '@common/auth/use-auth';
 
 const useForwardToTelegram = (entries: DriveEntry[]) => {
   return useMutation({
@@ -35,6 +37,20 @@ const useForwardToTelegram = (entries: DriveEntry[]) => {
       apiClient.post(`files/${entryId}/forward`),
     onSuccess: () => {
       toast(message('File forwarded to your Telegram chat.'));
+    },
+    onError: (err) => showHttpErrorToast(err),
+  });
+};
+
+const useTransferToTelegram = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (entryId: number) =>
+      apiClient.post(`files/${entryId}/transfer-to-telegram`),
+    onSuccess: () => {
+      toast(message('File transferred to Telegram.'));
+      // Invalidate queries to refetch entry data with telegram_file
+      return queryClient.invalidateQueries({queryKey: ['drive', 'files']});
     },
     onError: (err) => showHttpErrorToast(err),
   });
@@ -54,6 +70,7 @@ export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
   const removeSharedEntries = useRemoveSharedEntriesAction(entries);
   const restoreEntries = useRestoreEntriesAction(entries);
   const forwardToTelegram = useForwardToTelegramAction(entries);
+  const transferToTelegram = useTransferToTelegramAction(entries);
 
   return [
     preview,
@@ -66,6 +83,7 @@ export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
     makeCopy,
     download,
     forwardToTelegram,
+    transferToTelegram,
     deleteAction,
     removeSharedEntries,
     restoreEntries,
@@ -73,23 +91,61 @@ export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
 }
 
 function useForwardToTelegramAction(
-  entries: DriveEntry[],
+    entries: DriveEntry[],
 ): EntryAction | undefined {
+  const {user} = useAuth();
+  const {
+    uploads: {default_driver},
+  } = useSettings();
   const forwardToTelegram = useForwardToTelegram(entries);
   const activePage = useDriveStore(s => s.activePage);
+
   if (
+    default_driver !== 'telegram' ||
+    !user?.telegram_user_chat_id ||
     entries.length > 1 ||
     entries[0].type === 'folder' ||
+    !entries[0].telegram_file ||
     activePage === TrashPage
   ) {
     return;
   }
   return {
-    label: message('Forward to Telegram'),
+    label: message('Forward to yourself'),
     icon: TelegramIcon,
     key: 'forwardToTelegram',
     execute: () => {
       forwardToTelegram.mutate(entries[0].id);
+      driveState().selectEntries([]);
+    },
+  };
+}
+
+function useTransferToTelegramAction(
+  entries: DriveEntry[],
+): EntryAction | undefined {
+  const {
+    uploads: {default_driver},
+  } = useSettings();
+  const transferToTelegram = useTransferToTelegram();
+  const activePage = useDriveStore(s => s.activePage);
+
+  if (
+    default_driver !== 'telegram' ||
+    entries.length > 1 ||
+    entries[0].type === 'folder' ||
+    entries[0].telegram_file || // already on telegram
+    activePage === TrashPage
+  ) {
+    return;
+  }
+
+  return {
+    label: message('Save to Telegram'),
+    icon: TelegramIcon,
+    key: 'transferToTelegram',
+    execute: () => {
+      transferToTelegram.mutate(entries[0].id);
       driveState().selectEntries([]);
     },
   };

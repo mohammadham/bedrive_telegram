@@ -70,6 +70,26 @@ class MoveFileEntriesController extends BaseController
                     $newPath .= "/$oldParent";
                     $this->entry->updatePaths($oldPath, $newPath);
                     $entry->path = $newPath;
+
+                    if ($entry->telegramFile) {
+                        try {
+                            // reload the entry's parent relationship to ensure path is correct
+                            $entry->load('parent');
+                            $newHumanPath = $entry->getHumanReadablePath();
+                            $driver = new \App\Services\Storage\TelegramStorageDriver();
+                            $driver->editMessageCaption(
+                                $entry->telegramFile->telegram_file_id,
+                                $newHumanPath,
+                                $entry->telegramFile->chat_id
+                            );
+                            // Also update the caption in our own database
+                            $entry->telegramFile->update(['caption' => $newHumanPath]);
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error(
+                                "Could not update Telegram caption for moved file {$entry->id}. Error: " . $e->getMessage()
+                            );
+                        }
+                    }
                 });
 
                 event(

@@ -22,4 +22,5 @@ export interface FileEntry {
   updated_at?: string;
   children?: FileEntry[];
   users?: {id: number; email: string; owns_entry?: boolean}[];
+  telegram_file?: object | null;
 }

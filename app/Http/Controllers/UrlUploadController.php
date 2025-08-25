@@ -185,43 +185,44 @@ class UrlUploadController extends BaseController
     /**
      * Send file to Telegram
      */
-    protected function sendToTelegram(FileEntry $fileEntry, $chatId = null): ?array
+    protected function sendToTelegram(FileEntry $fileEntry): ?array
     {
         try {
-            // Check if Telegram is configured
-            $telegramConfig = [
-                'api_id' => $this->settings->get('storage_telegram_api_id'),
-                'api_hash' => $this->settings->get('storage_telegram_api_hash'),
-                'phone' => $this->settings->get('storage_telegram_phone'),
-            ];
+            $driver = new TelegramStorageDriver();
+            $user = Auth::user();
 
-            if (empty($telegramConfig['api_id']) || empty($telegramConfig['api_hash'])) {
-                return ['success' => false, 'message' => 'Telegram not configured'];
-            }
+            // The main destination is always the one from admin settings
+            $mainChatId = $this->settings->get('telegram.storage_telegram_chat_id', 'me');
 
-            // Get user's Telegram settings if no chat ID provided
-            if (!$chatId) {
-                $user = Auth::user();
-                $userSettings = UserTelegramSettings::where('user_id', $user->id)->first();
-                $chatId = $userSettings->telegram_chat_id ?? $this->settings->get('storage_telegram_chat_id');
-            }
+            // Get file's full path for the caption
+            $caption = $fileEntry->getHumanReadablePath();
 
-            if (!$chatId) {
-                return ['success' => false, 'message' => 'No Telegram chat ID specified'];
-            }
-
-            // Get file path
+            // Get local filesystem path for the file
             $disk = Storage::disk($fileEntry->disk_prefix ?? 'uploads');
             $filePath = $disk->path($fileEntry->path);
 
-            // Upload to Telegram (new signature)
-            $driver = new TelegramStorageDriver($telegramConfig);
             $uploadOptions = [
-                'to' => $chatId,
-                'caption' => $fileEntry->name,
-                // سایر گزینه‌ها را می‌توانید بر اساس نیاز اضافه کنید
+                'to' => $mainChatId,
+                'caption' => $caption,
             ];
+
+            // Check if user has forwarding enabled
+            $userTelegramSettings = UserTelegramSettings::where('user_id', $user->id)->first();
+            if ($userTelegramSettings && $userTelegramSettings->telegram_auto_forward && $userTelegramSettings->telegram_user_chat_id) {
+                $uploadOptions['forward'] = $userTelegramSettings->telegram_user_chat_id;
+            }
+
             $result = $driver->uploadFile($filePath, $uploadOptions);
+
+            // After successful upload, create a TelegramFile record
+            if ($result['success'] && isset($result['file_id'])) {
+                $fileEntry->telegramFile()->create([
+                    'telegram_file_id' => $result['file_id'],
+                    'chat_id' => $mainChatId,
+                    'caption' => $caption,
+                ]);
+            }
+
             return $result;
 
         } catch (\Exception $e) {

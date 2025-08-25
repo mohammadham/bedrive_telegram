@@ -144,6 +144,7 @@ Route::group(['prefix' => 'v1'], function() {
     Route::get('files/{id}/download', [FileApiController::class, 'download'])->name('api.v1.files.download');
     Route::delete('files/{id}', [FileApiController::class, 'delete'])->name('api.v1.files.delete');
     Route::post('files/{id}/forward', [FileApiController::class, 'forward'])->name('api.v1.files.forward');
+    Route::post('files/{fileEntry}/transfer-to-telegram', [FileApiController::class, 'transferToTelegram'])->name('api.v1.files.transfer');
   });
 
   //SHAREABLE LINKS PREVIEW (NO AUTH NEEDED)
@@ -161,14 +162,15 @@ Route::group(['prefix' => 'v1'], function() {
   Route::post('s/{shortCode}/download', [ShortLinkController::class, 'download']);
 });
 
-// TELEGRAM DOWNLOAD FLOW (signed URLs, no auth middleware needed on route)
-Route::get('telegram/download/{fileEntry}', [
-    TelegramDownloadController::class,
-    'startDownload',
-])
-    ->name('telegram.download.start')
-    ->middleware('signed');
+// TELEGRAM DOWNLOAD FLOW
+Route::group(['middleware' => ['auth:sanctum', 'verified']], function() {
+    Route::get('telegram/download/{fileEntry}', [
+        TelegramDownloadController::class,
+        'startDownload',
+    ])->name('telegram.download.start');
+});
 
+// This route does not need auth middleware, as it's protected by a short-lived signature
 Route::get('telegram/download/stream', [
     TelegramDownloadController::class,
     'streamFile',
