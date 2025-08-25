@@ -28,7 +28,7 @@ import {downloadFileFromUrl} from '@ui/utils/files/download-file-from-url';
 import {TelegramIcon} from '@ui/icons/social/telegram';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {apiClient} from '@common/http/query-client';
-import {useSettings} from '@common/core/settings/use-settings';
+import {useSettings} from '@ui/settings/use-settings';
 import {useAuth} from '@common/auth/use-auth';
 
 const useForwardToTelegram = (entries: DriveEntry[]) => {
