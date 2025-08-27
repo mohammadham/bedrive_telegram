@@ -157,13 +157,19 @@ class TelegramStorageDriver
         $result = Process::run($command);
 
         if ($result->successful()) {
-            $fileId = trim($result->output());
-            Log::info("File uploaded to Telegram: $filePath with ID: $fileId");
-            return [
-                'success' => true,
-                'file_id' => $fileId,
-                'path' => $options['caption'] ?? basename($filePath),
-            ];
+    $output = trim($result->output());
+    // استخراج file_id با regex
+    if (preg_match('/\(file_id ([^\)]+)\)/', $output, $matches)) {
+        $fileId = $matches[1];
+    } else {
+        $fileId = $output; // fallback اگر پیدا نشد
+    }
+    Log::info("File uploaded to Telegram: $filePath with ID: $fileId");
+    return [
+        'success' => true,
+        'file_id' => $fileId,
+        'path' => $options['caption'] ?? basename($filePath),
+    ];
         } else {
             $error = $result->errorOutput();
             Log::error("Failed to upload file to Telegram: $error");
