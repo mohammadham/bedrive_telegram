@@ -65,6 +65,6 @@ class DynamicStorageDiskProvider extends ServiceProvider
         $dynamicConfigKey = "{$type}_{$driverName}";
         Config::set("filesystems.disks.{$dynamicConfigKey}", $config);
 
-        return Storage::disk($dynamicConfigKey);
+        return Storage::build($dynamicConfigKey)->getDriver();
     }
 }
