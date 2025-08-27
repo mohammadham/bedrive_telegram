@@ -6,7 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Storage;
 use League\Flysystem\Filesystem;
 use App\Services\Storage\TelegramStorageDriver;
-use Illuminate\Filesystem\Filesystem as IlluminateFilesystem;
+use Illuminate\Contracts\Filesystem\Filesystem as IlluminateFilesystem;
 use App\Services\Storage\TelegramFilesystemAdapter;
 
 class TelegramStorageServiceProvider extends ServiceProvider

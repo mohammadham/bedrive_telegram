@@ -26,15 +26,12 @@ class DynamicStorageDiskProvider extends ServiceProvider
         ) {
             return $this->resolveDisk('public', $initialConfig);
         });
-
-          // ----- add telegram driver here -----
     }
 
     public function register()
     {
         //
     }
-
 
     private function resolveDisk(string $type, array $initialConfig): Filesystem
     {
