@@ -33,7 +33,7 @@ class TelegramStorageServiceProvider extends ServiceProvider
 
             $chatId = $config['chat_id'] ?? env('TELEGRAM_CHAT_ID');
 
-            $driver = new TelegramStorageDriver($telegramConfig);
+            $driver = new TelegramStorageDriver();
             $adapter = new TelegramFilesystemAdapter($driver, $chatId);
             return new FilesystemAdapter(
                 new Filesystem($adapter, $config),
