@@ -67,6 +67,6 @@ class DynamicStorageDiskProvider extends ServiceProvider
 
         return Storage::build($dynamicConfigKey)->bind('driver', function () use ($driverName) {
             return Storage::disk($driverName);
-        })
+        });
     }
 }
