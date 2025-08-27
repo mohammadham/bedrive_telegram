@@ -5,9 +5,9 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Storage;
 use App\Services\Storage\TelegramStorageDriver;
-use Illuminate\Contracts\Filesystem\Filesystem ;
-use App\Services\Storage\TelegramFilesystemAdapter;
+use League\Flysystem\Filesystem;
 use Illuminate\Filesystem\FilesystemAdapter;
+use App\Services\Storage\TelegramFilesystemAdapter;
 
 class TelegramStorageServiceProvider extends ServiceProvider
 {
