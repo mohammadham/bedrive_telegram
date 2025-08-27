@@ -30,7 +30,7 @@ import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {apiClient} from '@common/http/query-client';
 import {useSettings} from '@ui/settings/use-settings';
 import {useAuth} from '@common/auth/use-auth';
-
+import {useUserTelegramSettings} from '@common/auth/ui/account-settings/requests/use-user-telegram-settings';
 const useForwardToTelegram = (entries: DriveEntry[]) => {
   return useMutation({
     mutationFn: (entryId: number) =>
@@ -94,6 +94,7 @@ function useForwardToTelegramAction(
     entries: DriveEntry[],
 ): EntryAction | undefined {
   const {user} = useAuth();
+  const {data, isLoading} = useUserTelegramSettings(user!.id);
   const {
     uploads: {uploads_driver},
   } = useSettings();
@@ -102,7 +103,7 @@ function useForwardToTelegramAction(
 
   if (
     uploads_driver !== 'telegram' ||
-    !user?.telegram_user_chat_id ||
+    !data?.settings.telegram_user_chat_id ||
     entries.length > 1 ||
     entries[0].type === 'folder' ||
     !entries[0].telegram_file ||
