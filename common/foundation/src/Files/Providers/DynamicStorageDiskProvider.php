@@ -35,7 +35,8 @@ class DynamicStorageDiskProvider extends ServiceProvider
         //
     }
 
-    private function resolveDisk(string $type, array $initialConfig): \League\Flysystem\Filesystem
+
+    private function resolveDisk(string $type, array $initialConfig): Filesystem
     {
         $driverName = config("common.site.{$type}_disk_driver") ?? 'local';
         $config = array_merge(
@@ -65,8 +66,6 @@ class DynamicStorageDiskProvider extends ServiceProvider
         $dynamicConfigKey = "{$type}_{$driverName}";
         Config::set("filesystems.disks.{$dynamicConfigKey}", $config);
 
-        return Storage::build($dynamicConfigKey)->bind('driver', function () use ($driverName) {
-            return Storage::disk($driverName);
-        });
+        return Storage::disk($dynamicConfigKey);
     }
 }
