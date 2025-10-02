@@ -11,6 +11,8 @@ import {IconButton} from '@ui/buttons/icon-button';
 import {AddIcon} from '@ui/icons/material/Add';
 import {Menu, MenuItem, MenuTrigger} from '@ui/menu/menu-trigger';
 import {openUploadWindow} from '@ui/utils/files/open-upload-window';
+import {TelegramUrlUploadButton} from '@common/uploads/telegram-url-upload-button';
+import {invalidateEntryQueries} from '../drive-query-keys';
 
 interface CreateNewButtonProps {
   isCompact?: boolean;
@@ -39,34 +41,43 @@ export function CreateNewButton({isCompact, className}: CreateNewButtonProps) {
 
   return (
     <div className={className}>
-      <MenuTrigger
-        onItemSelected={async value => {
-          if (value === 'uploadFiles') {
-            uploadFiles(await openUploadWindow({multiple: true}));
-          } else if (value === 'uploadFolder') {
-            uploadFiles(await openUploadWindow({directory: true}));
-          } else if (value === 'newFolder') {
-            const activeFolder = driveState().activePage?.folder;
-            driveState().setActiveActionDialog(
-              'newFolder',
-              activeFolder ? [activeFolder] : [],
-            );
-          }
-        }}
-      >
-        {button}
-        <Menu>
-          <MenuItem value="uploadFiles" startIcon={<UploadFileIcon />}>
-            <Trans message="Upload files" />
-          </MenuItem>
-          <MenuItem value="uploadFolder" startIcon={<DriveFolderUploadIcon />}>
-            <Trans message="Upload folder" />
-          </MenuItem>
-          <MenuItem value="newFolder" startIcon={<CreateNewFolderIcon />}>
-            <Trans message="Create folder" />
-          </MenuItem>
-        </Menu>
-      </MenuTrigger>
+      <div className="flex gap-8">
+        <MenuTrigger
+          onItemSelected={async value => {
+            if (value === 'uploadFiles') {
+              uploadFiles(await openUploadWindow({multiple: true}));
+            } else if (value === 'uploadFolder') {
+              uploadFiles(await openUploadWindow({directory: true}));
+            } else if (value === 'newFolder') {
+              const activeFolder = driveState().activePage?.folder;
+              driveState().setActiveActionDialog(
+                'newFolder',
+                activeFolder ? [activeFolder] : [],
+              );
+            }
+          }}
+        >
+          {button}
+          <Menu>
+            <MenuItem value="uploadFiles" startIcon={<UploadFileIcon />}>
+              <Trans message="Upload files" />
+            </MenuItem>
+            <MenuItem value="uploadFolder" startIcon={<DriveFolderUploadIcon />}>
+              <Trans message="Upload folder" />
+            </MenuItem>
+            <MenuItem value="newFolder" startIcon={<CreateNewFolderIcon />}>
+              <Trans message="Create folder" />
+            </MenuItem>
+          </Menu>
+        </MenuTrigger>
+        
+        {/* Telegram URL Upload Button */}
+        <TelegramUrlUploadButton
+          onSuccess={() => {
+            invalidateEntryQueries();
+          }}
+        />
+      </div>
     </div>
   );
 }

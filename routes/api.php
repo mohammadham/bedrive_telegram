@@ -15,6 +15,7 @@ use App\Http\Controllers\StarredEntriesController;
 use App\Http\Controllers\UserFoldersController;
 use App\Http\Controllers\Admin\TelegramStatsController;
 use App\Http\Controllers\UserTelegramSettingsController;
+use App\Http\Controllers\TelegramUrlUploadController;
 use Illuminate\Support\Facades\Route;
 
 // prettier-ignore
@@ -113,6 +114,15 @@ Route::group(['prefix' => 'v1'], function() {
     Route::put('user/telegram/settings', [UserTelegramSettingsController::class, 'update']);
     Route::post('user/telegram/upload/{fileId}', [UserTelegramSettingsController::class, 'uploadToTelegram']);
     Route::post('user/telegram/forward/{fileId}', [UserTelegramSettingsController::class, 'forwardFile']);
+    
+    // TELEGRAM URL UPLOAD
+    Route::post('telegram/upload-url', [TelegramUrlUploadController::class, 'uploadSingle']);
+    Route::post('telegram/upload-bulk-urls', [TelegramUrlUploadController::class, 'uploadBulk']);
+    Route::post('telegram/validate-url', [TelegramUrlUploadController::class, 'validateUrl']);
+    Route::get('telegram/bulk-upload-status/{jobId}', function ($jobId) {
+        $results = cache()->get("telegram_bulk_upload:{$jobId}");
+        return response()->json($results ?? ['status' => 'not_found']);
+    });
   });
 
   //SHAREABLE LINKS PREVIEW (NO AUTH NEEDED)
