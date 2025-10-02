@@ -402,4 +402,54 @@ class TelegramUserClient implements TelegramClientInterface
             return false;
         }
     }
+
+    /**
+     * Forward a message to another chat
+     *
+     * @param string $fromChatId Source chat ID (channel)
+     * @param int $messageId Message ID to forward
+     * @param string $toChatId Target chat ID
+     * @return array
+     * @throws TelegramUploadException
+     */
+    public function forwardMessage(
+        string $fromChatId,
+        int $messageId,
+        string $toChatId
+    ): array {
+        try {
+            $result = $this->MadelineProto->messages->forwardMessages([
+                'from_peer' => $fromChatId,
+                'id' => [$messageId],
+                'to_peer' => $toChatId,
+            ]);
+
+            Log::info('Message forwarded successfully (User Account)', [
+                'from_chat' => $fromChatId,
+                'to_chat' => $toChatId,
+                'message_id' => $messageId,
+            ]);
+
+            return [
+                'success' => true,
+                'result' => $result,
+            ];
+        } catch (MadelineException $e) {
+            Log::error('Failed to forward message (User Account)', [
+                'from_chat' => $fromChatId,
+                'to_chat' => $toChatId,
+                'message_id' => $messageId,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw TelegramUploadException::uploadFailed(
+                'Failed to forward message: ' . $e->getMessage(),
+                [
+                    'from_chat' => $fromChatId,
+                    'to_chat' => $toChatId,
+                    'message_id' => $messageId,
+                ]
+            );
+        }
+    }
 }

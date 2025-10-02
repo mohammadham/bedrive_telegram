@@ -42,4 +42,42 @@ class User extends BaseUser
         }
         return null;
     }
+
+    /**
+     * Check if user has auto-forward enabled
+     */
+    public function hasTelegramAutoForward(): bool
+    {
+        return (bool) $this->telegram_auto_forward;
+    }
+
+    /**
+     * Get telegram forward target (channel/group/user ID)
+     */
+    public function getTelegramForwardTarget(): ?string
+    {
+        return $this->telegram_forward_target;
+    }
+
+    /**
+     * Enable telegram auto-forward
+     */
+    public function enableTelegramAutoForward(string $target): void
+    {
+        $this->update([
+            'telegram_auto_forward' => true,
+            'telegram_forward_target' => $target,
+        ]);
+    }
+
+    /**
+     * Disable telegram auto-forward
+     */
+    public function disableTelegramAutoForward(): void
+    {
+        $this->update([
+            'telegram_auto_forward' => false,
+            'telegram_forward_target' => null,
+        ]);
+    }
 }

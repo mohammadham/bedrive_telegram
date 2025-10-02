@@ -4,14 +4,35 @@ import {Fragment} from 'react';
 import {SectionHelper} from '@common/ui/other/section-helper';
 import {Link} from 'react-router-dom';
 import {TelegramStats} from './telegram-stats';
+import {useSettings} from '@ui/settings/use-settings';
+import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
 
 export interface TelegramFormProps {
   isInvalid: boolean;
 }
 
 export function TelegramForm({isInvalid}: TelegramFormProps) {
+  const settings = useSettings();
+  const isTelegramActive = settings.uploads?.disk === 'telegram';
+
   return (
     <Fragment>
+      {isTelegramActive && (
+        <SectionHelper
+          className="mb-30"
+          color="positive"
+          title={
+            <div className="flex items-center gap-8">
+              <CheckCircleIcon className="text-positive" size="sm" />
+              <Trans message="Telegram Storage is Active" />
+            </div>
+          }
+          description={
+            <Trans message="Your files are currently being stored in Telegram. All new uploads will be automatically saved to your configured Telegram channel." />
+          }
+        />
+      )}
+
       <SectionHelper
         className="mb-30"
         color="positive"

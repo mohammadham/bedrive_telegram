@@ -338,4 +338,57 @@ class TelegramBotClient implements TelegramClientInterface
             return [];
         }
     }
+
+    /**
+     * Forward a message to another chat
+     *
+     * @param string $fromChatId Source chat ID (channel)
+     * @param int $messageId Message ID to forward
+     * @param string $toChatId Target chat ID
+     * @return array
+     * @throws TelegramUploadException
+     */
+    public function forwardMessage(
+        string $fromChatId,
+        int $messageId,
+        string $toChatId
+    ): array {
+        try {
+            $result = $this->telegram->forwardMessage([
+                'chat_id' => $toChatId,
+                'from_chat_id' => $fromChatId,
+                'message_id' => $messageId,
+            ]);
+
+            Log::info('Message forwarded successfully', [
+                'from_chat' => $fromChatId,
+                'to_chat' => $toChatId,
+                'message_id' => $messageId,
+                'new_message_id' => $result->getMessageId(),
+            ]);
+
+            return [
+                'success' => true,
+                'message_id' => $result->getMessageId(),
+                'chat_id' => $result->getChat()->getId(),
+                'date' => $result->getDate(),
+            ];
+        } catch (TelegramSDKException $e) {
+            Log::error('Failed to forward message', [
+                'from_chat' => $fromChatId,
+                'to_chat' => $toChatId,
+                'message_id' => $messageId,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw TelegramUploadException::uploadFailed(
+                'Failed to forward message: ' . $e->getMessage(),
+                [
+                    'from_chat' => $fromChatId,
+                    'to_chat' => $toChatId,
+                    'message_id' => $messageId,
+                ]
+            );
+        }
+    }
 }

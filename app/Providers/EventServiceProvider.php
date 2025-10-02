@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Listeners\AttachUsersToNewlyUploadedFile;
+use App\Listeners\AutoForwardToTelegram;
 use App\Listeners\DeleteShareableLinks;
 use App\Listeners\FolderTotalSizeSubscriber;
 use App\Listeners\HandleDeletedWorkspace;
@@ -10,6 +11,7 @@ use App\Listeners\HydrateUserWithSampleDriveContents;
 use Common\Auth\Events\UserCreated;
 use Common\Files\Events\FileEntriesDeleted;
 use Common\Files\Events\FileEntryCreated;
+use Common\Files\Events\FileUploaded;
 use Common\Notifications\SubscribeUserToNotifications;
 use Common\Workspaces\Events\WorkspaceDeleted;
 use Common\Workspaces\Listeners\AttachWorkspaceToUser;
@@ -23,6 +25,7 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         FileEntryCreated::class => [AttachUsersToNewlyUploadedFile::class],
         FileEntriesDeleted::class => [DeleteShareableLinks::class],
+        FileUploaded::class => [AutoForwardToTelegram::class],
 
         WorkspaceDeleted::class => [HandleDeletedWorkspace::class],
 

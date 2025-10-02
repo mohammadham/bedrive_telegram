@@ -14,6 +14,7 @@ use App\Http\Controllers\SpaceUsageController;
 use App\Http\Controllers\StarredEntriesController;
 use App\Http\Controllers\UserFoldersController;
 use App\Http\Controllers\Admin\TelegramStatsController;
+use App\Http\Controllers\UserTelegramSettingsController;
 use Illuminate\Support\Facades\Route;
 
 // prettier-ignore
@@ -106,6 +107,12 @@ Route::group(['prefix' => 'v1'], function() {
 
     // TELEGRAM ADMIN
     Route::get('admin/telegram/stats', [TelegramStatsController::class, 'index']);
+
+    // USER TELEGRAM SETTINGS
+    Route::get('user/telegram/settings', [UserTelegramSettingsController::class, 'index']);
+    Route::put('user/telegram/settings', [UserTelegramSettingsController::class, 'update']);
+    Route::post('user/telegram/upload/{fileId}', [UserTelegramSettingsController::class, 'uploadToTelegram']);
+    Route::post('user/telegram/forward/{fileId}', [UserTelegramSettingsController::class, 'forwardFile']);
   });
 
   //SHAREABLE LINKS PREVIEW (NO AUTH NEEDED)

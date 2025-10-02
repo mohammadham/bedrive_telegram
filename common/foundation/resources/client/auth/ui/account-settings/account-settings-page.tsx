@@ -14,6 +14,7 @@ import {SessionsPanel} from '@common/auth/ui/account-settings/sessions-panel/ses
 import {useContext} from 'react';
 import {SiteConfigContext} from '@common/core/settings/site-config-context';
 import {TwoFactorPanel} from '@common/auth/ui/account-settings/two-factor-panel';
+import {TelegramSettingsPanel} from '@common/auth/ui/account-settings/telegram-settings-panel/telegram-settings-panel';
 
 export function AccountSettingsPage() {
   const {auth} = useContext(SiteConfigContext);
@@ -53,6 +54,7 @@ export function AccountSettingsPage() {
                 <TwoFactorPanel user={data.user} />
                 <SessionsPanel />
                 <LocalizationPanel user={data.user} />
+                <TelegramSettingsPanel />
                 <AccessTokenPanel user={data.user} />
                 <DangerZonePanel />
               </main>
