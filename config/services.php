@@ -28,4 +28,13 @@ return [
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'channel_id' => env('TELEGRAM_CHANNEL_ID'),
+        'api_id' => env('TELEGRAM_API_ID'),
+        'api_hash' => env('TELEGRAM_API_HASH'),
+        'phone' => env('TELEGRAM_PHONE'),
+        'session_file' => env('TELEGRAM_SESSION_FILE', storage_path('app/telegram/session.madeline')),
+    ],
 ];

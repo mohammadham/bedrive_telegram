@@ -22,6 +22,14 @@ class FileEntry extends CommonFileEntry
     }
 
     /**
+     * Telegram metadata relationship
+     */
+    public function telegramMetadata(): HasOne
+    {
+        return $this->hasOne(TelegramFileMetadata::class, 'file_entry_id');
+    }
+
+    /**
      * Get only entries that are not children of another entry.
      */
     public function scopeRootOnly(Builder $builder): Builder
