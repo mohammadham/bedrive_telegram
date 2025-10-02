@@ -1,5 +1,6 @@
 /**
  * Phase 8.2: Progress Tracking - TypeScript Types
+ * Phase 8.4: Added Retry fields
  */
 
 export interface TelegramUploadProgressData {
@@ -28,6 +29,13 @@ export interface TelegramUploadProgressData {
   status: 'pending' | 'downloading' | 'uploading' | 'completed' | 'failed' | 'cancelled';
   error_message: string | null;
   
+  // Phase 8.4: Retry fields
+  retry_count: number;
+  max_retries: number;
+  is_retryable: boolean;
+  retry_info: string;
+  next_retry_at: string | null;
+  
   // Timestamps
   started_at: string | null;
   completed_at: string | null;
@@ -41,4 +49,19 @@ export interface TelegramProgressResponse {
 export interface TelegramProgressListResponse {
   progress: TelegramUploadProgressData[];
   count: number;
+}
+
+// Phase 8.4: Retry Types
+export interface TelegramRetryResponse {
+  success: boolean;
+  message: string;
+  next_retry_at?: string;
+  retry_count?: number;
+}
+
+export interface TelegramRetryStatsResponse {
+  pending_retries: number;
+  total_retries: number;
+  non_retryable: number;
+  max_retries_reached: number;
 }

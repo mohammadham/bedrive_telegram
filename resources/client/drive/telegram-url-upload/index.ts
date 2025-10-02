@@ -1,5 +1,5 @@
 /**
- * Phase 8.1 & 8.2: Telegram URL Upload - Export Index
+ * Phase 8: Telegram URL Upload - Export Index
  * صادرات اصلی ماژول
  */
 
@@ -19,3 +19,7 @@ export {useUploadProgress} from './use-upload-progress';
 
 export * from './telegram-progress-types';
 export * from './telegram-progress-api';
+
+// Phase 8.3: Resume Upload (Session Management)
+export * from './telegram-session-types';
+export * from './telegram-session-api';

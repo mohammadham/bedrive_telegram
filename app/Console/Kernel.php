@@ -16,6 +16,15 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command(DeleteExpiredLinks::class)->everyMinute();
 
+        // Phase 8.4: Process Telegram retry queue every 5 minutes
+        $schedule->command('telegram:process-retries')->everyFiveMinutes();
+
+        // Phase 8.3: Cleanup stale sessions every hour
+        $schedule->command('telegram:cleanup-sessions', ['--stale-only'])->hourly();
+
+        // Phase 8.3: Cleanup old sessions daily
+        $schedule->command('telegram:cleanup-sessions')->daily();
+
         if (config('common.site.demo')) {
             $schedule->command(CleanDemoSite::class)->daily();
         }

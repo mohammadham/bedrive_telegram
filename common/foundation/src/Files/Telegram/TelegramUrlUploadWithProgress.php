@@ -85,10 +85,30 @@ class TelegramUrlUploadWithProgress
             // علامت‌گذاری به عنوان failed
             $this->progressService->markAsFailed($sessionId, $e->getMessage());
 
+            // Phase 8.4: Auto-Retry Logic
+            $retryService = new TelegramRetryService();
+            $errorInfo = $retryService->classifyError($e);
+
+            $progress = \App\Models\TelegramUploadProgress::where('session_id', $sessionId)->first();
+            if ($progress) {
+                if (!$errorInfo['is_retryable']) {
+                    $progress->markAsNonRetryable($e->getMessage());
+                } elseif ($progress->canRetry()) {
+                    $progress->scheduleNextRetry();
+                    
+                    Log::info('Upload will be retried', [
+                        'session_id' => $sessionId,
+                        'retry_count' => $progress->retry_count,
+                        'next_retry_at' => $progress->next_retry_at,
+                    ]);
+                }
+            }
+
             Log::error('Telegram URL upload failed', [
                 'session_id' => $sessionId,
                 'url' => $url,
                 'error' => $e->getMessage(),
+                'is_retryable' => $errorInfo['is_retryable'],
             ]);
 
             throw $e;

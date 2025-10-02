@@ -33,6 +33,13 @@ class TelegramUploadProgress extends Model
         'file_entry_id',
         'started_at',
         'completed_at',
+        // Phase 8.4: Retry fields
+        'retry_count',
+        'max_retries',
+        'last_retry_at',
+        'next_retry_at',
+        'is_retryable',
+        'retry_phase',
     ];
 
     protected $casts = [
@@ -46,6 +53,12 @@ class TelegramUploadProgress extends Model
         'metadata' => 'array',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        // Phase 8.4: Retry casts
+        'retry_count' => 'integer',
+        'max_retries' => 'integer',
+        'last_retry_at' => 'datetime',
+        'next_retry_at' => 'datetime',
+        'is_retryable' => 'boolean',
     ];
 
     /**
@@ -296,5 +309,96 @@ class TelegramUploadProgress extends Model
         return static::where('created_at', '<', now()->subHours(24))
             ->whereIn('status', ['completed', 'failed', 'cancelled'])
             ->delete();
+    }
+
+    /**
+     * Phase 8.4: Auto-Retry Methods
+     */
+
+    /**
+     * آیا می‌توان retry کرد؟
+     */
+    public function canRetry(): bool
+    {
+        return $this->is_retryable 
+            && $this->retry_count < $this->max_retries
+            && in_array($this->status, ['failed', 'downloading', 'uploading']);
+    }
+
+    /**
+     * افزایش شمارنده retry
+     */
+    public function incrementRetry(): void
+    {
+        $this->increment('retry_count');
+        $this->update([
+            'last_retry_at' => now(),
+            'next_retry_at' => null,
+        ]);
+    }
+
+    /**
+     * تنظیم زمان retry بعدی (exponential backoff)
+     */
+    public function scheduleNextRetry(): void
+    {
+        if (!$this->canRetry()) {
+            return;
+        }
+
+        // Exponential backoff: 5s, 15s, 45s
+        $delays = [5, 15, 45];
+        $retryIndex = min($this->retry_count, count($delays) - 1);
+        $delaySeconds = $delays[$retryIndex];
+
+        $this->update([
+            'next_retry_at' => now()->addSeconds($delaySeconds),
+            'status' => 'pending', // برگشت به pending برای retry
+        ]);
+    }
+
+    /**
+     * علامت‌گذاری به عنوان non-retryable
+     */
+    public function markAsNonRetryable(string $reason = ''): void
+    {
+        $this->update([
+            'is_retryable' => false,
+            'error_message' => $reason ?: $this->error_message,
+        ]);
+    }
+
+    /**
+     * دریافت متن retry
+     */
+    public function getRetryInfoAttribute(): string
+    {
+        if (!$this->is_retryable) {
+            return 'غیرقابل تلاش مجدد';
+        }
+
+        if ($this->retry_count >= $this->max_retries) {
+            return 'حداکثر تلاش انجام شد';
+        }
+
+        if ($this->retry_count > 0) {
+            return "تلاش {$this->retry_count} از {$this->max_retries}";
+        }
+
+        return '';
+    }
+
+    /**
+     * Scope: موارد آماده برای retry
+     */
+    public function scopeReadyForRetry($query)
+    {
+        return $query->where('is_retryable', true)
+            ->where('retry_count', '<', \DB::raw('max_retries'))
+            ->where('status', 'pending')
+            ->where(function($q) {
+                $q->whereNull('next_retry_at')
+                  ->orWhere('next_retry_at', '<=', now());
+            });
     }
 }

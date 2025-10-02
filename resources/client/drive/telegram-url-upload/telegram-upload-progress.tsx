@@ -1,5 +1,6 @@
 /**
  * Phase 8.2: Progress Tracking - Progress Component
+ * Phase 8.4: Added Retry UI
  * 
  * نمایش progress bar و اطلاعات آپلود
  */
@@ -13,6 +14,7 @@ import {
   getStatusColor,
   getStatusText,
   cancelUpload,
+  retryUpload,
 } from './telegram-progress-api';
 import {Button} from '@ui/buttons/button';
 import {CancelIcon} from '@ui/icons/material/Cancel';
@@ -20,6 +22,7 @@ import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
 import {ErrorIcon} from '@ui/icons/material/Error';
 import {CloudDownloadIcon} from '@ui/icons/material/CloudDownload';
 import {CloudUploadIcon} from '@ui/icons/material/CloudUpload';
+import {RefreshIcon} from '@ui/icons/material/Refresh';
 import {Skeleton} from '@ui/skeleton/skeleton';
 import {toast} from '@ui/toast/toast';
 
@@ -76,6 +79,20 @@ export function TelegramUploadProgress({
       toast.success(<Trans message="آپلود لغو شد" />);
     } catch (error: any) {
       toast.danger(error.message || <Trans message="خطا در لغو آپلود" />);
+    }
+  };
+
+  // Phase 8.4: Retry handler
+  const handleRetry = async () => {
+    try {
+      const result = await retryUpload(sessionId);
+      if (result.success) {
+        toast.success(<Trans message="تلاش مجدد با موفقیت آغاز شد" />);
+      } else {
+        toast.warning(result.message);
+      }
+    } catch (error: any) {
+      toast.danger(error.message || <Trans message="خطا در تلاش مجدد" />);
     }
   };
 
@@ -197,7 +214,41 @@ export function TelegramUploadProgress({
           {progress.error_message && (
             <div className="rounded bg-danger/10 p-8 text-danger flex items-start gap-8">
               <ErrorIcon size="sm" className="mt-2 flex-shrink-0" />
-              <span>{progress.error_message}</span>
+              <div className="flex-1">
+                <span>{progress.error_message}</span>
+                
+                {/* Phase 8.4: Retry info and button */}
+                {progress.retry_count > 0 && (
+                  <div className="mt-4 text-xs text-muted">
+                    {progress.retry_info}
+                  </div>
+                )}
+                {progress.is_retryable && progress.status === 'failed' && (
+                  <div className="mt-8">
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      color="primary"
+                      startIcon={<RefreshIcon />}
+                      onClick={handleRetry}
+                      disabled={progress.retry_count >= progress.max_retries}
+                    >
+                      <Trans message="تلاش مجدد" />
+                      {progress.retry_count > 0 && ` (${progress.retry_count}/${progress.max_retries})`}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Phase 8.4: Next retry time */}
+          {progress.next_retry_at && progress.status === 'pending' && (
+            <div className="rounded bg-warning/10 p-8 text-warning flex items-center gap-8 text-xs">
+              <RefreshIcon size="sm" />
+              <span>
+                <Trans message="تلاش مجدد در" />: {new Date(progress.next_retry_at).toLocaleTimeString('fa-IR')}
+              </span>
             </div>
           )}
         </div>

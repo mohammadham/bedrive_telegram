@@ -1,11 +1,14 @@
 /**
  * Phase 8.2: Progress Tracking - API Functions
+ * Phase 8.4: Added Retry functions
  */
 
 import {apiClient} from '@common/http/query-client';
 import {
   TelegramProgressResponse,
   TelegramProgressListResponse,
+  TelegramRetryResponse,
+  TelegramRetryStatsResponse,
 } from './telegram-progress-types';
 
 /**
@@ -40,6 +43,35 @@ export function cancelUpload(sessionId: string): Promise<{message: string}> {
   return apiClient
     .post(`telegram/upload-progress/${sessionId}/cancel`)
     .then(response => response.data);
+}
+
+/**
+ * Phase 8.4: Retry یک upload ناموفق
+ */
+export function retryUpload(
+  sessionId: string,
+): Promise<TelegramRetryResponse> {
+  return apiClient
+    .post(`telegram/retry/${sessionId}`)
+    .then(response => response.data);
+}
+
+/**
+ * Phase 8.4: لغو retry
+ */
+export function cancelRetry(sessionId: string): Promise<{message: string}> {
+  return apiClient
+    .post(`telegram/retry/${sessionId}/cancel`)
+    .then(response => response.data);
+}
+
+/**
+ * Phase 8.4: دریافت آمار retry
+ */
+export function getRetryStatistics(): Promise<TelegramRetryStatsResponse> {
+  return apiClient
+    .get('telegram/retry-stats')
+    .then(response => response.data.data);
 }
 
 /**

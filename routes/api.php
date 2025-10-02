@@ -16,6 +16,9 @@ use App\Http\Controllers\UserFoldersController;
 use App\Http\Controllers\Admin\TelegramStatsController;
 use App\Http\Controllers\UserTelegramSettingsController;
 use App\Http\Controllers\TelegramUrlUploadController;
+use App\Http\Controllers\TelegramUploadProgressController;
+use App\Http\Controllers\TelegramRetryController;
+use App\Http\Controllers\TelegramUploadSessionController;
 use Illuminate\Support\Facades\Route;
 
 // prettier-ignore
@@ -128,6 +131,20 @@ Route::group(['prefix' => 'v1'], function() {
     Route::get('telegram/upload-progress', [TelegramUploadProgressController::class, 'index']);
     Route::get('telegram/upload-progress/{sessionId}', [TelegramUploadProgressController::class, 'show']);
     Route::post('telegram/upload-progress/{sessionId}/cancel', [TelegramUploadProgressController::class, 'cancel']);
+    
+    // TELEGRAM AUTO-RETRY (Phase 8.4)
+    Route::post('telegram/retry/{sessionId}', [TelegramRetryController::class, 'retry']);
+    Route::get('telegram/retry-stats', [TelegramRetryController::class, 'statistics']);
+    Route::post('telegram/retry/{sessionId}/cancel', [TelegramRetryController::class, 'cancelRetry']);
+    
+    // TELEGRAM RESUMABLE UPLOAD (Phase 8.3)
+    Route::post('telegram/chunked-upload', [TelegramUploadSessionController::class, 'start']);
+    Route::get('telegram/upload-sessions', [TelegramUploadSessionController::class, 'index']);
+    Route::get('telegram/upload-sessions/statistics', [TelegramUploadSessionController::class, 'statistics']);
+    Route::get('telegram/upload-session/{sessionId}', [TelegramUploadSessionController::class, 'show']);
+    Route::post('telegram/upload-session/{sessionId}/resume', [TelegramUploadSessionController::class, 'resume']);
+    Route::post('telegram/upload-session/{sessionId}/pause', [TelegramUploadSessionController::class, 'pause']);
+    Route::post('telegram/upload-session/{sessionId}/cancel', [TelegramUploadSessionController::class, 'cancel']);
   });
 
   //SHAREABLE LINKS PREVIEW (NO AUTH NEEDED)
