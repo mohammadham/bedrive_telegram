@@ -1,9 +1,9 @@
-import {Trans} from '@common/i18n/trans';
-import {Button} from '@common/ui/buttons/button';
-import {TextField} from '@common/ui/forms/input-field/text-field/text-field';
-import {CheckIcon} from '@common/icons/material/Check';
-import {InfoIcon} from '@common/icons/material/Info';
-import {WarningIcon} from '@common/icons/material/Warning';
+import {Trans} from '@ui/i18n/trans';
+import {Button} from '@ui/buttons/button';
+import {TextField} from '@ui/forms/input-field/text-field/text-field';
+import {CheckIcon} from '@ui/icons/material/Check';
+import {InfoIcon} from '@ui/icons/material/Info';
+import {WarningIcon} from '@ui/icons/material/Warning';
 import type {SingleUrlFormProps} from '../telegram-types';
 import {isValidUrl} from '../telegram-url-upload-api';
 
@@ -28,7 +28,7 @@ export function SingleUrlForm({
         <TextField
           label={<Trans message="File URL" />}
           value={url}
-          onChange={e => setUrl(e.target.value)}
+          onChange={(e: any) => setUrl(e.target.value)}
           placeholder="https://example.com/file.pdf"
           errorMessage={urlError}
           required
@@ -107,14 +107,14 @@ export function SingleUrlForm({
       <TextField
         label={<Trans message="File name (optional)" />}
         value={name}
-        onChange={e => setName(e.target.value)}
+        onChange={(e: any) => setName(e.target.value)}
         placeholder="My Document"
       />
 
       <TextField
         label={<Trans message="Caption (optional)" />}
         value={caption}
-        onChange={e => setCaption(e.target.value)}
+        onChange={(e: any) => setCaption(e.target.value)}
         placeholder="Add a caption for this file"
         inputElementType="textarea"
         rows={3}

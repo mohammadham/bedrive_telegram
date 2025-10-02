@@ -1,8 +1,8 @@
-import {Trans} from '@common/i18n/trans';
-import {TextField} from '@common/ui/forms/input-field/text-field/text-field';
-import {InfoIcon} from '@common/icons/material/Info';
-import {CheckCircleIcon} from '@common/icons/material/CheckCircle';
-import {ErrorIcon} from '@common/icons/material/Error';
+import {Trans} from '@ui/i18n/trans';
+import {TextField} from '@ui/forms/input-field/text-field/text-field';
+import {InfoIcon} from '@ui/icons/material/Info';
+import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
+import {ErrorIcon} from '@ui/icons/material/Error';
 import type {BulkUrlsFormProps} from '../telegram-types';
 import {parseUrlsFromText, isValidUrl} from '../telegram-url-upload-api';
 import {useMemo} from 'react';
@@ -43,7 +43,7 @@ export function BulkUrlsForm({
       <TextField
         label={<Trans message="File URLs (one per line)" />}
         value={urlsText}
-        onChange={e => handleUrlsChange(e.target.value)}
+        onChange={(e: any) => handleUrlsChange(e.target.value)}
         placeholder={`https://example.com/file1.pdf\nhttps://example.com/file2.jpg\nhttps://example.com/file3.mp4`}
         inputElementType="textarea"
         rows={10}
@@ -109,7 +109,7 @@ export function BulkUrlsForm({
       <TextField
         label={<Trans message="Caption for all files (optional)" />}
         value={caption}
-        onChange={e => setCaption(e.target.value)}
+        onChange={(e: any) => setCaption(e.target.value)}
         placeholder="Add a caption that will be applied to all files"
         inputElementType="textarea"
         rows={2}

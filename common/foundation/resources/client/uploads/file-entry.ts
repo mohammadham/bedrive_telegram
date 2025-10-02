@@ -22,4 +22,10 @@ export interface FileEntry {
   updated_at?: string;
   children?: FileEntry[];
   users?: {id: number; email: string; owns_entry?: boolean}[];
+  telegram_metadata?: {
+    id: number;
+    telegram_file_id: string;
+    message_id: number;
+    channel_id: string;
+  };
 }

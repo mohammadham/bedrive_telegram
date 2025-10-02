@@ -3,12 +3,12 @@ import {Trans} from '@ui/i18n/trans';
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
 import {apiClient} from '@common/http/query-client';
 import {toast} from '@ui/toast/toast';
-import {FormSwitch} from '@ui/forms/form-switch';
+import {FormSwitch} from '@ui/forms/toggle/switch';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
 import {Button} from '@ui/buttons/button';
 import {useForm} from 'react-hook-form';
 import {Form} from '@ui/forms/form';
-import {SectionHelper} from '@common/admin/settings/form/section-helper';
+import {SectionHelper} from '@common/ui/other/section-helper';
 
 interface TelegramSettings {
   auto_forward: boolean;
@@ -42,7 +42,7 @@ export function TelegramSettingsPanel() {
     mutationFn: (data: TelegramSettingsFormData) => 
       updateTelegramSettings(data),
     onSuccess: () => {
-      toast(Trans({message: 'Telegram settings updated successfully'}));
+      toast.positive('Telegram settings updated successfully');
       queryClient.invalidateQueries({queryKey: ['user-telegram-settings']});
     },
     onError: (error: any) => {
@@ -60,7 +60,6 @@ export function TelegramSettingsPanel() {
     <AccountSettingsPanel
       id="telegram-settings"
       title={<Trans message="Telegram Settings" />}
-      isLoading={isLoading}
     >
       <Form
         form={form}

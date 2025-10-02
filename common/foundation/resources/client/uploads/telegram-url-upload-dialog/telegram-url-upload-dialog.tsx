@@ -1,15 +1,15 @@
 import {useState} from 'react';
-import {Trans} from '@common/i18n/trans';
-import {Dialog} from '@common/ui/overlays/dialog/dialog';
-import {DialogHeader} from '@common/ui/overlays/dialog/dialog-header';
-import {DialogBody} from '@common/ui/overlays/dialog/dialog-body';
-import {DialogFooter} from '@common/ui/overlays/dialog/dialog-footer';
-import {Button} from '@common/ui/buttons/button';
-import {Tabs} from '@common/ui/tabs/tabs';
-import {TabList} from '@common/ui/tabs/tab-list';
-import {Tab} from '@common/ui/tabs/tab';
-import {TabPanel} from '@common/ui/tabs/tab-panel';
-import {toast} from '@common/ui/toast/toast';
+import {Trans} from '@ui/i18n/trans';
+import {Dialog} from '@ui/overlays/dialog/dialog';
+import {DialogHeader} from '@ui/overlays/dialog/dialog-header';
+import {DialogBody} from '@ui/overlays/dialog/dialog-body';
+import {DialogFooter} from '@ui/overlays/dialog/dialog-footer';
+import {Button} from '@ui/buttons/button';
+import {Tabs} from '@ui/tabs/tabs';
+import {TabList} from '@ui/tabs/tab-list';
+import {Tab} from '@ui/tabs/tab';
+import {TabPanel} from '@ui/tabs/tab-panels';
+import {toast} from '@ui/toast/toast';
 import {SingleUrlForm} from './single-url-form';
 import {BulkUrlsForm} from './bulk-urls-form';
 import type {
@@ -124,7 +124,7 @@ export function TelegramUrlUploadDialog({
       const message = `Uploaded ${result.successful} of ${result.total} files successfully`;
       
       if (result.failed > 0) {
-        toast.warning(message);
+        toast.danger(message);
       } else {
         toast.positive(message);
       }
@@ -161,23 +161,23 @@ export function TelegramUrlUploadDialog({
     : urls.length > 0 && urls.length <= 100;
 
   return (
-    <Dialog size="lg" isOpen={isOpen} onClose={handleClose}>
+    <Dialog size="lg">
       <DialogHeader>
         <Trans message="Upload from URL" />
       </DialogHeader>
 
       <DialogBody>
-        <Tabs selectedTab={mode} onTabChange={setMode as any}>
+        <Tabs selectedTab={mode === 'single' ? 0 : 1} onTabChange={(index) => setMode(index === 0 ? 'single' : 'bulk')}>
           <TabList>
-            <Tab id="single">
+            <Tab>
               <Trans message="Single File" />
             </Tab>
-            <Tab id="bulk">
+            <Tab>
               <Trans message="Multiple Files" />
             </Tab>
           </TabList>
 
-          <TabPanel id="single">
+          <TabPanel>
             <SingleUrlForm
               url={url}
               setUrl={setUrl}
@@ -191,7 +191,7 @@ export function TelegramUrlUploadDialog({
             />
           </TabPanel>
 
-          <TabPanel id="bulk">
+          <TabPanel>
             <BulkUrlsForm
               urls={urls}
               setUrls={setUrls}

@@ -2,7 +2,7 @@ import {Trans} from '@ui/i18n/trans';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
 import {Fragment} from 'react';
 import {SectionHelper} from '@common/ui/other/section-helper';
-import {Link} from 'react-router-dom';
+import {Link} from 'react-router';
 import {TelegramStats} from './telegram-stats';
 import {useSettings} from '@ui/settings/use-settings';
 import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';

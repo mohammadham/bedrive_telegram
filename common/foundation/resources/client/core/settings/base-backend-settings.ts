@@ -104,6 +104,7 @@ export interface BaseBackendSettings {
     blocked_extensions?: string[];
     public_driver: string;
     uploads_driver: string;
+    disk?: string;
     s3_direct_upload: boolean;
     disable_tus: boolean;
   };

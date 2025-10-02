@@ -1,8 +1,8 @@
 import {useState} from 'react';
-import {Trans} from '@common/i18n/trans';
-import {Button} from '@common/ui/buttons/button';
-import {Tooltip} from '@common/ui/tooltip/tooltip';
-import {LinkIcon} from '@common/icons/material/Link';
+import {Trans} from '@ui/i18n/trans';
+import {Button} from '@ui/buttons/button';
+import {Tooltip} from '@ui/tooltip/tooltip';
+import {LinkIcon} from '@ui/icons/material/Link';
 import {TelegramUrlUploadDialog} from './telegram-url-upload-dialog/telegram-url-upload-dialog';
 import type {TelegramUrlUploadButtonProps} from './telegram-types';
 

@@ -28,7 +28,7 @@ export function useUploadProgress({
     enabled: enabled && !!sessionId,
     refetchInterval: (data) => {
       // Stop polling if completed, failed, or cancelled
-      const progress = data?.progress;
+      const progress = data?.data?.progress;
       if (!progress) return false;
       
       const isFinished = ['completed', 'failed', 'cancelled'].includes(
@@ -38,10 +38,10 @@ export function useUploadProgress({
       return isFinished ? false : refetchInterval;
     },
     staleTime: 0, // Always fresh
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const progress: TelegramUploadProgressData | undefined = query.data?.progress;
+  const progress: TelegramUploadProgressData | undefined = query.data?.data?.progress;
 
   return {
     progress,

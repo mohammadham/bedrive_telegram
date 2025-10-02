@@ -33,7 +33,6 @@ export function TelegramUrlUploadDialog({
   const [activeTab, setActiveTab] = useState<TelegramUploadTab>('single');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadSessionId, setUploadSessionId] = useState<string | null>(null);
-  const activeFolderId = useDriveStore(s => s.activeFolderId);
 
   const handleSingleSubmit = async (url: string, filename: string) => {
     setIsSubmitting(true);
@@ -41,7 +40,6 @@ export function TelegramUrlUploadDialog({
       const response = await uploadFromUrl({
         url,
         name: filename,
-        parent_id: activeFolderId,
       });
 
       // Phase 8.2: ذخیره session_id برای نمایش progress
@@ -53,18 +51,15 @@ export function TelegramUrlUploadDialog({
       }
     } catch (error: any) {
       toast.danger(
-        error.message || <Trans message="خطا در آپلود فایل به تلگرام" />,
+        error.message || 'خطا در آپلود فایل به تلگرام',
       );
       setIsSubmitting(false);
     }
   };
 
   const handleUploadComplete = async (filename?: string) => {
-    toast.success(
-      <Trans
-        message="فایل :name با موفقیت به تلگرام آپلود شد"
-        values={{name: filename || 'فایل'}}
-      />,
+    toast.positive(
+      `فایل ${filename || 'فایل'} با موفقیت به تلگرام آپلود شد`,
     );
 
     // Refresh drive list
@@ -91,29 +86,21 @@ export function TelegramUrlUploadDialog({
     try {
       const response = await uploadBulkFromUrls({
         urls,
-        parent_id: activeFolderId,
       });
 
       const {successful, failed, total} = response.summary;
 
       if (failed === 0) {
-        toast.success(
-          <Trans
-            message=":count فایل با موفقیت به تلگرام آپلود شد"
-            values={{count: successful}}
-          />,
+        toast.positive(
+          `${successful} فایل با موفقیت به تلگرام آپلود شد`,
         );
       } else if (successful === 0) {
         toast.danger(
-          <Trans message="هیچ فایلی آپلود نشد. لطفاً URL‌ها را بررسی کنید" />,
+          'هیچ فایلی آپلود نشد. لطفاً URL‌ها را بررسی کنید',
         );
       } else {
-        toast(
-          <Trans
-            message=":successful از :total فایل آپلود شد. :failed فایل با خطا مواجه شد"
-            values={{successful, total, failed}}
-          />,
-          {type: 'warning'},
+        toast.danger(
+          `${successful} از ${total} فایل آپلود شد. ${failed} فایل با خطا مواجه شد`,
         );
       }
 
@@ -135,8 +122,10 @@ export function TelegramUrlUploadDialog({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} size="lg">
+    <Dialog size="lg">
       <DialogHeader>
         <Trans message="آپلود از URL به تلگرام" />
       </DialogHeader>
@@ -156,7 +145,7 @@ export function TelegramUrlUploadDialog({
             />
           </div>
         ) : (
-          <Tabs selectedTab={activeTab} onTabChange={setActiveTab as any}>
+          <Tabs selectedTab={activeTab === 'single' ? 0 : 1} onTabChange={(index) => setActiveTab(index === 0 ? 'single' : 'bulk')}>
             <TabList className="mb-24">
               <Tab index={0}>
                 <Trans message="آپلود تکی" />

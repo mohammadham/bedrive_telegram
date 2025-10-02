@@ -54,7 +54,7 @@ function UploadToTelegramButton({file}: {file: FileEntry}) {
   const uploadMutation = useMutation({
     mutationFn: () => uploadToTelegram(file.id),
     onSuccess: () => {
-      toast(Trans({message: 'File uploaded to Telegram successfully'}));
+      toast.positive('File uploaded to Telegram successfully');
       queryClient.invalidateQueries({queryKey: ['file-entries']});
     },
     onError: (error: any) => {
@@ -127,7 +127,7 @@ function ForwardToSavedTarget({
   const forwardMutation = useMutation({
     mutationFn: () => forwardFile(file.id, targetId),
     onSuccess: () => {
-      toast(Trans({message: 'File forwarded to saved target successfully'}));
+      toast.positive('File forwarded to saved target successfully');
     },
     onError: (error: any) => {
       const message =
@@ -159,7 +159,7 @@ function ForwardToCustomTarget({file}: {file: FileEntry}) {
   const forwardMutation = useMutation({
     mutationFn: (target: string) => forwardFile(file.id, target),
     onSuccess: () => {
-      toast(Trans({message: 'File forwarded successfully'}));
+      toast.positive('File forwarded successfully');
       setTargetId('');
     },
     onError: (error: any) => {
@@ -183,6 +183,7 @@ function ForwardToCustomTarget({file}: {file: FileEntry}) {
             <Trans message="Enter the Telegram ID (channel, group, or user) where you want to forward this file." />
           </p>
           <FormTextField
+            name="telegram_id"
             value={targetId}
             onChange={e => setTargetId(e.target.value)}
             label={<Trans message="Telegram ID" />}
@@ -206,10 +207,12 @@ function ForwardToCustomTarget({file}: {file: FileEntry}) {
         </DialogBody>
         <DialogFooter>
           <Button
-            onClick={close => {
+            onClick={(close) => {
               if (targetId.trim()) {
                 forwardMutation.mutate(targetId, {
-                  onSuccess: () => close(),
+                  onSuccess: () => {
+                    if (typeof close === 'function') close();
+                  },
                 });
               }
             }}

@@ -49,23 +49,23 @@ export function TelegramUploadProgressList({
           <Trans message="فایل‌های آپلود شده در اینجا نمایش داده می‌شوند" />
         }
         image={
-          <SvgImage>
-            <svg
-              width="140"
-              height="140"
-              viewBox="0 0 140 140"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle cx="70" cy="70" r="60" fill="currentColor" opacity="0.1" />
-              <path
-                d="M70 40V100M40 70H100"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-              />
-            </svg>
-          </SvgImage>
+          <svg
+            width="140"
+            height="140"
+            viewBox="0 0 140 140"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="text-muted"
+          >
+            <circle cx="70" cy="70" r="60" fill="currentColor" opacity="0.1" />
+            <path
+              d="M70 40v60M40 70h60"
+              stroke="currentColor"
+              strokeWidth="4"
+              strokeLinecap="round"
+              opacity="0.3"
+            />
+          </svg>
         }
       />
     );

@@ -76,9 +76,9 @@ export function TelegramUploadProgress({
   const handleCancel = async () => {
     try {
       await cancelUpload(sessionId);
-      toast.success(<Trans message="آپلود لغو شد" />);
+      toast.positive('آپلود لغو شد');
     } catch (error: any) {
-      toast.danger(error.message || <Trans message="خطا در لغو آپلود" />);
+      toast.danger(error.message || 'خطا در لغو آپلود');
     }
   };
 
@@ -87,12 +87,12 @@ export function TelegramUploadProgress({
     try {
       const result = await retryUpload(sessionId);
       if (result.success) {
-        toast.success(<Trans message="تلاش مجدد با موفقیت آغاز شد" />);
+        toast.positive('تلاش مجدد با موفقیت آغاز شد');
       } else {
-        toast.warning(result.message);
+        toast.danger(result.message);
       }
     } catch (error: any) {
-      toast.danger(error.message || <Trans message="خطا در تلاش مجدد" />);
+      toast.danger(error.message || 'خطا در تلاش مجدد');
     }
   };
 
@@ -104,7 +104,6 @@ export function TelegramUploadProgress({
           <ProgressBar
             value={progress.overall_percentage}
             size="sm"
-            color={getStatusColor(progress.status)}
           />
         </div>
         <span className="text-xs text-muted">
@@ -154,7 +153,6 @@ export function TelegramUploadProgress({
         <ProgressBar
           value={progress.overall_percentage}
           size="md"
-          color={getStatusColor(progress.status)}
           showValueLabel
         />
       </div>
