@@ -66,6 +66,12 @@ return [
             ),
             'remote_root' => env('PUBLIC_UPLOADS_REMOTE_ROOT', 'storage'),
         ],
+
+        'telegram' => [
+            'driver' => 'telegram',
+            'channel_id' => env('TELEGRAM_CHANNEL_ID'),
+            'prefix' => env('TELEGRAM_PREFIX', ''),
+        ],
     ],
 
     /*

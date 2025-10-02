@@ -13,6 +13,7 @@ use App\Http\Controllers\SharesController;
 use App\Http\Controllers\SpaceUsageController;
 use App\Http\Controllers\StarredEntriesController;
 use App\Http\Controllers\UserFoldersController;
+use App\Http\Controllers\Admin\TelegramStatsController;
 use Illuminate\Support\Facades\Route;
 
 // prettier-ignore
@@ -102,6 +103,9 @@ Route::group(['prefix' => 'v1'], function() {
 
     // FCM TOKENS
     Route::post('fcm-token', [FcmTokenController::class, 'store']);
+
+    // TELEGRAM ADMIN
+    Route::get('admin/telegram/stats', [TelegramStatsController::class, 'index']);
   });
 
   //SHAREABLE LINKS PREVIEW (NO AUTH NEEDED)

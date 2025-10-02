@@ -17,6 +17,7 @@ import {useForm, useFormContext} from 'react-hook-form';
 import {AdminSettings} from '@common/admin/settings/admin-settings';
 import {FormSelect} from '@ui/forms/select/select';
 import {DropboxForm} from '@common/admin/settings/pages/uploading-settings/dropbox-form/dropbox-form';
+import {TelegramForm} from '@common/admin/settings/pages/uploading-settings/telegram-form/telegram-form';
 import React, {Fragment} from 'react';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
 import {useUploadS3Cors} from '@common/admin/settings/pages/uploading-settings/use-upload-s3-cors';
@@ -97,6 +98,13 @@ function Form({data}: FormProps) {
           data.server.storage_dropbox_app_secret ?? '',
         storage_dropbox_refresh_token:
           data.server.storage_dropbox_refresh_token ?? '',
+
+        // telegram
+        storage_telegram_bot_token: data.server.storage_telegram_bot_token ?? '',
+        storage_telegram_channel_id: data.server.storage_telegram_channel_id ?? '',
+        storage_telegram_api_id: data.server.storage_telegram_api_id ?? '',
+        storage_telegram_api_hash: data.server.storage_telegram_api_hash ?? '',
+        storage_telegram_phone: data.server.storage_telegram_phone ?? '',
       },
     },
   });
@@ -223,6 +231,7 @@ function PrivateUploadSection() {
       <Item value="backblaze_s3">Backblaze</Item>
       <Item value="s3">Amazon S3 (Or compatible service)</Item>
       <Item value="dropbox">Dropbox</Item>
+      <Item value="telegram">Telegram</Item>
       <Item value="rackspace">Rackspace</Item>
     </FormSelect>
   );
@@ -285,6 +294,9 @@ function CredentialsSection() {
         }
         if (drives.includes('backblaze_s3')) {
           return <BackblazeForm isInvalid={isInvalid} />;
+        }
+        if (drives.includes('telegram')) {
+          return <TelegramForm isInvalid={isInvalid} />;
         }
       }}
     </SettingsErrorGroup>

@@ -7,6 +7,7 @@ use App\Models\TelegramFileMetadata;
 use Common\Files\Telegram\Exceptions\TelegramException;
 use Common\Files\Telegram\TelegramFileManager;
 use Common\Files\Telegram\TelegramMetadataHelper;
+use Common\Files\Telegram\TelegramPathMapper;
 use Illuminate\Support\Facades\Log;
 use League\Flysystem\Config;
 use League\Flysystem\FileAttributes;
@@ -275,8 +276,9 @@ class TelegramAdapter implements FilesystemAdapter
      */
     public function directoryExists(string $path): bool
     {
-        // Telegram doesn't have directories
-        return false;
+        // استفاده از PathMapper برای چک وجود virtual directory
+        $path = TelegramPathMapper::normalizePath($path);
+        return TelegramPathMapper::directoryExists($path);
     }
 
     /**
@@ -288,25 +290,21 @@ class TelegramAdapter implements FilesystemAdapter
      */
     public function listContents(string $path, bool $deep): iterable
     {
-        // Get all metadata for this channel
-        $query = TelegramFileMetadata::where('channel_id', $this->channelId);
+        // Normalize path
+        $path = TelegramPathMapper::normalizePath($path);
 
-        if ($path !== '' && $path !== '/') {
-            // Filter by path prefix if specified
-            $query->whereHas('fileEntry', function ($q) use ($path) {
-                $q->where('path', 'like', $path . '%');
-            });
-        }
+        // Use PathMapper to list directory contents
+        $files = TelegramPathMapper::listDirectory($path, $deep);
 
-        $metadataList = $query->with('fileEntry')->get();
-
-        foreach ($metadataList as $metadata) {
-            if ($metadata->fileEntry) {
+        foreach ($files as $metadata) {
+            $filePath = data_get($metadata->metadata, 'path', '');
+            
+            if ($filePath) {
                 yield new FileAttributes(
-                    $metadata->fileEntry->path ?? $metadata->fileEntry->name,
+                    $filePath,
                     $metadata->original_file_size,
                     null,
-                    $metadata->uploaded_at?->timestamp,
+                    $metadata->uploaded_at?->timestamp ?? $metadata->updated_at->timestamp,
                     $metadata->original_mime_type
                 );
             }
@@ -323,8 +321,20 @@ class TelegramAdapter implements FilesystemAdapter
      */
     public function move(string $source, string $destination, Config $config): void
     {
-        $this->copy($source, $destination, $config);
-        $this->delete($source);
+        // بهینه‌سازی: فقط path را تغییر می‌دهیم بدون کپی مجدد
+        $source = TelegramPathMapper::normalizePath($source);
+        $destination = TelegramPathMapper::normalizePath($destination);
+
+        if (TelegramPathMapper::move($source, $destination)) {
+            Log::info('File moved successfully', [
+                'from' => $source,
+                'to' => $destination,
+            ]);
+        } else {
+            // اگر با PathMapper نشد، از copy+delete استفاده می‌کنیم
+            $this->copy($source, $destination, $config);
+            $this->delete($source);
+        }
     }
 
     /**
@@ -501,16 +511,17 @@ class TelegramAdapter implements FilesystemAdapter
      */
     protected function storePathMapping(string $path, array $uploadResult): void
     {
-        // This is a simplified version
-        // In production, you should associate this with FileEntry
-        // For now, we store it in metadata JSON
+        // Normalize path
+        $path = TelegramPathMapper::normalizePath($path);
+
+        // Find or create metadata
         $metadata = TelegramFileMetadata::where('message_id', $uploadResult['message_id'])
             ->where('channel_id', $uploadResult['channel_id'])
             ->first();
 
         if (!$metadata) {
             // Create new metadata entry
-            TelegramFileMetadata::create([
+            $metadata = TelegramFileMetadata::create([
                 'file_entry_id' => 0, // Temporary, should be linked to FileEntry
                 'telegram_file_id' => $uploadResult['file_id'],
                 'telegram_file_unique_id' => $uploadResult['file_unique_id'] ?? null,
@@ -522,9 +533,16 @@ class TelegramAdapter implements FilesystemAdapter
                 'telegram_file_type' => TelegramMetadataHelper::determineTelegramFileType($uploadResult['mime_type']),
                 'upload_status' => 'completed',
                 'uploaded_at' => now(),
-                'metadata' => ['path' => $path],
             ]);
         }
+
+        // Store path mapping using PathMapper
+        TelegramPathMapper::store($path, $metadata);
+
+        Log::info('Path mapping stored', [
+            'path' => $path,
+            'message_id' => $uploadResult['message_id'],
+        ]);
     }
 
     /**
@@ -532,9 +550,10 @@ class TelegramAdapter implements FilesystemAdapter
      */
     public function getMetadataByPath(string $path): ?TelegramFileMetadata
     {
-        // Search in metadata JSON
-        return TelegramFileMetadata::where('channel_id', $this->channelId)
-            ->whereJsonContains('metadata->path', $path)
-            ->first();
+        // Normalize path
+        $path = TelegramPathMapper::normalizePath($path);
+
+        // Use PathMapper to resolve
+        return TelegramPathMapper::resolve($path);
     }
 }

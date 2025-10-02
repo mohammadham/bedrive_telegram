@@ -6,6 +6,7 @@ use Aws\S3\Exception\S3Exception;
 use Common\Files\Providers\BackblazeServiceProvider;
 use Common\Files\Providers\DigitalOceanServiceProvider;
 use Common\Files\Providers\DropboxServiceProvider;
+use Common\Files\Providers\TelegramServiceProvider;
 use Config;
 use Exception;
 use Spatie\FlysystemDropbox\DropboxAdapter;
@@ -56,6 +57,13 @@ class StorageCredentialsValidator
         'storage_backblaze_secret',
         'storage_backblaze_bucket',
         'storage_backblaze_region',
+
+        // telegram
+        'storage_telegram_bot_token',
+        'storage_telegram_channel_id',
+        'storage_telegram_api_id',
+        'storage_telegram_api_hash',
+        'storage_telegram_phone',
     ];
 
     public function fails($settings)
@@ -86,6 +94,20 @@ class StorageCredentialsValidator
                     ->getAdapter()
                     ->getClient()
                     ->listFolder();
+            } elseif ($driverName === 'telegram') {
+                // Test Telegram connection
+                $adapter = $disk->getAdapter();
+                if (method_exists($adapter, 'manager')) {
+                    $results = $adapter->manager->testConnections();
+                    if (isset($results['bot']['success']) && !$results['bot']['success']) {
+                        throw new Exception($results['bot']['error'] ?? 'Bot connection failed');
+                    }
+                    // User connection is optional, only warn if configured but failing
+                    if (isset($results['user']) && !$results['user']['success']) {
+                        // User connection failed but not critical
+                        \Log::warning('Telegram user connection failed', $results['user']);
+                    }
+                }
             } else {
                 $disk->allFiles();
             }
@@ -126,6 +148,7 @@ class StorageCredentialsValidator
             'digitalocean',
             'rackspace',
             'backblaze',
+            'telegram',
         ];
 
         foreach ($settings as $key => $value) {
@@ -157,5 +180,6 @@ class StorageCredentialsValidator
         app()->register(DigitalOceanServiceProvider::class);
         app()->register(DropboxServiceProvider::class);
         app()->register(BackblazeServiceProvider::class);
+        app()->register(TelegramServiceProvider::class);
     }
 }
