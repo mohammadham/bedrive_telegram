@@ -11,7 +11,7 @@ import {IconButton} from '@ui/buttons/icon-button';
 import {AddIcon} from '@ui/icons/material/Add';
 import {Menu, MenuItem, MenuTrigger} from '@ui/menu/menu-trigger';
 import {openUploadWindow} from '@ui/utils/files/open-upload-window';
-import {TelegramUrlUploadButton} from '@common/uploads/telegram-url-upload-button';
+import {TelegramUrlUploadButton} from '../telegram-url-upload';
 import {invalidateEntryQueries} from '../drive-query-keys';
 
 interface CreateNewButtonProps {
@@ -72,11 +72,7 @@ export function CreateNewButton({isCompact, className}: CreateNewButtonProps) {
         </MenuTrigger>
         
         {/* Telegram URL Upload Button */}
-        <TelegramUrlUploadButton
-          onSuccess={() => {
-            invalidateEntryQueries();
-          }}
-        />
+        {!isCompact && <TelegramUrlUploadButton variant="icon" size="md" />}
       </div>
     </div>
   );

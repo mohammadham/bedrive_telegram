@@ -123,6 +123,11 @@ Route::group(['prefix' => 'v1'], function() {
         $results = cache()->get("telegram_bulk_upload:{$jobId}");
         return response()->json($results ?? ['status' => 'not_found']);
     });
+    
+    // TELEGRAM UPLOAD PROGRESS (Phase 8.2)
+    Route::get('telegram/upload-progress', [TelegramUploadProgressController::class, 'index']);
+    Route::get('telegram/upload-progress/{sessionId}', [TelegramUploadProgressController::class, 'show']);
+    Route::post('telegram/upload-progress/{sessionId}/cancel', [TelegramUploadProgressController::class, 'cancel']);
   });
 
   //SHAREABLE LINKS PREVIEW (NO AUTH NEEDED)

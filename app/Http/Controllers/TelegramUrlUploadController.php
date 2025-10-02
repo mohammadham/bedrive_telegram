@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Common\Files\Telegram\TelegramUrlUploadService;
+use Common\Files\Telegram\TelegramUrlUploadWithProgress;
 use Common\Foundation\Http\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,14 +13,19 @@ use Illuminate\Support\Facades\Validator;
  * Telegram URL Upload Controller
  * 
  * Handles uploading files from URLs directly to Telegram
+ * Phase 8.2: با Progress Tracking
  */
 class TelegramUrlUploadController extends Controller
 {
     protected TelegramUrlUploadService $uploadService;
+    protected TelegramUrlUploadWithProgress $uploadWithProgress;
 
-    public function __construct(TelegramUrlUploadService $uploadService)
-    {
+    public function __construct(
+        TelegramUrlUploadService $uploadService,
+        TelegramUrlUploadWithProgress $uploadWithProgress
+    ) {
         $this->uploadService = $uploadService;
+        $this->uploadWithProgress = $uploadWithProgress;
     }
 
     /**
@@ -36,6 +42,7 @@ class TelegramUrlUploadController extends Controller
             'url' => 'required|url|max:2048',
             'name' => 'nullable|string|max:255',
             'caption' => 'nullable|string|max:1024',
+            'parent_id' => 'nullable|integer|exists:file_entries,id',
         ]);
 
         if ($validator->fails()) {
@@ -43,12 +50,14 @@ class TelegramUrlUploadController extends Controller
         }
 
         try {
-            $result = $this->uploadService->uploadFromUrl(
+            // استفاده از uploadWithProgress برای tracking
+            $result = $this->uploadWithProgress->uploadFromUrl(
                 $request->input('url'),
                 [
                     'name' => $request->input('name'),
                     'user_id' => auth()->id(),
                     'owner_id' => auth()->id(),
+                    'parent_id' => $request->input('parent_id'),
                 ],
                 [
                     'caption' => $request->input('caption', ''),
@@ -57,9 +66,9 @@ class TelegramUrlUploadController extends Controller
 
             return $this->success([
                 'message' => 'File uploaded successfully from URL',
-                'file' => $result['file_entry'],
-                'upload_method' => $result['upload_result']['upload_method'],
-                'message_id' => $result['upload_result']['message_id'],
+                'session_id' => $result['session_id'], // Phase 8.2: session_id برای tracking
+                'file_entry' => $result['file_entry'],
+                'metadata' => $result['metadata'],
             ]);
 
         } catch (\Exception $e) {
