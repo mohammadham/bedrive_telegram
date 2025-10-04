@@ -7,8 +7,12 @@ import {CloudUploadIcon} from '@ui/icons/material/CloudUpload';
 import {apiClient} from '@common/http/query-client';
 import {toast} from '@ui/toast/toast';
 import {useFormContext} from 'react-hook-form';
-import {Dialog, DialogHeader, DialogBody, DialogFooter} from '@ui/overlays/dialog/dialog';
+import {Dialog} from '@ui/overlays/dialog/dialog';
+import {DialogHeader} from '@ui/overlays/dialog/dialog-header';
+import {DialogBody} from '@ui/overlays/dialog/dialog-body';
+import {DialogFooter} from '@ui/overlays/dialog/dialog-footer';
 import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
+import {useDialogContext} from '@ui/overlays/dialog/dialog-context';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
 import {useForm} from 'react-hook-form';
 import {Form} from '@ui/forms/form';
@@ -17,6 +21,7 @@ interface TelegramTestResponse {
   success: boolean;
   message: string;
   data?: any;
+  needs_password?: boolean;
   error?: {
     type: string;
     suggestion: string;
@@ -276,6 +281,7 @@ export function TelegramTestButtons() {
 }
 
 function TelegramLoginDialog({apiId, apiHash, phone}: {apiId: string; apiHash: string; phone: string}) {
+  const {close} = useDialogContext();
   const [step, setStep] = useState<'init' | 'code' | 'password'>('init');
   const [phoneCodeHash, setPhoneCodeHash] = useState('');
   const [loading, setLoading] = useState(false);
@@ -310,7 +316,7 @@ function TelegramLoginDialog({apiId, apiHash, phone}: {apiId: string; apiHash: s
     }
   };
 
-  const handleVerifyCode = async (values: {code: string; password: string}, {close}: any) => {
+  const handleVerifyCode = async (values: {code: string; password: string}) => {
     setLoading(true);
     try {
       const response = await apiClient.post<TelegramTestResponse>('admin/telegram/verify-code', {
@@ -338,7 +344,7 @@ function TelegramLoginDialog({apiId, apiHash, phone}: {apiId: string; apiHash: s
     }
   };
 
-  const handleComplete2FA = async (values: {password: string}, {close}: any) => {
+  const handleComplete2FA = async (values: {password: string}) => {
     setLoading(true);
     try {
       const response = await apiClient.post<TelegramTestResponse>('admin/telegram/complete-2fa', {
@@ -445,7 +451,7 @@ function TelegramLoginDialog({apiId, apiHash, phone}: {apiId: string; apiHash: s
           <Button
             variant="flat"
             color="primary"
-            onClick={form.handleSubmit((values, {close}) => handleVerifyCode(values, {close}))}
+            onClick={form.handleSubmit(handleVerifyCode)}
             disabled={loading}
           >
             {loading ? <Trans message="Verifying..." /> : <Trans message="Verify Code" />}
@@ -456,7 +462,7 @@ function TelegramLoginDialog({apiId, apiHash, phone}: {apiId: string; apiHash: s
           <Button
             variant="flat"
             color="primary"
-            onClick={form.handleSubmit((values, {close}) => handleComplete2FA(values, {close}))}
+            onClick={form.handleSubmit(handleComplete2FA)}
             disabled={loading}
           >
             {loading ? <Trans message="Verifying..." /> : <Trans message="Complete Login" />}
@@ -468,10 +474,11 @@ function TelegramLoginDialog({apiId, apiHash, phone}: {apiId: string; apiHash: s
 }
 
 function SessionUploadDialog({apiId, apiHash, phone}: {apiId: string; apiHash: string; phone: string}) {
+  const {close} = useDialogContext();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  const handleUpload = async ({close}: any) => {
+  const handleUpload = async () => {
     if (!file) {
       toast.danger('Please select a session file');
       return;
