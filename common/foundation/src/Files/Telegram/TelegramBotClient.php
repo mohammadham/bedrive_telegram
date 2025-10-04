@@ -391,4 +391,165 @@ class TelegramBotClient implements TelegramClientInterface
             );
         }
     }
+
+    /**
+     * Get bot information
+     *
+     * @return array
+     * @throws TelegramAuthException
+     */
+    public function getMe(): array
+    {
+        try {
+            $me = $this->telegram->getMe();
+            return [
+                'id' => $me->getId(),
+                'username' => $me->getUsername(),
+                'first_name' => $me->getFirstName(),
+                'is_bot' => true,
+            ];
+        } catch (TelegramSDKException $e) {
+            Log::error('Failed to get bot info', [
+                'error' => $e->getMessage(),
+            ]);
+            throw TelegramAuthException::invalidToken();
+        }
+    }
+
+    /**
+     * Send a text message to a channel
+     *
+     * @param string $chatId
+     * @param string $text
+     * @param array $options
+     * @return array
+     * @throws TelegramUploadException
+     */
+    public function sendMessage(
+        string $chatId,
+        string $text,
+        array $options = []
+    ): array {
+        try {
+            $params = array_merge(
+                [
+                    'chat_id' => $chatId,
+                    'text' => $text,
+                ],
+                $options
+            );
+
+            $message = $this->telegram->sendMessage($params);
+
+            return [
+                'message_id' => $message->getMessageId(),
+                'chat_id' => $message->getChat()->getId(),
+                'date' => $message->getDate(),
+            ];
+        } catch (TelegramSDKException $e) {
+            Log::error('Failed to send message', [
+                'chat_id' => $chatId,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw TelegramUploadException::uploadFailed(
+                'Failed to send message: ' . $e->getMessage(),
+                ['chat_id' => $chatId]
+            );
+        }
+    }
+
+    /**
+     * Get webhook info
+     *
+     * @return array
+     * @throws TelegramUploadException
+     */
+    public function getWebhookInfo(): array
+    {
+        try {
+            $webhookInfo = $this->telegram->getWebhookInfo();
+
+            return [
+                'url' => $webhookInfo->getUrl() ?? '',
+                'has_custom_certificate' => $webhookInfo->getHasCustomCertificate() ?? false,
+                'pending_update_count' => $webhookInfo->getPendingUpdateCount() ?? 0,
+                'last_error_date' => $webhookInfo->getLastErrorDate() ?? null,
+                'last_error_message' => $webhookInfo->getLastErrorMessage() ?? null,
+                'max_connections' => $webhookInfo->getMaxConnections() ?? null,
+                'allowed_updates' => $webhookInfo->getAllowedUpdates() ?? [],
+            ];
+        } catch (TelegramSDKException $e) {
+            Log::error('Failed to get webhook info', [
+                'error' => $e->getMessage(),
+            ]);
+
+            throw TelegramUploadException::uploadFailed(
+                'Failed to get webhook info: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Set webhook
+     *
+     * @param string $url
+     * @param array $options
+     * @return bool
+     * @throws TelegramUploadException
+     */
+    public function setWebhook(string $url, array $options = []): bool
+    {
+        try {
+            $params = array_merge(['url' => $url], $options);
+            $result = $this->telegram->setWebhook($params);
+
+            Log::info('Telegram webhook set', [
+                'url' => $url,
+                'result' => $result,
+            ]);
+
+            return true;
+        } catch (TelegramSDKException $e) {
+            Log::error('Failed to set webhook', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw TelegramUploadException::uploadFailed(
+                'Failed to set webhook: ' . $e->getMessage(),
+                ['url' => $url]
+            );
+        }
+    }
+
+    /**
+     * Delete webhook
+     *
+     * @param bool $dropPendingUpdates
+     * @return bool
+     * @throws TelegramUploadException
+     */
+    public function deleteWebhook(bool $dropPendingUpdates = false): bool
+    {
+        try {
+            $result = $this->telegram->deleteWebhook([
+                'drop_pending_updates' => $dropPendingUpdates,
+            ]);
+
+            Log::info('Telegram webhook deleted', [
+                'drop_pending_updates' => $dropPendingUpdates,
+            ]);
+
+            return true;
+        } catch (TelegramSDKException $e) {
+            Log::error('Failed to delete webhook', [
+                'error' => $e->getMessage(),
+            ]);
+
+            throw TelegramUploadException::uploadFailed(
+                'Failed to delete webhook: ' . $e->getMessage()
+            );
+        }
+    }
 }

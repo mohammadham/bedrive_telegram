@@ -14,11 +14,13 @@ use App\Http\Controllers\SpaceUsageController;
 use App\Http\Controllers\StarredEntriesController;
 use App\Http\Controllers\UserFoldersController;
 use App\Http\Controllers\Admin\TelegramStatsController;
+use App\Http\Controllers\Admin\TelegramTestController;
 use App\Http\Controllers\UserTelegramSettingsController;
 use App\Http\Controllers\TelegramUrlUploadController;
 use App\Http\Controllers\TelegramUploadProgressController;
 use App\Http\Controllers\TelegramRetryController;
 use App\Http\Controllers\TelegramUploadSessionController;
+use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // prettier-ignore
@@ -111,6 +113,22 @@ Route::group(['prefix' => 'v1'], function() {
 
     // TELEGRAM ADMIN
     Route::get('admin/telegram/stats', [TelegramStatsController::class, 'index']);
+    
+    // TELEGRAM TESTING
+    Route::post('admin/telegram/test-bot', [TelegramTestController::class, 'testBot']);
+    Route::post('admin/telegram/test-user', [TelegramTestController::class, 'testUser']);
+    Route::post('admin/telegram/login-user', [TelegramTestController::class, 'loginUser']);
+    Route::post('admin/telegram/verify-code', [TelegramTestController::class, 'verifyCode']);
+    Route::post('admin/telegram/complete-2fa', [TelegramTestController::class, 'complete2FA']);
+    Route::get('admin/telegram/download-session', [TelegramTestController::class, 'downloadSession']);
+    
+    // TELEGRAM WEBHOOK MANAGEMENT
+    Route::post('admin/telegram/webhook/info', [TelegramTestController::class, 'getWebhookInfo']);
+    Route::post('admin/telegram/webhook/set', [TelegramTestController::class, 'setWebhook']);
+    Route::post('admin/telegram/webhook/delete', [TelegramTestController::class, 'deleteWebhook']);
+
+// TELEGRAM WEBHOOK HANDLER (Public - for Telegram to call)
+Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
 
     // USER TELEGRAM SETTINGS
     Route::get('user/telegram/settings', [UserTelegramSettingsController::class, 'index']);

@@ -4,6 +4,7 @@ import {Fragment} from 'react';
 import {SectionHelper} from '@common/ui/other/section-helper';
 import {Link} from 'react-router';
 import {TelegramStats} from './telegram-stats';
+import {TelegramTestButtons} from './telegram-test-buttons';
 import {useSettings} from '@ui/settings/use-settings';
 import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
 
@@ -159,6 +160,8 @@ export function TelegramForm({isInvalid}: TelegramFormProps) {
           </div>
         }
       />
+
+      <TelegramTestButtons />
 
       <TelegramStats />
     </Fragment>

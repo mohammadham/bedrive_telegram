@@ -23,6 +23,7 @@ class TelegramUserClient implements TelegramClientInterface
     protected ?API $MadelineProto = null;
     protected int $apiId;
     protected string $apiHash;
+    protected string $phone;
     protected string $sessionFile;
     protected bool $authenticated = false;
 
@@ -34,10 +35,12 @@ class TelegramUserClient implements TelegramClientInterface
     public function __construct(
         ?int $apiId = null,
         ?string $apiHash = null,
+        ?string $phone = null,
         ?string $sessionFile = null
     ) {
         $this->apiId = $apiId ?? (int) config('services.telegram.api_id');
         $this->apiHash = $apiHash ?? config('services.telegram.api_hash');
+        $this->phone = $phone ?? config('services.telegram.phone');
         $this->sessionFile =
             $sessionFile ?? config('services.telegram.session_file');
 
@@ -450,6 +453,162 @@ class TelegramUserClient implements TelegramClientInterface
                     'message_id' => $messageId,
                 ]
             );
+        }
+    }
+
+    /**
+     * Get authorization state
+     *
+     * @return array
+     */
+    public function getAuthorizationState(): array
+    {
+        try {
+            if (!$this->MadelineProto) {
+                return [
+                    'is_authorized' => false,
+                    'needs_login' => true,
+                ];
+            }
+
+            $authorization = $this->MadelineProto->getAuthorization();
+            
+            return [
+                'is_authorized' => $authorization === API::LOGGED_IN,
+                'needs_login' => $authorization !== API::LOGGED_IN,
+                'authorization_state' => $authorization,
+            ];
+        } catch (Exception $e) {
+            Log::error('Failed to get authorization state', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            return [
+                'is_authorized' => false,
+                'needs_login' => true,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Start login process
+     *
+     * @return array
+     * @throws TelegramAuthException
+     */
+    public function startLogin(): array
+    {
+        try {
+            if (empty($this->phone)) {
+                throw TelegramAuthException::invalidCredentials('Phone number is required');
+            }
+
+            // Start phone login
+            $result = $this->MadelineProto->phoneLogin($this->phone);
+
+            return [
+                'needs_code' => true,
+                'phone' => $this->phone,
+                'phone_code_hash' => $result['phone_code_hash'] ?? null,
+            ];
+        } catch (MadelineException $e) {
+            Log::error('Failed to start login', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            throw TelegramAuthException::invalidCredentials($e->getMessage());
+        }
+    }
+
+    /**
+     * Verify code and complete login
+     *
+     * @param string $code
+     * @param string|null $phoneCodeHash
+     * @return array
+     * @throws TelegramAuthException
+     */
+    public function verifyCode(string $code, ?string $phoneCodeHash = null): array
+    {
+        try {
+            $result = $this->MadelineProto->completePhoneLogin($code);
+
+            // Check if logged in successfully
+            if ($result === API::LOGGED_IN) {
+                $this->authenticated = true;
+                
+                return [
+                    'success' => true,
+                    'is_authorized' => true,
+                    'session_file' => $this->sessionFile,
+                ];
+            }
+
+            // Check if 2FA password is required
+            if ($result === API::WAITING_PASSWORD) {
+                return [
+                    'success' => false,
+                    'needs_password' => true,
+                    'is_authorized' => false,
+                    'message' => 'Two-factor authentication enabled. Please enter your cloud password.',
+                ];
+            }
+
+            throw TelegramAuthException::invalidCredentials('Login verification failed');
+        } catch (MadelineException $e) {
+            Log::error('Failed to verify code', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            // Check if error message indicates 2FA is required
+            if (str_contains(strtolower($e->getMessage()), 'password') || 
+                str_contains(strtolower($e->getMessage()), '2fa')) {
+                return [
+                    'success' => false,
+                    'needs_password' => true,
+                    'is_authorized' => false,
+                    'message' => 'Two-factor authentication enabled. Please enter your cloud password.',
+                ];
+            }
+            
+            throw TelegramAuthException::invalidCredentials($e->getMessage());
+        }
+    }
+
+    /**
+     * Complete login with 2FA password
+     *
+     * @param string $password
+     * @return array
+     * @throws TelegramAuthException
+     */
+    public function complete2FA(string $password): array
+    {
+        try {
+            $result = $this->MadelineProto->complete2faLogin($password);
+
+            if ($result === API::LOGGED_IN) {
+                $this->authenticated = true;
+                
+                Log::info('Telegram user logged in with 2FA', [
+                    'phone' => $this->phone,
+                ]);
+                
+                return [
+                    'success' => true,
+                    'is_authorized' => true,
+                    'session_file' => $this->sessionFile,
+                ];
+            }
+
+            throw TelegramAuthException::invalidCredentials('2FA password verification failed');
+        } catch (MadelineException $e) {
+            Log::error('Failed to complete 2FA login', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            throw TelegramAuthException::invalidCredentials('Invalid 2FA password: ' . $e->getMessage());
         }
     }
 }

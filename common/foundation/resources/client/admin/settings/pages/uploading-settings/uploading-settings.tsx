@@ -262,6 +262,7 @@ function PublicUploadSection() {
       <Item value="ftp">FTP</Item>
       <Item value="digitalocean_s3">DigitalOcean Spaces</Item>
       <Item value="backblaze_s3">Backblaze</Item>
+      <Item value="telegram">Telegram</Item>
     </FormSelect>
   );
 }
