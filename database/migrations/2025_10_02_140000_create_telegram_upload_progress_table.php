@@ -21,7 +21,8 @@ return new class extends Migration
             
             // Session & User
             $table->string('session_id', 64)->unique()->index();
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
+            $table->unsignedInteger('user_id')->nullable()->index();
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             
             // File Information
             $table->text('url');
@@ -50,7 +51,8 @@ return new class extends Migration
             $table->json('metadata')->nullable()->comment('Extra data');
             
             // File Entry (after completion)
-            $table->foreignId('file_entry_id')->nullable()->constrained('file_entries')->onDelete('set null');
+            $table->unsignedInteger('file_entry_id')->nullable()->index();
+            $table->foreign('file_entry_id')->references('id')->on('file_entries')->onDelete('set null');
             
             // Timestamps
             $table->timestamp('started_at')->nullable();

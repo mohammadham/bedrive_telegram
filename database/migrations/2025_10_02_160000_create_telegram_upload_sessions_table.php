@@ -21,8 +21,10 @@ return new class extends Migration
             
             // Session & User
             $table->string('session_id', 64)->unique()->index();
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
-            $table->foreignId('progress_id')->nullable()->constrained('telegram_upload_progress')->onDelete('cascade');
+            $table->unsignedInteger('user_id')->nullable()->index();
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('progress_id')->nullable()->index();
+            $table->foreign('progress_id')->references('id')->on('telegram_upload_progress')->onDelete('cascade');
             
             // File Information
             $table->text('url');

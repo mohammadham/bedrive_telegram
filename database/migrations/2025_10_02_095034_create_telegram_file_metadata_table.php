@@ -23,7 +23,8 @@ class CreateTelegramFileMetadataTable extends Migration
             $table->id();
             
             // Foreign key to file_entries table
-            $table->unsignedBigInteger('file_entry_id')->unique();
+            // Note: file_entries uses integer (not bigInteger), so we must match that type
+            $table->unsignedInteger('file_entry_id')->unique();
             $table->foreign('file_entry_id')
                   ->references('id')
                   ->on('file_entries')
