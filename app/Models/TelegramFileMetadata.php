@@ -197,4 +197,65 @@ class TelegramFileMetadata extends BaseModel
         $metadata[$key] = $value;
         $this->update(['metadata' => $metadata]);
     }
+     /**
+     * Get filterable fields for this model
+     */
+    public static function filterableFields(): array
+    {
+        return [
+            'id',
+            'file_entry_id',
+            'message_id',
+            'channel_id',
+            'upload_method',
+            'telegram_file_type',
+            'upload_status',
+            'created_at',
+            'updated_at',
+            'deleted_at',
+        ];
+    }
+
+    /**
+     * Convert model to normalized array for API responses
+     */
+    public function toNormalizedArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->fileEntry->name ?? 'Unknown',
+            'description' => $this->telegram_file_type,
+            'image' => null,
+            'model_type' => 'telegram_file_metadata',
+        ];
+    }
+
+    /**
+     * Convert model to searchable array for indexing
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'file_entry_id' => $this->file_entry_id,
+            'telegram_file_id' => $this->telegram_file_id,
+            'message_id' => $this->message_id,
+            'channel_id' => $this->channel_id,
+            'upload_method' => $this->upload_method,
+            'telegram_file_type' => $this->telegram_file_type,
+            'upload_status' => $this->upload_status,
+            'created_at' => $this->created_at->timestamp ?? '_null',
+            'updated_at' => $this->updated_at->timestamp ?? '_null',
+            'deleted_at' => $this->deleted_at->timestamp ?? '_null',
+        ];
+    }
+
+    /**
+     * Get model type attribute
+     */
+    public static function getModelTypeAttribute(): string
+    {
+        return 'telegram_file_metadata';
+    }
+
 }

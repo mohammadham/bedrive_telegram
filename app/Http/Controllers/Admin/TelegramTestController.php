@@ -63,7 +63,7 @@ class TelegramTestController extends Controller
 
             // Test 5: Delete the test message
             try {
-                $botClient->deleteMessage($request->channel_id, $result['message_id']);
+                $botClient->deleteFile($request->channel_id, $result['message_id']);
             } catch (Exception $e) {
                 // Deletion failed - bot might not have delete permissions
             }
