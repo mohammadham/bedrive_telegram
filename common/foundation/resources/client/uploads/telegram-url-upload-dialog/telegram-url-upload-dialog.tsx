@@ -8,7 +8,7 @@ import {Button} from '@ui/buttons/button';
 import {Tabs} from '@ui/tabs/tabs';
 import {TabList} from '@ui/tabs/tab-list';
 import {Tab} from '@ui/tabs/tab';
-import {TabPanel} from '@ui/tabs/tab-panels';
+import {TabPanels, TabPanel} from '@ui/tabs/tab-panels';
 import {toast} from '@ui/toast/toast';
 import {SingleUrlForm} from './single-url-form';
 import {BulkUrlsForm} from './bulk-urls-form';
@@ -177,28 +177,30 @@ export function TelegramUrlUploadDialog({
             </Tab>
           </TabList>
 
-          <TabPanel>
-            <SingleUrlForm
-              url={url}
-              setUrl={setUrl}
-              name={name}
-              setName={setName}
-              caption={caption}
-              setCaption={setCaption}
-              validation={validation}
-              validating={validating}
-              onValidate={handleValidate}
-            />
-          </TabPanel>
+          <TabPanels>
+            <TabPanel>
+              <SingleUrlForm
+                url={url}
+                setUrl={setUrl}
+                name={name}
+                setName={setName}
+                caption={caption}
+                setCaption={setCaption}
+                validation={validation}
+                validating={validating}
+                onValidate={handleValidate}
+              />
+            </TabPanel>
 
-          <TabPanel>
-            <BulkUrlsForm
-              urls={urls}
-              setUrls={setUrls}
-              caption={bulkCaption}
-              setCaption={setBulkCaption}
-            />
-          </TabPanel>
+            <TabPanel>
+              <BulkUrlsForm
+                urls={urls}
+                setUrls={setUrls}
+                caption={bulkCaption}
+                setCaption={setBulkCaption}
+              />
+            </TabPanel>
+          </TabPanels>
         </Tabs>
       </DialogBody>
 

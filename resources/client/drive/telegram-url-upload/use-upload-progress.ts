@@ -26,9 +26,9 @@ export function useUploadProgress({
     queryKey: ['telegram-upload-progress', sessionId],
     queryFn: () => getUploadProgress(sessionId),
     enabled: enabled && !!sessionId,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Stop polling if completed, failed, or cancelled
-      const progress = data?.data?.progress;
+      const progress = query.state.data?.progress;
       if (!progress) return false;
       
       const isFinished = ['completed', 'failed', 'cancelled'].includes(
@@ -41,7 +41,7 @@ export function useUploadProgress({
     gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const progress: TelegramUploadProgressData | undefined = query.data?.data?.progress;
+  const progress = query.data?.progress;
 
   return {
     progress,

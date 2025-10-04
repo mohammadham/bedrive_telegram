@@ -6737,269 +6737,23 @@ botapi@host:~/public_html$ npm run build
 > bedrive-react@0.0.0 build
 > tsc --skipLibCheck && vite build
 
-common/foundation/resources/client/admin/settings/pages/uploading-settings/telegram-form/telegram-form.tsx:5:20 - error TS2307: Cannot find module 'react-router-dom' or its corresponding type declarations.
-
-5 import {Link} from 'react-router-dom';
-                     ~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/admin/settings/pages/uploading-settings/telegram-form/telegram-form.tsx:16:46 - error TS2339: Property 'disk' does not exist on type '{ chunk_size: number; max_size: number; available_space: number; allowed_extensions?: string[] | undefined; blocked_extensions?: string[] | undefined; public_driver: string; uploads_driver: string; s3_direct_upload: boolean; disable_tus: boolean; }'.
-
-16   const isTelegramActive = settings.uploads?.disk === 'telegram';
-                                                ~~~~
-
-common/foundation/resources/client/admin/settings/pages/uploading-settings/uploading-settings.tsx:103:9 - error TS2322: Type '{ static_file_delivery: string; uploads_disk_driver: string; public_disk_driver: string; storage_s3_key: string; storage_s3_secret: string; storage_s3_region: string; storage_s3_bucket: string; ... 23 more ...; storage_telegram_phone: any; }' is not assignable to type '{ app_url?: string | undefined; app_timezone?: string | undefined; app_locale?: string | undefined; newAppUrl?: string | undefined; paypal_client_id?: string | undefined; paypal_secret?: string | undefined; ... 90 more ...; lastfm_api_key?: string | undefined; }'.
-  Object literal may only specify known properties, and 'storage_telegram_bot_token' does not exist in type '{ app_url?: string | undefined; app_timezone?: string | undefined; app_locale?: string | undefined; newAppUrl?: string | undefined; paypal_client_id?: string | undefined; paypal_secret?: string | undefined; ... 90 more ...; lastfm_api_key?: string | undefined; }'.
-
-103         storage_telegram_bot_token: data.server.storage_telegram_bot_token ?? '',
-            ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/admin/settings/pages/uploading-settings/uploading-settings.tsx:103:49 - error TS2339: Property 'storage_telegram_bot_token' does not exist on type 'AdminServerSettings'.
-
-103         storage_telegram_bot_token: data.server.storage_telegram_bot_token ?? '',
-                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/admin/settings/pages/uploading-settings/uploading-settings.tsx:104:50 - error TS2339: Property 'storage_telegram_channel_id' does not exist on type 'AdminServerSettings'.
-
-104         storage_telegram_channel_id: data.server.storage_telegram_channel_id ?? '',
-                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/admin/settings/pages/uploading-settings/uploading-settings.tsx:105:46 - error TS2339: Property 'storage_telegram_api_id' does not exist on type 'AdminServerSettings'.
-
-105         storage_telegram_api_id: data.server.storage_telegram_api_id ?? '',
-                                                 ~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/admin/settings/pages/uploading-settings/uploading-settings.tsx:106:48 - error TS2339: Property 'storage_telegram_api_hash' does not exist on type 'AdminServerSettings'.
-
-106         storage_telegram_api_hash: data.server.storage_telegram_api_hash ?? '',
-                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/admin/settings/pages/uploading-settings/uploading-settings.tsx:107:45 - error TS2339: Property 'storage_telegram_phone' does not exist on type 'AdminServerSettings'.
-
-107         storage_telegram_phone: data.server.storage_telegram_phone ?? '',
-                                                ~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/auth/ui/account-settings/account-settings-sidenav.tsx:38:37 - error TS2339: Property 'disk' does not exist on type '{ chunk_size: number; max_size: number; available_space: number; allowed_extensions?: string[] | undefined; blocked_extensions?: string[] | undefined; public_driver: string; uploads_driver: string; s3_direct_upload: boolean; disable_tus: boolean; }'.
-
-38   const isTelegramDriver = uploads?.disk === 'telegram';
-                                       ~~~~
-
-common/foundation/resources/client/auth/ui/account-settings/telegram-settings-panel/telegram-settings-panel.tsx:6:26 - error TS2307: Cannot find module '@ui/forms/form-switch' or its corresponding type declarations.
-
-6 import {FormSwitch} from '@ui/forms/form-switch';
-                           ~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/auth/ui/account-settings/telegram-settings-panel/telegram-settings-panel.tsx:11:29 - error TS2307: Cannot find module '@common/admin/settings/form/section-helper' or its corresponding type declarations.
-
-11 import {SectionHelper} from '@common/admin/settings/form/section-helper';
-                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/auth/ui/account-settings/telegram-settings-panel/telegram-settings-panel.tsx:45:13 - error TS2345: Argument of type 'ReactNode' is not assignable to parameter of type 'string | MessageDescriptor'.
-  Type 'undefined' is not assignable to type 'string | MessageDescriptor'.
-
-45       toast(Trans({message: 'Telegram settings updated successfully'}));
-               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/auth/ui/account-settings/telegram-settings-panel/telegram-settings-panel.tsx:63:7 - error TS2322: Type '{ children: Element; id: string; title: Element; isLoading: boolean; }' is not assignable to type 'IntrinsicAttributes & Props'.
-  Property 'isLoading' does not exist on type 'IntrinsicAttributes & Props'.
-
-63       isLoading={isLoading}
-         ~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-file-actions.tsx:35:39 - error TS2339: Property 'telegram_metadata' does not exist on type 'FileEntry'.
-
-35   const isUploadedToTelegram = !!file.telegram_metadata;
-                                         ~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-file-actions.tsx:36:46 - error TS2339: Property 'disk' does not exist on type '{ chunk_size: number; max_size: number; available_space: number; allowed_extensions?: string[] | undefined; blocked_extensions?: string[] | undefined; public_driver: string; uploads_driver: string; s3_direct_upload: boolean; disable_tus: boolean; }'.
-
-36   const isTelegramDriver = settings.uploads?.disk === 'telegram';
-                                                ~~~~
-
-common/foundation/resources/client/uploads/telegram-file-actions.tsx:57:13 - error TS2345: Argument of type 'ReactNode' is not assignable to parameter of type 'string | MessageDescriptor'.
-
-57       toast(Trans({message: 'File uploaded to Telegram successfully'}));
-               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-file-actions.tsx:130:13 - error TS2345: Argument of type 'ReactNode' is not assignable to parameter of type 'string | MessageDescriptor'.
-
-130       toast(Trans({message: 'File forwarded to saved target successfully'}));
-                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-file-actions.tsx:162:13 - error TS2345: Argument of type 'ReactNode' is not assignable to parameter of type 'string | MessageDescriptor'.
-
-162       toast(Trans({message: 'File forwarded successfully'}));
-                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-file-actions.tsx:185:12 - error TS2741: Property 'name' is missing in type '{ value: string; onChange: (e: ChangeEvent<HTMLInputElement>) => void; label: Element; placeholder: string; required: true; autoFocus: true; }' but required in type 'FormTextFieldProps'.
-
-185           <FormTextField
-               ~~~~~~~~~~~~~
-
-  common/foundation/resources/client/ui/library/forms/input-field/text-field/text-field.tsx:65:3
-    65   name: string;
-         ~~~~
-    'name' is declared here.
-
-common/foundation/resources/client/uploads/telegram-file-actions.tsx:212:36 - error TS2349: This expression is not callable.
-  Type 'MouseEvent<HTMLButtonElement, MouseEvent>' has no call signatures.
-
-212                   onSuccess: () => close(),
-                                       ~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-button.tsx:2:21 - error TS2307: Cannot find module '@common/i18n/trans' or its corresponding type declarations.
-
-2 import {Trans} from '@common/i18n/trans';
-                      ~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-button.tsx:3:22 - error TS2307: Cannot find module '@common/ui/buttons/button' or its corresponding type declarations.
-
-3 import {Button} from '@common/ui/buttons/button';
-                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-button.tsx:4:23 - error TS2307: Cannot find module '@common/ui/tooltip/tooltip' or its corresponding type declarations.
-
-4 import {Tooltip} from '@common/ui/tooltip/tooltip';
-                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-button.tsx:5:24 - error TS2307: Cannot find module '@common/icons/material/Link' or its corresponding type declarations.
-
-5 import {LinkIcon} from '@common/icons/material/Link';
-                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/bulk-urls-form.tsx:1:21 - error TS2307: Cannot find module '@common/i18n/trans' or its corresponding type declarations.
-
-1 import {Trans} from '@common/i18n/trans';
-                      ~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/bulk-urls-form.tsx:2:25 - error TS2307: Cannot find module '@common/ui/forms/input-field/text-field/text-field' or its corresponding type declarations.
-
-2 import {TextField} from '@common/ui/forms/input-field/text-field/text-field';
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/bulk-urls-form.tsx:3:24 - error TS2307: Cannot find module '@common/icons/material/Info' or its corresponding type declarations.
-
-3 import {InfoIcon} from '@common/icons/material/Info';
-                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/bulk-urls-form.tsx:4:31 - error TS2307: Cannot find module '@common/icons/material/CheckCircle' or its corresponding type declarations.
-
-4 import {CheckCircleIcon} from '@common/icons/material/CheckCircle';
-                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/bulk-urls-form.tsx:5:25 - error TS2307: Cannot find module '@common/icons/material/Error' or its corresponding type declarations.
-
-5 import {ErrorIcon} from '@common/icons/material/Error';
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/bulk-urls-form.tsx:46:19 - error TS7006: Parameter 'e' implicitly has an 'any' type.
-
-46         onChange={e => handleUrlsChange(e.target.value)}
-                     ~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/bulk-urls-form.tsx:112:19 - error TS7006: Parameter 'e' implicitly has an 'any' type.
-
-112         onChange={e => setCaption(e.target.value)}
-                      ~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:1:21 - error TS2307: Cannot find module '@common/i18n/trans' or its corresponding type declarations.
-
-1 import {Trans} from '@common/i18n/trans';
-                      ~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:2:22 - error TS2307: Cannot find module '@common/ui/buttons/button' or its corresponding type declarations.
-
-2 import {Button} from '@common/ui/buttons/button';
-                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:3:25 - error TS2307: Cannot find module '@common/ui/forms/input-field/text-field/text-field' or its corresponding type declarations.
-
-3 import {TextField} from '@common/ui/forms/input-field/text-field/text-field';
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:4:25 - error TS2307: Cannot find module '@common/icons/material/Check' or its corresponding type declarations.
-
-4 import {CheckIcon} from '@common/icons/material/Check';
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:5:24 - error TS2307: Cannot find module '@common/icons/material/Info' or its corresponding type declarations.
-
-5 import {InfoIcon} from '@common/icons/material/Info';
-                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:6:27 - error TS2307: Cannot find module '@common/icons/material/Warning' or its corresponding type declarations.
-
-6 import {WarningIcon} from '@common/icons/material/Warning';
-                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:31:21 - error TS7006: Parameter 'e' implicitly has an 'any' type.
-
-31           onChange={e => setUrl(e.target.value)}
-                       ~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:110:19 - error TS7006: Parameter 'e' implicitly has an 'any' type.
-
-110         onChange={e => setName(e.target.value)}
-                      ~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:117:19 - error TS7006: Parameter 'e' implicitly has an 'any' type.
-
-117         onChange={e => setCaption(e.target.value)}
-                      ~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:2:21 - error TS2307: Cannot find module '@common/i18n/trans' or its corresponding type declarations.
-
-2 import {Trans} from '@common/i18n/trans';
-                      ~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:3:22 - error TS2307: Cannot find module '@common/ui/overlays/dialog/dialog' or its corresponding type declarations.
-
-3 import {Dialog} from '@common/ui/overlays/dialog/dialog';
-                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:4:28 - error TS2307: Cannot find module '@common/ui/overlays/dialog/dialog-header' or its corresponding type declarations.
-
-4 import {DialogHeader} from '@common/ui/overlays/dialog/dialog-header';
-                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:5:26 - error TS2307: Cannot find module '@common/ui/overlays/dialog/dialog-body' or its corresponding type declarations.
-
-5 import {DialogBody} from '@common/ui/overlays/dialog/dialog-body';
-                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:6:28 - error TS2307: Cannot find module '@common/ui/overlays/dialog/dialog-footer' or its corresponding type declarations.
-
-6 import {DialogFooter} from '@common/ui/overlays/dialog/dialog-footer';
-                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:7:22 - error TS2307: Cannot find module '@common/ui/buttons/button' or its corresponding type declarations.
-
-7 import {Button} from '@common/ui/buttons/button';
-                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:8:20 - error TS2307: Cannot find module '@common/ui/tabs/tabs' or its corresponding type declarations.
-
-8 import {Tabs} from '@common/ui/tabs/tabs';
-                     ~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:9:23 - error TS2307: Cannot find module '@common/ui/tabs/tab-list' or its corresponding type declarations.
-
-9 import {TabList} from '@common/ui/tabs/tab-list';
-                        ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:10:19 - error TS2307: Cannot find module '@common/ui/tabs/tab' or its corresponding type declarations.
-
-10 import {Tab} from '@common/ui/tabs/tab';
-                     ~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:11:24 - error TS2307: Cannot find module '@common/ui/tabs/tab-panel' or its corresponding type declarations.
-
-11 import {TabPanel} from '@common/ui/tabs/tab-panel';
-                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:12:21 - error TS2307: Cannot find module '@common/ui/toast/toast' or its corresponding type declarations.
-
-12 import {toast} from '@common/ui/toast/toast';
-                       ~~~~~~~~~~~~~~~~~~~~~~~~
+common/foundation/resources/client/uploads/telegram-file-actions.tsx:214:54 - error TS2349: This expression is not callable.
+  Type 'never' has no call signatures.
+
+214                     if (typeof close === 'function') close();
+                                                         ~~~~~
+
+common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:194:11 - error TS2322: Type 'Element' is not assignable to type 'undefined'.
+
+194           <TabPanel>
+              ~~~~~~~~~~
+195             <BulkUrlsForm
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+... 
+200             />
+    ~~~~~~~~~~~~~~
+201           </TabPanel>
+    ~~~~~~~~~~~~~~~~~~~~~
 
 resources/client/drive/telegram-url-upload/single-url-form.tsx:112:9 - error TS2322: Type '{ label: Element; placeholder: string; value: string; onChange: (e: ChangeEvent<HTMLInputElement>) => void; onBlur: () => void; disabled: boolean; ... 4 more ...; description: Element; }' is not assignable to type 'IntrinsicAttributes & TextFieldProps & RefAttributes<HTMLDivElement>'.
   Property 'error' does not exist on type 'IntrinsicAttributes & TextFieldProps & RefAttributes<HTMLDivElement>'. Did you mean 'onError'?
@@ -7007,126 +6761,21 @@ resources/client/drive/telegram-url-upload/single-url-form.tsx:112:9 - error TS2
 112         error={urlError}
             ~~~~~
 
-resources/client/drive/telegram-url-upload/telegram-upload-progress-list.tsx:52:12 - error TS2741: Property 'src' is missing in type '{ children: Element; }' but required in type 'Props'.
+resources/client/drive/telegram-url-upload/use-upload-progress.ts:31:30 - error TS2339: Property 'data' does not exist on type 'Query<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>'.
 
-52           <SvgImage>
-              ~~~~~~~~
+31       const progress = data?.data?.progress;
+                                ~~~~
 
-  common/foundation/resources/client/ui/library/images/svg-image.tsx:5:3
-    5   src: string;
-        ~~~
-    'src' is declared here.
+resources/client/drive/telegram-url-upload/use-upload-progress.ts:44:72 - error TS2339: Property 'data' does not exist on type 'TelegramProgressResponse'.
 
-resources/client/drive/telegram-url-upload/telegram-upload-progress.tsx:79:13 - error TS2339: Property 'success' does not exist on type 'typeof toast'.
-
-79       toast.success(<Trans message="آپلود لغو شد" />);
-               ~~~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-upload-progress.tsx:90:15 - error TS2339: Property 'success' does not exist on type 'typeof toast'.
-
-90         toast.success(<Trans message="تلاش مجدد با موفقیت آغاز شد" />);
-                 ~~~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-upload-progress.tsx:92:15 - error TS2339: Property 'warning' does not exist on type 'typeof toast'.
-
-92         toast.warning(result.message);
-                 ~~~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-upload-progress.tsx:107:13 - error TS2322: Type '{ value: number; size: "sm"; color: "primary" | "danger" | "positive" | "warning"; }' is not assignable to type 'IntrinsicAttributes & Props'.
-  Property 'color' does not exist on type 'IntrinsicAttributes & Props'.
-
-107             color={getStatusColor(progress.status)}
-                ~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-upload-progress.tsx:157:11 - error TS2322: Type '{ value: number; size: "md"; color: "primary" | "danger" | "positive" | "warning"; showValueLabel: true; }' is not assignable to type 'IntrinsicAttributes & Props'.
-  Property 'color' does not exist on type 'IntrinsicAttributes & Props'.
-
-157           color={getStatusColor(progress.status)}
-              ~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-url-upload-dialog.tsx:36:47 - error TS2339: Property 'activeFolderId' does not exist on type 'State & Actions'.
-
-36   const activeFolderId = useDriveStore(s => s.activeFolderId);
-                                                 ~~~~~~~~~~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-url-upload-dialog.tsx:63:11 - error TS2339: Property 'success' does not exist on type 'typeof toast'.
-
-63     toast.success(
-             ~~~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-url-upload-dialog.tsx:100:15 - error TS2339: Property 'success' does not exist on type 'typeof toast'.
-
-100         toast.success(
-                  ~~~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-url-upload-dialog.tsx:108:11 - error TS2345: Argument of type 'Element' is not assignable to parameter of type 'string | MessageDescriptor'.
-
-108           <Trans message="هیچ فایلی آپلود نشد. لطفاً URL‌ها را بررسی کنید" />,
-              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-url-upload-dialog.tsx:112:11 - error TS2345: Argument of type 'Element' is not assignable to parameter of type 'string | MessageDescriptor'.
-
-112           <Trans
-              ~~~~~~
-113             message=":successful از :total فایل آپلود شد. :failed فایل با خطا مواجه شد"
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-114             values={{successful, total, failed}}
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-115           />,
-    ~~~~~~~~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-url-upload-dialog.tsx:139:13 - error TS2322: Type '{ children: Element[]; isOpen: boolean; onClose: () => void; size: string; }' is not assignable to type 'IntrinsicAttributes & DialogProps'.
-  Property 'isOpen' does not exist on type 'IntrinsicAttributes & DialogProps'.
-
-139     <Dialog isOpen={isOpen} onClose={onClose} size="lg">
-                ~~~~~~
-
-resources/client/drive/telegram-url-upload/telegram-url-upload-dialog.tsx:159:17 - error TS2322: Type 'TelegramUploadTab' is not assignable to type 'number | undefined'.
-  Type 'string' is not assignable to type 'number'.
-
-159           <Tabs selectedTab={activeTab} onTabChange={setActiveTab as any}>
-                    ~~~~~~~~~~~
-
-  common/foundation/resources/client/ui/library/tabs/tabs.tsx:14:3
-    14   selectedTab?: number;
-         ~~~~~~~~~~~
-    The expected type comes from property 'selectedTab' which is declared here on type 'IntrinsicAttributes & TabsProps'
-
-resources/client/drive/telegram-url-upload/use-upload-progress.ts:31:30 - error TS2339: Property 'progress' does not exist on type 'Query<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>'.
-
-31       const progress = data?.progress;
-                                ~~~~~~~~
-
-resources/client/drive/telegram-url-upload/use-upload-progress.ts:41:5 - error TS2769: No overload matches this call.
-  Overload 1 of 3, '(options: UndefinedInitialDataOptions<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Argument of type '{ queryKey: string[]; queryFn: () => Promise<TelegramProgressResponse>; enabled: boolean; refetchInterval: (data: Query<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>) => number | false; staleTime: number; cacheTime: number; }' is not assignable to parameter of type 'UndefinedInitialDataOptions<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>'.
-      Object literal may only specify known properties, and 'cacheTime' does not exist in type 'UndefinedInitialDataOptions<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>'.
-  Overload 2 of 3, '(options: DefinedInitialDataOptions<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<...>', gave the following error.
-    Argument of type '{ queryKey: string[]; queryFn: () => Promise<TelegramProgressResponse>; enabled: boolean; refetchInterval: (data: Query<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>) => number | false; staleTime: number; cacheTime: number; }' is not assignable to parameter of type 'DefinedInitialDataOptions<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>'.
-      Object literal may only specify known properties, and 'cacheTime' does not exist in type 'DefinedInitialDataOptions<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>'.
-  Overload 3 of 3, '(options: UseQueryOptions<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Argument of type '{ queryKey: string[]; queryFn: () => Promise<TelegramProgressResponse>; enabled: boolean; refetchInterval: (data: Query<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>) => number | false; staleTime: number; cacheTime: number; }' is not assignable to parameter of type 'UseQueryOptions<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>'.
-      Object literal may only specify known properties, and 'cacheTime' does not exist in type 'UseQueryOptions<TelegramProgressResponse, Error, TelegramProgressResponse, string[]>'.
-
-41     cacheTime: 5 * 60 * 1000, // 5 minutes
-       ~~~~~~~~~
+44   const progress: TelegramUploadProgressData | undefined = query.data?.data?.progress;
+                                                                          ~~~~
 
 
-
-Found 67 errors in 14 files.
+Found 5 errors in 4 files.
 
 Errors  Files
-     2  common/foundation/resources/client/admin/settings/pages/uploading-settings/telegram-form/telegram-form.tsx:5
-     6  common/foundation/resources/client/admin/settings/pages/uploading-settings/uploading-settings.tsx:103
-     1  common/foundation/resources/client/auth/ui/account-settings/account-settings-sidenav.tsx:38
-     4  common/foundation/resources/client/auth/ui/account-settings/telegram-settings-panel/telegram-settings-panel.tsx:6
-     7  common/foundation/resources/client/uploads/telegram-file-actions.tsx:35
-     4  common/foundation/resources/client/uploads/telegram-url-upload-button.tsx:2
-     7  common/foundation/resources/client/uploads/telegram-url-upload-dialog/bulk-urls-form.tsx:1
-     9  common/foundation/resources/client/uploads/telegram-url-upload-dialog/single-url-form.tsx:1
-    11  common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:2
+     1  common/foundation/resources/client/uploads/telegram-file-actions.tsx:214
+     1  common/foundation/resources/client/uploads/telegram-url-upload-dialog/telegram-url-upload-dialog.tsx:194
      1  resources/client/drive/telegram-url-upload/single-url-form.tsx:112
-     1  resources/client/drive/telegram-url-upload/telegram-upload-progress-list.tsx:52
-     5  resources/client/drive/telegram-url-upload/telegram-upload-progress.tsx:79
-     7  resources/client/drive/telegram-url-upload/telegram-url-upload-dialog.tsx:36
      2  resources/client/drive/telegram-url-upload/use-upload-progress.ts:31

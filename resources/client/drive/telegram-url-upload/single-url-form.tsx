@@ -109,7 +109,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
         required
         autoFocus
         startAdornment={<LinkIcon className="text-muted" />}
-        error={urlError}
+        errorMessage={urlError}
         description={
           <Trans message="لینک مستقیم فایلی که می‌خواهید به تلگرام آپلود کنید" />
         }

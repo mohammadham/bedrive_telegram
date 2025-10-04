@@ -13,6 +13,7 @@ import {Dialog} from '@ui/overlays/dialog/dialog';
 import {DialogHeader} from '@ui/overlays/dialog/dialog-header';
 import {DialogBody} from '@ui/overlays/dialog/dialog-body';
 import {DialogFooter} from '@ui/overlays/dialog/dialog-footer';
+import {useDialogContext} from '@ui/overlays/dialog/dialog-context';
 import {Button} from '@ui/buttons/button';
 import {useState} from 'react';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
@@ -154,6 +155,18 @@ function ForwardToSavedTarget({
 }
 
 function ForwardToCustomTarget({file}: {file: FileEntry}) {
+  return (
+    <DialogTrigger type="modal">
+      <button className="w-full text-left">
+        <Trans message="Forward to custom ID..." />
+      </button>
+      <ForwardDialog file={file} />
+    </DialogTrigger>
+  );
+}
+
+function ForwardDialog({file}: {file: FileEntry}) {
+  const {close} = useDialogContext();
   const [targetId, setTargetId] = useState('');
 
   const forwardMutation = useMutation({
@@ -161,6 +174,7 @@ function ForwardToCustomTarget({file}: {file: FileEntry}) {
     onSuccess: () => {
       toast.positive('File forwarded successfully');
       setTargetId('');
+      close();
     },
     onError: (error: any) => {
       const message =
@@ -170,61 +184,52 @@ function ForwardToCustomTarget({file}: {file: FileEntry}) {
   });
 
   return (
-    <DialogTrigger type="modal">
-      <button className="w-full text-left">
-        <Trans message="Forward to custom ID..." />
-      </button>
-      <Dialog>
-        <DialogHeader>
-          <Trans message="Forward File to Telegram" />
-        </DialogHeader>
-        <DialogBody>
-          <p className="text-sm text-muted mb-16">
-            <Trans message="Enter the Telegram ID (channel, group, or user) where you want to forward this file." />
-          </p>
-          <FormTextField
-            name="telegram_id"
-            value={targetId}
-            onChange={e => setTargetId(e.target.value)}
-            label={<Trans message="Telegram ID" />}
-            placeholder="-1001234567890 or @username"
-            required
-            autoFocus
-          />
-          <div className="mt-16 text-xs text-muted">
-            <ul className="list-disc list-inside space-y-4">
-              <li>
-                <Trans message="For channels/groups: -1001234567890" />
-              </li>
-              <li>
-                <Trans message="For users: @username or numeric ID" />
-              </li>
-              <li>
-                <Trans message="Bot must have permission to send messages" />
-              </li>
-            </ul>
-          </div>
-        </DialogBody>
-        <DialogFooter>
-          <Button
-            onClick={(close) => {
-              if (targetId.trim()) {
-                forwardMutation.mutate(targetId, {
-                  onSuccess: () => {
-                    if (typeof close === 'function') close();
-                  },
-                });
-              }
-            }}
-            variant="flat"
-            color="primary"
-            disabled={!targetId.trim() || forwardMutation.isPending}
-          >
-            <Trans message="Forward" />
-          </Button>
-        </DialogFooter>
-      </Dialog>
-    </DialogTrigger>
+    <Dialog>
+      <DialogHeader>
+        <Trans message="Forward File to Telegram" />
+      </DialogHeader>
+      <DialogBody>
+        <p className="text-sm text-muted mb-16">
+          <Trans message="Enter the Telegram ID (channel, group, or user) where you want to forward this file." />
+        </p>
+        <FormTextField
+          name="telegram_id"
+          value={targetId}
+          onChange={e => setTargetId(e.target.value)}
+          label={<Trans message="Telegram ID" />}
+          placeholder="-1001234567890 or @username"
+          required
+          autoFocus
+        />
+        <div className="mt-16 text-xs text-muted">
+          <ul className="list-disc list-inside space-y-4">
+            <li>
+              <Trans message="For channels/groups: -1001234567890" />
+            </li>
+            <li>
+              <Trans message="For users: @username or numeric ID" />
+            </li>
+            <li>
+              <Trans message="Bot must have permission to send messages" />
+            </li>
+          </ul>
+        </div>
+      </DialogBody>
+      <DialogFooter>
+        <Button
+          onClick={() => {
+            if (targetId.trim()) {
+              forwardMutation.mutate(targetId);
+            }
+          }}
+          variant="flat"
+          color="primary"
+          disabled={!targetId.trim() || forwardMutation.isPending}
+        >
+          <Trans message="Forward" />
+        </Button>
+      </DialogFooter>
+    </Dialog>
   );
 }
 
