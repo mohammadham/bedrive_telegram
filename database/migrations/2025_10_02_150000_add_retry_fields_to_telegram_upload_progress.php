@@ -25,8 +25,8 @@ return new class extends Migration
             $table->boolean('is_retryable')->default(true)->after('next_retry_at')->comment('Can be retried');
             $table->string('retry_phase')->nullable()->after('is_retryable')->comment('download or upload');
             
-            // Index برای retry queue
-            $table->index(['is_retryable', 'retry_count', 'next_retry_at']);
+             // Index برای retry queue (با نام کوتاه)
+            $table->index(['is_retryable', 'retry_count', 'next_retry_at'], 'tg_progress_retry_queue_idx');
         });
     }
 
@@ -36,6 +36,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('telegram_upload_progress', function (Blueprint $table) {
+            $table->dropIndex('tg_progress_retry_queue_idx');
             $table->dropColumn([
                 'retry_count',
                 'max_retries',
