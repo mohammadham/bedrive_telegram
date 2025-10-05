@@ -59,6 +59,11 @@ class TelegramAdapter implements FilesystemAdapter
     public function write(string $path, string $contents, Config $config): void
     {
         try {
+            Log::info('TelegramAdapter writing file', [
+                'path' => $path,
+                'size' => strlen($contents),
+            ]);
+            
             // Create temporary file
             $tempPath = $this->createTempFile($contents);
 
@@ -85,6 +90,7 @@ class TelegramAdapter implements FilesystemAdapter
             Log::error('Failed to write file to Telegram', [
                 'path' => $path,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             throw UnableToWriteFile::atLocation($path, $e->getMessage(), $e);
         }
@@ -515,8 +521,12 @@ class TelegramAdapter implements FilesystemAdapter
      */
     protected function storePathMapping(string $path, array $uploadResult): void
     {
-        // Normalize path
-        $path = TelegramPathMapper::normalizePath($path);
+        // DON'T normalize path here - keep original format ({uuid}/{uuid}.ext)
+        // Normalization can cause issues with UUID-based paths
+        Log::info('Storing path mapping', [
+            'original_path' => $path,
+            'message_id' => $uploadResult['message_id'],
+        ]);
 
         // Find or create metadata
         $metadata = TelegramFileMetadata::where('message_id', $uploadResult['message_id'])
@@ -524,9 +534,24 @@ class TelegramAdapter implements FilesystemAdapter
             ->first();
 
         if (!$metadata) {
+            // Try to find FileEntry by path (UUID-based path)
+            // Path format: {uuid}/{uuid}.{extension}
+            // Extract UUID from path
+            $pathParts = explode('/', $path);
+            $fileEntry = null;
+            
+            if (count($pathParts) >= 2) {
+                // Try to find FileEntry by file_name (which contains UUID)
+                $fileName = $pathParts[count($pathParts) - 1];
+                $fileEntry = FileEntry::where('file_name', $fileName)
+                    ->orWhere('file_name', 'LIKE', '%' . basename($path))
+                    ->latest()
+                    ->first();
+            }
+            
             // Create new metadata entry
             $metadata = TelegramFileMetadata::create([
-                'file_entry_id' => 0, // Temporary, should be linked to FileEntry
+                'file_entry_id' => $fileEntry ? $fileEntry->id : 0,
                 'telegram_file_id' => $uploadResult['file_id'],
                 'telegram_file_unique_id' => $uploadResult['file_unique_id'] ?? null,
                 'message_id' => $uploadResult['message_id'],
@@ -540,12 +565,14 @@ class TelegramAdapter implements FilesystemAdapter
             ]);
         }
 
-        // Store path mapping using PathMapper
+        // Store path mapping using PathMapper (it will handle normalization internally)
         TelegramPathMapper::store($path, $metadata);
 
         Log::info('Path mapping stored', [
             'path' => $path,
             'message_id' => $uploadResult['message_id'],
+            'file_entry_id' => $metadata->file_entry_id,
+            'metadata_id' => $metadata->id,
         ]);
     }
 
@@ -554,10 +581,16 @@ class TelegramAdapter implements FilesystemAdapter
      */
     public function getMetadataByPath(string $path): ?TelegramFileMetadata
     {
-        // Normalize path
-        $path = TelegramPathMapper::normalizePath($path);
-
-        // Use PathMapper to resolve
-        return TelegramPathMapper::resolve($path);
+        // DON'T normalize - use exact path
+        Log::info('Getting metadata by path', ['path' => $path]);
+        
+        // Use PathMapper to resolve (it uses the exact stored path)
+        $metadata = TelegramPathMapper::resolve($path);
+        
+        if (!$metadata) {
+            Log::warning('No metadata found for path', ['path' => $path]);
+        }
+        
+        return $metadata;
     }
 }

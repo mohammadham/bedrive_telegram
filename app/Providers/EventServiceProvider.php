@@ -8,6 +8,7 @@ use App\Listeners\DeleteShareableLinks;
 use App\Listeners\FolderTotalSizeSubscriber;
 use App\Listeners\HandleDeletedWorkspace;
 use App\Listeners\HydrateUserWithSampleDriveContents;
+use App\Listeners\LinkTelegramMetadataToFileEntry;
 use Common\Auth\Events\UserCreated;
 use Common\Files\Events\FileEntriesDeleted;
 use Common\Files\Events\FileEntryCreated;
@@ -23,7 +24,10 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
-        FileEntryCreated::class => [AttachUsersToNewlyUploadedFile::class],
+        FileEntryCreated::class => [
+            AttachUsersToNewlyUploadedFile::class,
+            LinkTelegramMetadataToFileEntry::class,
+        ],
         FileEntriesDeleted::class => [DeleteShareableLinks::class],
         FileUploaded::class => [AutoForwardToTelegram::class],
 
