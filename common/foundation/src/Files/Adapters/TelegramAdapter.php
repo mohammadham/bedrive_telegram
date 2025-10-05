@@ -30,20 +30,21 @@ class TelegramAdapter implements FilesystemAdapter
     protected string $channelId;
     protected string $prefix = '';
 
-    public function __construct(array $config = [])
+public function __construct(array $config = [])
     {
-        // $this->channelId = $config['channel_id'] ?? config('services.telegram.channel_id');
         // Try to get channel_id from: config array, database settings, or env/config
         $this->channelId = $config['channel_id'] 
             ?? config('services.telegram.channel_id')
             ?? settings('storage_telegram_channel_id');
         $this->prefix = $config['prefix'] ?? '';
 
-        $this->manager = new TelegramFileManager($this->channelId);
+        // Pass full config to TelegramFileManager
+        $this->manager = new TelegramFileManager($this->channelId, $config);
 
         Log::info('TelegramAdapter initialized', [
             'channel_id' => $this->channelId,
             'prefix' => $this->prefix,
+            'config_keys' => array_keys($config),
         ]);
     }
 
@@ -108,7 +109,7 @@ class TelegramAdapter implements FilesystemAdapter
                 'trace' => $e->getTraceAsString(),
             ]);
             throw UnableToWriteFile::atLocation($path, $e->getMessage(), $e);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to write file to Telegram', [
                 'path' => $path,
                 'error' => $e->getMessage(),
@@ -133,7 +134,7 @@ class TelegramAdapter implements FilesystemAdapter
             // Read stream to string
             $data = stream_get_contents($contents);
             $this->write($path, $data, $config);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw UnableToWriteFile::atLocation($path, $e->getMessage(), $e);
         }
     }
@@ -151,7 +152,7 @@ class TelegramAdapter implements FilesystemAdapter
             $metadata = $this->getMetadataByPath($path);
 
             if (!$metadata) {
-                throw new \Exception("File not found: {$path}");
+                throw new Exception("File not found: {$path}");
             }
 
             // Create temp download path
@@ -178,7 +179,7 @@ class TelegramAdapter implements FilesystemAdapter
             $metadata->touchLastAccessed();
 
             return $contents;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to read file from Telegram', [
                 'path' => $path,
                 'error' => $e->getMessage(),
@@ -202,7 +203,7 @@ class TelegramAdapter implements FilesystemAdapter
             fwrite($stream, $contents);
             rewind($stream);
             return $stream;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw UnableToReadFile::fromLocation($path, $e->getMessage(), $e);
         }
     }
@@ -238,7 +239,7 @@ class TelegramAdapter implements FilesystemAdapter
                 'path' => $path,
                 'message_id' => $metadata->message_id,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to delete file from Telegram', [
                 'path' => $path,
                 'error' => $e->getMessage(),
@@ -295,7 +296,7 @@ class TelegramAdapter implements FilesystemAdapter
         try {
             $metadata = $this->getMetadataByPath($path);
             return $metadata !== null;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return false;
         }
     }
@@ -396,14 +397,14 @@ class TelegramAdapter implements FilesystemAdapter
             $metadata = $this->getMetadataByPath($path);
 
             if (!$metadata) {
-                throw new \Exception("File not found: {$path}");
+                throw new Exception("File not found: {$path}");
             }
 
             return new FileAttributes(
                 $path,
                 $metadata->original_file_size
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw UnableToRetrieveMetadata::fileSize($path, $e->getMessage(), $e);
         }
     }
@@ -421,7 +422,7 @@ class TelegramAdapter implements FilesystemAdapter
             $metadata = $this->getMetadataByPath($path);
 
             if (!$metadata) {
-                throw new \Exception("File not found: {$path}");
+                throw new Exception("File not found: {$path}");
             }
 
             return new FileAttributes(
@@ -431,7 +432,7 @@ class TelegramAdapter implements FilesystemAdapter
                 null,
                 $metadata->original_mime_type
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw UnableToRetrieveMetadata::mimeType($path, $e->getMessage(), $e);
         }
     }
@@ -449,7 +450,7 @@ class TelegramAdapter implements FilesystemAdapter
             $metadata = $this->getMetadataByPath($path);
 
             if (!$metadata) {
-                throw new \Exception("File not found: {$path}");
+                throw new Exception("File not found: {$path}");
             }
 
             return new FileAttributes(
@@ -458,7 +459,7 @@ class TelegramAdapter implements FilesystemAdapter
                 null,
                 $metadata->uploaded_at?->timestamp
             );
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw UnableToRetrieveMetadata::lastModified($path, $e->getMessage(), $e);
         }
     }

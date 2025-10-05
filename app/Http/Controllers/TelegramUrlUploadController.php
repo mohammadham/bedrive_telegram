@@ -71,7 +71,7 @@ class TelegramUrlUploadController extends BaseController
                 'metadata' => $result['metadata'],
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->error(
                 'Failed to upload file from URL: ' . $e->getMessage(),
                 500
@@ -121,7 +121,7 @@ class TelegramUrlUploadController extends BaseController
                 'results' => $result['results'],
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->error(
                 'Failed to process bulk upload: ' . $e->getMessage(),
                 500
@@ -181,7 +181,7 @@ class TelegramUrlUploadController extends BaseController
                 'reason' => $canUpload['reason'],
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->error('Failed to validate URL: ' . $e->getMessage(), 500);
         }
     }

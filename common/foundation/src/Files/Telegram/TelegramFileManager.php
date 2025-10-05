@@ -18,14 +18,18 @@ class TelegramFileManager
     protected ?TelegramBotClient $botClient = null;
     protected ?TelegramUserClient $userClient = null;
     protected string $defaultChannelId;
+    protected array $config = [];
 
     /**
      * File size threshold (50MB)
      */
     public const SIZE_THRESHOLD = 50 * 1024 * 1024;
 
-    public function __construct(?string $channelId = null)
+    public function __construct(?string $channelId = null, array $config = [])
     {
+        // Store config for later use
+        $this->config = $config;
+        
         // Channel ID should come from config (loaded from .env)
         $this->defaultChannelId = $channelId 
             ?? config('services.telegram.channel_id')
@@ -38,6 +42,12 @@ class TelegramFileManager
             );
         }
 
+        Log::info('TelegramFileManager initialized', [
+            'channel_id' => $this->defaultChannelId,
+            'has_bot_token' => !empty($config['bot_token']),
+            'has_api_id' => !empty($config['api_id']),
+        ]);
+
         // Initialize clients lazily
     }
 
@@ -47,7 +57,9 @@ class TelegramFileManager
     protected function getBotClient(): TelegramBotClient
     {
         if (!$this->botClient) {
-            $this->botClient = new TelegramBotClient();
+            // Pass bot_token from config if available
+            $botToken = $this->config['bot_token'] ?? null;
+            $this->botClient = new TelegramBotClient($botToken);
         }
         return $this->botClient;
     }
@@ -58,7 +70,12 @@ class TelegramFileManager
     protected function getUserClient(): TelegramUserClient
     {
         if (!$this->userClient) {
-            $this->userClient = new TelegramUserClient();
+            // Pass user account credentials from config
+            $this->userClient = new TelegramUserClient(
+                $this->config['api_id'] ?? null,
+                $this->config['api_hash'] ?? null,
+                $this->config['phone'] ?? null
+            );
         }
         return $this->userClient;
     }
@@ -236,7 +253,7 @@ class TelegramFileManager
                 'success' => $botClient->isAuthenticated(),
                 'info' => $botClient->getBotInfo(),
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $results['bot'] = [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -250,7 +267,7 @@ class TelegramFileManager
                 'success' => $userClient->isAuthenticated(),
                 'info' => $userClient->getUserInfo(),
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $results['user'] = [
                 'success' => false,
                 'error' => $e->getMessage(),

@@ -103,7 +103,7 @@ class AutoForwardToTelegram implements ShouldQueue
                 'target_id' => $targetId,
                 'error' => $e->getMessage(),
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // هر خطای دیگری
             Log::error('Auto-forward exception', [
                 'file_id' => $fileEntry->id,

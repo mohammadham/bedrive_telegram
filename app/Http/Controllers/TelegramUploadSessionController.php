@@ -50,7 +50,7 @@ class TelegramUploadSessionController extends BaseController
                 'session' => $session,
             ], 201);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'Failed to start chunked upload',
                 'error' => $e->getMessage(),
@@ -73,7 +73,7 @@ class TelegramUploadSessionController extends BaseController
                 'data' => $result,
             ], $result['success'] ? 200 : 400);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'Failed to resume session',
                 'error' => $e->getMessage(),

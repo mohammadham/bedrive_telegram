@@ -36,7 +36,7 @@ class TelegramRetryController extends BaseController
                 'data' => $result,
             ], $result['success'] ? 200 : 400);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'Retry failed',
                 'error' => $e->getMessage(),

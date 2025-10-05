@@ -104,7 +104,7 @@ class TelegramSessionManager
                 Log::info('MadelineProto authorization state retrieved', [
                     'state' => $authState,
                 ]);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::warning('Could not get authorization state', [
                     'error' => $e->getMessage(),
                 ]);
