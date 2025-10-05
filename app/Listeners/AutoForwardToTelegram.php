@@ -17,14 +17,16 @@ class AutoForwardToTelegram implements ShouldQueue
 {
     use InteractsWithQueue;
 
-    protected TelegramFileManager $telegramManager;
+    // protected TelegramFileManager $telegramManager;
 
     /**
      * Create the event listener.
      */
     public function __construct()
     {
-        $this->telegramManager = new TelegramFileManager();
+        // $this->telegramManager = new TelegramFileManager();
+           // Don't initialize TelegramFileManager here!
+        // It will be created lazily when needed
     }
 
     /**
@@ -67,10 +69,18 @@ class AutoForwardToTelegram implements ShouldQueue
         }
 
         try {
+            // Initialize TelegramFileManager only when needed (lazy initialization)
+            // At this point, config is already loaded from .env
+            $telegramManager = app(TelegramFileManager::class);
+            
             // Forward message به target
             $client = $metadata->isUploadedViaBot()
-                ? $this->telegramManager->getBotClient()
-                : $this->telegramManager->getUserClient();
+                ? $telegramManager->getBotClient()
+                : $telegramManager->getUserClient();
+            // // Forward message به target
+            // $client = $metadata->isUploadedViaBot()
+            //     ? $this->telegramManager->getBotClient()
+            //     : $this->telegramManager->getUserClient();
 
             $result = $client->forwardMessage(
                 $metadata->channel_id,
