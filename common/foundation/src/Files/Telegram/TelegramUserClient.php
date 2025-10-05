@@ -11,8 +11,12 @@ use danog\MadelineProto\API;
 use danog\MadelineProto\Exception as MadelineException;
 use danog\MadelineProto\LocalFile;
 use danog\MadelineProto\RemoteUrl;
+use danog\MadelineProto\Settings;
+use danog\MadelineProto\Settings\AppInfo;
+use danog\MadelineProto\Settings\Logger as LoggerSettings;
 use Exception;
 use Illuminate\Support\Facades\Log;
+
 
 /**
  * Telegram User Account Client (MTProto)
@@ -75,23 +79,21 @@ class TelegramUserClient implements TelegramClientInterface
     protected function initializeMadelineProto(): void
     {
         try {
-            $settings = [
-                'app_info' => [
-                    'api_id' => $this->apiId,
-                    'api_hash' => $this->apiHash,
-                ],
-                'logger' => [
-                    'logger' => 3, // File logger
-                    'logger_param' => storage_path('logs/madelineproto.log'),
-                    'logger_level' => 3, // Warning level
-                ],
-                'serialization' => [
-                    'serialization_interval' => 30,
-                ],
-                'upload' => [
-                    'allow_automatic_upload' => true,
-                ],
-            ];
+            // MadelineProto v8+ requires Settings object
+            $settings = new Settings;
+            
+            // Set app info
+            $appInfo = new AppInfo;
+            $appInfo->setApiId($this->apiId);
+            $appInfo->setApiHash($this->apiHash);
+            $settings->setAppInfo($appInfo);
+            
+            // Set logger
+            $logger = new LoggerSettings;
+            $logger->setType(\danog\MadelineProto\Logger::FILE_LOGGER);
+            $logger->setExtra(storage_path('logs/madelineproto.log'));
+            $logger->setLevel(\danog\MadelineProto\Logger::WARNING);
+            $settings->setLogger($logger);
 
             $this->MadelineProto = new API($this->sessionFile, $settings);
 
