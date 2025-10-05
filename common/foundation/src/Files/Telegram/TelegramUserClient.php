@@ -7,6 +7,7 @@ use Common\Files\Telegram\Exceptions\TelegramAuthException;
 use Common\Files\Telegram\Exceptions\TelegramConfigException;
 use Common\Files\Telegram\Exceptions\TelegramDownloadException;
 use Common\Files\Telegram\Exceptions\TelegramUploadException;
+use Common\Files\Telegram\TelegramSessionManager;
 use danog\MadelineProto\API;
 use danog\MadelineProto\Exception as MadelineException;
 use danog\MadelineProto\LocalFile;
@@ -74,45 +75,74 @@ class TelegramUserClient implements TelegramClientInterface
 
     /**
      * Initialize MadelineProto
+     * Initialize MadelineProto using shared session manager
+     * This ensures session persistence across HTTP requests
      */
     protected function initializeMadelineProto(): void
     {
         try {
-            // MadelineProto v8+ requires Settings object
-            $settings = new Settings;
+            // // MadelineProto v8+ requires Settings object
+            // $settings = new Settings;
             
-            // Set app info
-            $appInfo = new AppInfo;
-            $appInfo->setApiId($this->apiId);
-            $appInfo->setApiHash($this->apiHash);
-            $settings->setAppInfo($appInfo);
+            // // Set app info
+            // $appInfo = new AppInfo;
+            // $appInfo->setApiId($this->apiId);
+            // $appInfo->setApiHash($this->apiHash);
+            // $settings->setAppInfo($appInfo);
             
-            // Set logger
-            $logger = new LoggerSettings;
-            $logger->setType(\danog\MadelineProto\Logger::FILE_LOGGER);
-            $logger->setExtra(storage_path('logs/madelineproto.log'));
-            $logger->setLevel(\danog\MadelineProto\Logger::WARNING);
-            $settings->setLogger($logger);
-            // IMPORTANT: Use IPC mode for session persistence across requests
-            // This ensures the same MadelineProto instance is used for phoneLogin and completePhoneLogin
-            $this->MadelineProto = new API($this->sessionFile, $settings);
+            // // Set logger
+            // $logger = new LoggerSettings;
+            // $logger->setType(\danog\MadelineProto\Logger::FILE_LOGGER);
+            // $logger->setExtra(storage_path('logs/madelineproto.log'));
+            // $logger->setLevel(\danog\MadelineProto\Logger::WARNING);
+            // $settings->setLogger($logger);
+            // // CRITICAL: Enable IPC mode for session persistence across HTTP requests
+            // // This creates a long-running background process that maintains state
+            // $settings->getIpc()->setSlow(false);
+            
+            // // Initialize with IPC server
+            // // This will start a background server if not running, or connect to existing one
+            // $this->MadelineProto = new API($this->sessionFile, $settings);
 
-            // Wait for the session to be ready
-            $this->MadelineProto->waitForInit();
+            // // Start the IPC server (non-blocking)
+            // // This ensures session state persists between phoneLogin and completePhoneLogin
+            // $this->MadelineProto->startAndLoop();
+            // Use shared session manager to get/create MadelineProto instance
+            // This ensures the SAME instance is used for phoneLogin and completePhoneLogin
+            $sessionManager = TelegramSessionManager::getInstance();
+            
+            $this->MadelineProto = $sessionManager->getSession(
+                $this->apiId,
+                $this->apiHash,
+                $this->phone,
+                $this->sessionFile
+            );
             // Check if already authorized
             try {
                 $authorization = $this->MadelineProto->getAuthorization();
                 $this->authenticated = ($authorization === API::LOGGED_IN);
+                Log::info('Authorization state', [
+                    'phone' => $this->phone,
+                    'state' => $authorization,
+                    'is_logged_in' => $this->authenticated,
+                ]);
             } catch (Exception $e) {
                 $this->authenticated = false;
+                Log::warning('Could not get authorization state', [
+                    'error' => $e->getMessage(),
+                ]);
             }
 
-            Log::info('MadelineProto initialized successfully', [
+            Log::info('MadelineProto initialized via session manager', [
                 'session_file' => $this->sessionFile,
                 'is_authenticated' => $this->authenticated,
             ]);
-        } catch (MadelineException $e) {
+        } catch (Exception $e) {
             $this->authenticated = false;
+            Log::error('MadelineProto initialization failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             throw new Exception('Failed to initialize MadelineProto: ' . $e->getMessage());
         }
     }
@@ -646,11 +676,50 @@ class TelegramUserClient implements TelegramClientInterface
     public function verifyCode(string $code, ?string $phoneCodeHash = null): array
     {
         try {
+            // Log current state before verification
+            $currentAuth = $this->MadelineProto->getAuthorization();
+            
+            Log::info('Attempting code verification', [
+                'phone' => $this->phone,
+                'code_length' => strlen($code),
+                'current_auth_state' => $currentAuth,
+            ]);
+
+            // If not in WAITING_CODE state, we need to restart login
+            if ($currentAuth !== API::WAITING_CODE && $currentAuth !== API::WAITING_PASSWORD) {
+                Log::warning('Not in WAITING_CODE state, attempting to restart login', [
+                    'current_state' => $currentAuth,
+                ]);
+                
+                // Try to restart login process
+                try {
+                    $this->MadelineProto->phoneLogin($this->phone);
+                    Log::info('Login restarted, please resend code');
+                    
+                    throw TelegramAuthException::invalidCredentials(
+                        'Session expired. Please request a new verification code.'
+                    );
+                } catch (Exception $restartEx) {
+                    Log::error('Failed to restart login', [
+                        'error' => $restartEx->getMessage(),
+                    ]);
+                }
+            }
+
+            // Complete phone login with code
             $result = $this->MadelineProto->completePhoneLogin($code);
+
+            Log::info('Code verification completed', [
+                'result' => $result,
+            ]);
 
             // Check if logged in successfully
             if ($result === API::LOGGED_IN) {
                 $this->authenticated = true;
+                
+                Log::info('Login successful', [
+                    'phone' => $this->phone,
+                ]);
                 
                 return [
                     'success' => true,
@@ -661,6 +730,8 @@ class TelegramUserClient implements TelegramClientInterface
 
             // Check if 2FA password is required
             if ($result === API::WAITING_PASSWORD) {
+                Log::info('2FA password required');
+                
                 return [
                     'success' => false,
                     'needs_password' => true,
@@ -669,10 +740,17 @@ class TelegramUserClient implements TelegramClientInterface
                 ];
             }
 
+            // Unknown result
+            Log::warning('Unexpected verification result', [
+                'result' => $result,
+            ]);
+            
             throw TelegramAuthException::invalidCredentials('Login verification failed');
         } catch (MadelineException $e) {
             Log::error('Failed to verify code', [
+                'phone' => $this->phone,
                 'error' => $e->getMessage(),
+                'error_code' => $e->getCode(),
             ]);
             
             // Check if error message indicates 2FA is required
@@ -685,8 +763,17 @@ class TelegramUserClient implements TelegramClientInterface
                     'message' => 'Two-factor authentication enabled. Please enter your cloud password.',
                 ];
             }
+
+            // Check for AUTH_RESTART error
+            if (str_contains($e->getMessage(), 'AUTH_RESTART')) {
+                throw TelegramAuthException::invalidCredentials(
+                    'Session expired. Please request a new verification code and try again.'
+                );
+            }
             
-            throw TelegramAuthException::invalidCredentials($e->getMessage());
+            throw TelegramAuthException::invalidCredentials(
+                'Verification failed: ' . $e->getMessage()
+            );
         }
     }
 
