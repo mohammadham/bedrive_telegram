@@ -825,6 +825,30 @@ class TelegramUserClient implements TelegramClientInterface
     public function complete2FA(string $password): array
     {
         try {
+            // First, check if already logged in
+            $currentAuth = $this->MadelineProto->getAuthorization();
+            
+            if ($currentAuth === API::LOGGED_IN) {
+                $this->authenticated = true;
+                
+                Log::info('User already logged in (skipping 2FA)', [
+                    'phone' => $this->phone,
+                ]);
+                
+                return [
+                    'success' => true,
+                    'is_authorized' => true,
+                    'session_file' => $this->sessionFile,
+                    'message' => 'Already logged in',
+                ];
+            }
+            
+            // If not logged in, complete 2FA
+            Log::info('Attempting 2FA completion', [
+                'phone' => $this->phone,
+                'current_state' => $currentAuth,
+            ]);
+            
             $result = $this->MadelineProto->complete2faLogin($password);
 
             if ($result === API::LOGGED_IN) {
@@ -845,7 +869,25 @@ class TelegramUserClient implements TelegramClientInterface
         } catch (MadelineException $e) {
             Log::error('Failed to complete 2FA login', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
+            
+            // Check if already logged in (error might be because of this)
+            try {
+                $auth = $this->MadelineProto->getAuthorization();
+                if ($auth === API::LOGGED_IN) {
+                    Log::info('Actually already logged in despite error');
+                    $this->authenticated = true;
+                    return [
+                        'success' => true,
+                        'is_authorized' => true,
+                        'session_file' => $this->sessionFile,
+                        'message' => 'Login successful (recovered from error)',
+                    ];
+                }
+            } catch (Exception $checkEx) {
+                // Ignore
+            }
             
             throw TelegramAuthException::invalidCredentials('Invalid 2FA password: ' . $e->getMessage());
         }
