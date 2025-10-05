@@ -36,7 +36,7 @@ class TelegramUserClient implements TelegramClientInterface
      */
     public const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB in bytes
 
-    public function __construct(
+        public function __construct(
         ?int $apiId = null,
         ?string $apiHash = null,
         ?string $phone = null,
@@ -48,6 +48,12 @@ class TelegramUserClient implements TelegramClientInterface
         $this->sessionFile =
             $sessionFile ?? config('services.telegram.session_file');
 
+        Log::info('TelegramUserClient constructor called', [
+            'api_id' => $this->apiId,
+            'phone' => $this->phone,
+            'session_file' => $this->sessionFile,
+        ]);
+
         // Validate configuration
         if (empty($this->apiId) || empty($this->apiHash)) {
             throw TelegramConfigException::missingConfig('api_id or api_hash');
@@ -57,17 +63,14 @@ class TelegramUserClient implements TelegramClientInterface
             $this->sessionFile = storage_path('app/telegram/session.madeline');
         }
 
-        // Ensure session directory exists
-        $sessionDir = dirname($this->sessionFile);
-        if (!is_dir($sessionDir)) {
-            mkdir($sessionDir, 0755, true);
-        }
-
         try {
+            Log::info('Initializing MadelineProto in constructor');
             $this->initializeMadelineProto();
+            Log::info('MadelineProto initialized successfully in constructor');
         } catch (Exception $e) {
-            Log::error('MadelineProto initialization failed', [
+            Log::error('MadelineProto initialization failed in constructor', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             throw TelegramAuthException::invalidCredentials($e->getMessage());
         }

@@ -184,15 +184,28 @@ class TelegramTestController extends BaseController
             'phone' => 'required|string',
         ]);
 
+        Log::info('Login user request received', [
+            'api_id' => $request->api_id,
+            'phone' => $request->phone,
+        ]);
+
         try {
+            Log::info('Creating TelegramUserClient for login');
+            
             $userClient = new TelegramUserClient(
                 (int) $request->api_id,
                 $request->api_hash,
                 $request->phone
             );
 
+            Log::info('TelegramUserClient created, calling startLogin()');
+
             // Start login process
             $result = $userClient->startLogin();
+
+            Log::info('startLogin() completed', [
+                'result' => $result,
+            ]);
 
             if ($result['needs_code']) {
                 return response()->json([
@@ -205,11 +218,26 @@ class TelegramTestController extends BaseController
                 ]);
             }
 
+            if (isset($result['already_logged_in'])) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Already logged in!',
+                    'data' => [
+                        'is_authorized' => true,
+                    ],
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Login initiated. Please check your Telegram for verification code.',
             ]);
         } catch (Exception $e) {
+            Log::error('Login user failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Login failed: ' . $e->getMessage(),
