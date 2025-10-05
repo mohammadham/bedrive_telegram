@@ -88,12 +88,27 @@ class TelegramSessionManager
             $logger->setLevel(\danog\MadelineProto\Logger::NOTICE);
             $settings->setLogger($logger);
 
+            Log::info('Creating MadelineProto API instance');
+
             // Create API instance - MadelineProto v8+ uses IPC by default
             $api = new API($sessionFile, $settings);
 
-            // Start the session (this will use IPC mode automatically)
-            // This keeps the session alive between HTTP requests
-            $api->start();
+            Log::info('MadelineProto API instance created, checking authorization');
+
+            // Wait for initialization without starting event loop
+            // This prevents the \"start()\" hanging issue
+            try {
+                // Get authorization state to ensure session is ready
+                $authState = $api->getAuthorization();
+                
+                Log::info('MadelineProto authorization state retrieved', [
+                    'state' => $authState,
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Could not get authorization state', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // Store in cache
             $this->sessions[$sessionKey] = $api;
