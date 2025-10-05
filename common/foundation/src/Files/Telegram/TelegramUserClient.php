@@ -93,9 +93,12 @@ class TelegramUserClient implements TelegramClientInterface
             $logger->setExtra(storage_path('logs/madelineproto.log'));
             $logger->setLevel(\danog\MadelineProto\Logger::WARNING);
             $settings->setLogger($logger);
-
+            // IMPORTANT: Use IPC mode for session persistence across requests
+            // This ensures the same MadelineProto instance is used for phoneLogin and completePhoneLogin
             $this->MadelineProto = new API($this->sessionFile, $settings);
 
+            // Wait for the session to be ready
+            $this->MadelineProto->waitForInit();
             // Check if already authorized
             try {
                 $authorization = $this->MadelineProto->getAuthorization();
@@ -106,6 +109,7 @@ class TelegramUserClient implements TelegramClientInterface
 
             Log::info('MadelineProto initialized successfully', [
                 'session_file' => $this->sessionFile,
+                'is_authenticated' => $this->authenticated,
             ]);
         } catch (MadelineException $e) {
             $this->authenticated = false;
@@ -508,9 +512,42 @@ class TelegramUserClient implements TelegramClientInterface
                 throw TelegramAuthException::invalidCredentials('Phone number is required');
             }
 
+            // Check current authorization state
+            $currentAuth = $this->MadelineProto->getAuthorization();
+            
+            // If already waiting for code, don't restart
+            if ($currentAuth === API::WAITING_CODE) {
+                Log::info('Already waiting for verification code', [
+                    'phone' => $this->phone,
+                ]);
+                
+                return [
+                    'needs_code' => true,
+                    'phone' => $this->phone,
+                    'phone_code_hash' => null, // State is preserved in session
+                ];
+            }
+            
+            // If already logged in, no need to login again
+            if ($currentAuth === API::LOGGED_IN) {
+                return [
+                    'already_logged_in' => true,
+                    'phone' => $this->phone,
+                ];
+            }
+
             // Start phone login
+            Log::info('Starting phone login', [
+                'phone' => $this->phone,
+                'session_file' => $this->sessionFile,
+            ]);
+            
             $result = $this->MadelineProto->phoneLogin($this->phone);
 
+            Log::info('Phone login initiated successfully', [
+                'phone' => $this->phone,
+                'has_phone_code_hash' => isset($result['phone_code_hash']),
+            ]);
             return [
                 'needs_code' => true,
                 'phone' => $this->phone,
@@ -518,12 +555,85 @@ class TelegramUserClient implements TelegramClientInterface
             ];
         } catch (MadelineException $e) {
             Log::error('Failed to start login', [
+                'phone' => $this->phone,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             
             throw TelegramAuthException::invalidCredentials($e->getMessage());
         }
     }
+    // /**
+    //  * Verify code and complete login
+    //  *
+    //  * @param string $code
+    //  * @return array
+    //  * @throws TelegramAuthException
+    //  */
+    // public function verifyCode(string $code): array
+    // {
+    //     try {
+    //         // Check current authorization state
+    //         $currentAuth = $this->MadelineProto->getAuthorization();
+            
+    //         Log::info('Verifying code', [
+    //             'phone' => $this->phone,
+    //             'code_length' => strlen($code),
+    //             'current_auth_state' => $currentAuth,
+    //             'session_file' => $this->sessionFile,
+    //         ]);
+            
+    //         // If not waiting for code, something went wrong
+    //         if ($currentAuth !== API::WAITING_CODE && $currentAuth !== API::WAITING_PASSWORD) {
+    //             Log::error('Not in correct state for verification', [
+    //                 'current_state' => $currentAuth,
+    //                 'expected_state' => 'WAITING_CODE or WAITING_PASSWORD',
+    //             ]);
+                
+    //             throw new MadelineException("Invalid state for code verification. Current state: {$currentAuth}");
+    //         }
+
+    //         // Complete phone login with code
+    //         $result = $this->MadelineProto->completePhoneLogin($code);
+
+    //         Log::info('Code verification result', [
+    //             'result_type' => $result['_'] ?? 'unknown',
+    //             'has_user' => isset($result['user']),
+    //         ]);
+
+    //         // Check if 2FA is required
+    //         if (isset($result['_']) && $result['_'] === 'account.password') {
+    //             Log::info('2FA required for login');
+                
+    //             return [
+    //                 'needs_password' => true,
+    //                 'is_authorized' => false,
+    //                 'hint' => $result['hint'] ?? '',
+    //             ];
+    //         }
+
+    //         // Login successful
+    //         $this->authenticated = true;
+
+    //         Log::info('Login successful', [
+    //             'phone' => $this->phone,
+    //         ]);
+
+    //         return [
+    //             'is_authorized' => true,
+    //             'session_file' => $this->sessionFile,
+    //         ];
+    //     } catch (MadelineException $e) {
+    //         Log::error('Failed to verify code', [
+    //             'phone' => $this->phone,
+    //             'error' => $e->getMessage(),
+    //             'code' => $e->getCode(),
+    //             'trace' => $e->getTraceAsString(),
+    //         ]);
+            
+    //         throw TelegramAuthException::invalidCredentials('Login verification failed: ' . $e->getMessage());
+    //     }
+    // }
 
     /**
      * Verify code and complete login
