@@ -713,10 +713,33 @@ class TelegramUserClient implements TelegramClientInterface
             $result = $this->MadelineProto->completePhoneLogin($code);
 
             Log::info('Code verification completed', [
-                'result' => $result,
+               'result_type' => gettype($result),
+                'is_array' => is_array($result),
+                'result' => is_array($result) ? $result : 'not-array',
             ]);
 
-            // Check if logged in successfully
+            // Check result type
+            // MadelineProto v8 returns different types based on state:
+            // - Integer constant (API::LOGGED_IN, API::WAITING_PASSWORD)
+            // - Array with account.password structure (2FA enabled)
+            
+            // Check if it's an array with account.password (2FA enabled)
+            if (is_array($result) && isset($result['_']) && $result['_'] === 'account.password') {
+                Log::info('2FA password required (array response)', [
+                    'has_password' => $result['has_password'] ?? false,
+                    'hint' => $result['hint'] ?? null,
+                ]);
+                
+                return [
+                    'success' => false,
+                    'needs_password' => true,
+                    'is_authorized' => false,
+                    'message' => 'Two-factor authentication enabled. Please enter your cloud password.',
+                    'hint' => $result['hint'] ?? null,
+                ];
+            }
+
+            // Check if logged in successfully (integer constant)
             if ($result === API::LOGGED_IN) {
                 $this->authenticated = true;
                 
@@ -733,7 +756,7 @@ class TelegramUserClient implements TelegramClientInterface
 
             // Check if 2FA password is required
             if ($result === API::WAITING_PASSWORD) {
-                Log::info('2FA password required');
+                Log::info('2FA password required (constant)');
                 
                 return [
                     'success' => false,
@@ -745,6 +768,7 @@ class TelegramUserClient implements TelegramClientInterface
 
             // Unknown result
             Log::warning('Unexpected verification result', [
+                'result_type' => gettype($result),
                 'result' => $result,
             ]);
             
