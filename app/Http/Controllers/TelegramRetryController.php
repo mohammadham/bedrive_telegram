@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Common\Core\BaseController;
 use Common\Files\Telegram\TelegramRetryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
  * 
  * API برای مدیریت retry آپلودهای ناموفق
  */
-class TelegramRetryController extends Controller
+class TelegramRetryController extends BaseController
 {
     protected TelegramRetryService $retryService;
 

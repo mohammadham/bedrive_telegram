@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Common\Files\Telegram\TelegramUploadProgressService;
-use Common\Foundation\Http\Controller;
+use Common\Core\BaseController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Validator;
  * 
  * API endpoints برای tracking progress آپلود
  */
-class TelegramUploadProgressController extends Controller
+class TelegramUploadProgressController extends BaseController
 {
     protected TelegramUploadProgressService $progressService;
 

@@ -6,13 +6,13 @@ use Common\Files\Telegram\TelegramChunkedUploadService;
 use App\Models\TelegramUploadSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
+use Common\Core\BaseController;
 /**
  * Phase 8.3: Telegram Upload Session Controller
  * 
  * API برای مدیریت resumable upload sessions
  */
-class TelegramUploadSessionController extends Controller
+class TelegramUploadSessionController extends BaseController
 {
     protected TelegramChunkedUploadService $chunkedService;
 

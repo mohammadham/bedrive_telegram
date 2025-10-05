@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Common\Files\Telegram\TelegramUrlUploadService;
 use Common\Files\Telegram\TelegramUrlUploadWithProgress;
-use Common\Foundation\Http\Controller;
+use Common\Core\BaseController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Validator;
  * Handles uploading files from URLs directly to Telegram
  * Phase 8.2: با Progress Tracking
  */
-class TelegramUrlUploadController extends Controller
+class TelegramUrlUploadController extends BaseController
 {
     protected TelegramUrlUploadService $uploadService;
     protected TelegramUrlUploadWithProgress $uploadWithProgress;

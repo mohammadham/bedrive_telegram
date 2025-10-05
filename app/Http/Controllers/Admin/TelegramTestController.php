@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
+use Common\Core\BaseController;
 use Common\Files\Telegram\TelegramBotClient;
 use Common\Files\Telegram\TelegramUserClient;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class TelegramTestController extends Controller
+class TelegramTestController extends BaseController
 {
     /**
      * Test Bot Token and Channel access
@@ -66,6 +66,11 @@ class TelegramTestController extends Controller
                 $botClient->deleteFile($request->channel_id, $result['message_id']);
             } catch (Exception $e) {
                 // Deletion failed - bot might not have delete permissions
+                return response()->json([
+                'success' => false,
+                'message' => 'Bot connection failed: ' . $e->getMessage(),
+                'error' => $this->classifyBotError($e->getMessage()),
+            ], 422);
             }
 
             return response()->json([

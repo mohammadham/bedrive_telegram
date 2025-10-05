@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Common\Core\BaseController;
 
-class TelegramWebhookController extends Controller
+class TelegramWebhookController extends BaseController
 {
     /**
      * Handle incoming webhook from Telegram
