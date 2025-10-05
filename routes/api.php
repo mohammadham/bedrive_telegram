@@ -120,6 +120,7 @@ Route::group(['prefix' => 'v1'], function() {
     Route::post('admin/telegram/login-user', [TelegramTestController::class, 'loginUser']);
     Route::post('admin/telegram/verify-code', [TelegramTestController::class, 'verifyCode']);
     Route::post('admin/telegram/complete-2fa', [TelegramTestController::class, 'complete2FA']);
+    Route::post('admin/telegram/logout-user', [TelegramTestController::class, 'logoutUser']);
     Route::get('admin/telegram/download-session', [TelegramTestController::class, 'downloadSession']);
     
     // TELEGRAM WEBHOOK MANAGEMENT

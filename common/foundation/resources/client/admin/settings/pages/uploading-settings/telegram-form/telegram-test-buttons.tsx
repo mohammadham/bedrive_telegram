@@ -16,6 +16,8 @@ import {useDialogContext} from '@ui/overlays/dialog/dialog-context';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
 import {useForm} from 'react-hook-form';
 import {Form} from '@ui/forms/form';
+import {LogoutIcon} from '@ui/icons/material/Logout';
+import {ConfirmationDialog} from '@ui/overlays/dialog/confirmation-dialog';
 
 interface TelegramTestResponse {
   success: boolean;
@@ -32,6 +34,7 @@ export function TelegramTestButtons() {
   const {watch} = useFormContext();
   const [botTesting, setBotTesting] = useState(false);
   const [userTesting, setUserTesting] = useState(false);
+  const [userLogout, setUserLogout] = useState(false);
   const [botTestResult, setBotTestResult] = useState<TelegramTestResponse | null>(null);
   const [userTestResult, setUserTestResult] = useState<TelegramTestResponse | null>(null);
 
@@ -106,7 +109,35 @@ export function TelegramTestButtons() {
       setUserTesting(false);
     }
   };
+const handleLogoutUser = async () => {
+    if (!canTestUser) {
+      toast.danger('Please fill API ID, API Hash, and Phone Number first');
+      return;
+    }
 
+    setUserLogout(true);
+
+    try {
+      const response = await apiClient.post<TelegramTestResponse>('admin/telegram/logout-user', {
+        api_id: apiId,
+        api_hash: apiHash,
+        phone: phone,
+      });
+
+      if (response.data.success) {
+        toast.positive(response.data.message);
+        // Clear user test result
+        setUserTestResult(null);
+      } else {
+        toast.danger(response.data.message);
+      }
+    } catch (error: any) {
+      const errorData = error.response?.data;
+      toast.danger(errorData?.message || 'Logout failed');
+    } finally {
+      setUserLogout(false);
+    }
+  };
   return (
     <div className="space-y-20 mt-30">
       {/* Bot Test Button */}
@@ -245,6 +276,31 @@ export function TelegramTestButtons() {
                 <Trans message="Login" />
               </Button>
               <TelegramLoginDialog apiId={apiId} apiHash={apiHash} phone={phone} />
+            </DialogTrigger>
+            
+            <DialogTrigger type="modal">
+              <Button
+                variant="outline"
+                color="danger"
+                size="sm"
+                disabled={!canTestUser || userLogout}
+                startIcon={<LogoutIcon />}
+              >
+                {userLogout ? (
+                  <Trans message="Logging out..." />
+                ) : (
+                  <Trans message="Logout" />
+                )}
+              </Button>
+              <ConfirmationDialog
+                isDanger
+                title={<Trans message="Logout from Telegram" />}
+                body={
+                  <Trans message="Are you sure you want to logout? This will delete the session file and you'll need to login again for large file uploads." />
+                }
+                confirm={<Trans message="Logout" />}
+                onConfirm={handleLogoutUser}
+              />
             </DialogTrigger>
           </div>
         </div>

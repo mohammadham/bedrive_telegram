@@ -433,6 +433,41 @@ class TelegramTestController extends BaseController
             ], 422);
         }
     }
+    /**
+     * Logout from User Account (destroy session)
+     */
+    public function logoutUser(Request $request): JsonResponse
+    {
+        $request->validate([
+            'api_id' => 'required|integer',
+            'api_hash' => 'required|string',
+            'phone' => 'required|string',
+        ]);
+
+        try {
+            $userClient = new TelegramUserClient(
+                (int) $request->api_id,
+                $request->api_hash,
+                $request->phone
+            );
+
+            $success = $userClient->logout();
+
+            if ($success) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Logged out successfully! Session has been cleared.',
+                ]);
+            }
+
+            throw new Exception('Logout operation failed');
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout failed: ' . $e->getMessage(),
+            ], 422);
+        }
+    }
 
     /**
      * Download session file

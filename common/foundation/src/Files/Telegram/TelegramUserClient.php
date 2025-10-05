@@ -17,6 +17,7 @@ use danog\MadelineProto\Settings\AppInfo;
 use danog\MadelineProto\Settings\Logger as LoggerSettings;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Telegram User Account Client (MTProto)
@@ -36,7 +37,7 @@ class TelegramUserClient implements TelegramClientInterface
      */
     public const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB in bytes
 
-        public function __construct(
+    public function __construct(
         ?int $apiId = null,
         ?string $apiHash = null,
         ?string $phone = null,
@@ -77,39 +78,12 @@ class TelegramUserClient implements TelegramClientInterface
     }
 
     /**
-     * Initialize MadelineProto
      * Initialize MadelineProto using shared session manager
      * This ensures session persistence across HTTP requests
      */
     protected function initializeMadelineProto(): void
     {
         try {
-            // // MadelineProto v8+ requires Settings object
-            // $settings = new Settings;
-            
-            // // Set app info
-            // $appInfo = new AppInfo;
-            // $appInfo->setApiId($this->apiId);
-            // $appInfo->setApiHash($this->apiHash);
-            // $settings->setAppInfo($appInfo);
-            
-            // // Set logger
-            // $logger = new LoggerSettings;
-            // $logger->setType(\danog\MadelineProto\Logger::FILE_LOGGER);
-            // $logger->setExtra(storage_path('logs/madelineproto.log'));
-            // $logger->setLevel(\danog\MadelineProto\Logger::WARNING);
-            // $settings->setLogger($logger);
-            // // CRITICAL: Enable IPC mode for session persistence across HTTP requests
-            // // This creates a long-running background process that maintains state
-            // $settings->getIpc()->setSlow(false);
-            
-            // // Initialize with IPC server
-            // // This will start a background server if not running, or connect to existing one
-            // $this->MadelineProto = new API($this->sessionFile, $settings);
-
-            // // Start the IPC server (non-blocking)
-            // // This ensures session state persists between phoneLogin and completePhoneLogin
-            // $this->MadelineProto->startAndLoop();
             // Use shared session manager to get/create MadelineProto instance
             // This ensures the SAME instance is used for phoneLogin and completePhoneLogin
             $sessionManager = TelegramSessionManager::getInstance();
@@ -305,6 +279,7 @@ class TelegramUserClient implements TelegramClientInterface
 
             throw TelegramDownloadException::downloadFailed($e->getMessage(), [
                 'file_id' => $fileId,
+                'save_path' => $savePath,
             ]);
         } catch (Exception $e) {
             throw TelegramDownloadException::downloadFailed($e->getMessage());
@@ -312,7 +287,7 @@ class TelegramUserClient implements TelegramClientInterface
     }
 
     /**
-     * Delete a message/file
+     * Delete a file (message) from channel
      *
      * @param string $channelId
      * @param int $messageId
@@ -333,7 +308,7 @@ class TelegramUserClient implements TelegramClientInterface
 
             return true;
         } catch (MadelineException $e) {
-            Log::error('Failed to delete message via User Account', [
+            Log::error('Failed to delete message', [
                 'channel_id' => $channelId,
                 'message_id' => $messageId,
                 'error' => $e->getMessage(),
@@ -351,7 +326,7 @@ class TelegramUserClient implements TelegramClientInterface
     public function getFileInfo(string $fileId): array
     {
         try {
-            // Parse fileId to get channel and message
+            // Parse fileId (format: channel_id:message_id)
             if (str_contains($fileId, ':')) {
                 [$channelId, $messageId] = explode(':', $fileId, 2);
 
@@ -361,20 +336,18 @@ class TelegramUserClient implements TelegramClientInterface
                 ]);
 
                 $message = $messages['messages'][0] ?? null;
-                if (!$message) {
+                if (!$message || !isset($message['media']['document'])) {
                     return [];
                 }
 
-                $document = $message['media']['document'] ?? null;
-                if (!$document) {
-                    return [];
-                }
+                $document = $message['media']['document'];
 
                 return [
                     'file_id' => $document['id'] ?? null,
                     'file_size' => $document['size'] ?? null,
+                    'file_name' => $this->extractFileName($document),
                     'mime_type' => $document['mime_type'] ?? null,
-                    'message_id' => $message['id'],
+                    'message_id' => $message['id'] ?? null,
                 ];
             }
 
@@ -386,6 +359,21 @@ class TelegramUserClient implements TelegramClientInterface
             ]);
             return [];
         }
+    }
+
+    /**
+     * Extract filename from document attributes
+     */
+    protected function extractFileName(array $document): ?string
+    {
+        if (isset($document['attributes'])) {
+            foreach ($document['attributes'] as $attr) {
+                if (isset($attr['_']) && $attr['_'] === 'documentAttributeFilename') {
+                    return $attr['file_name'] ?? null;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -435,16 +423,85 @@ class TelegramUserClient implements TelegramClientInterface
     public function logout(): bool
     {
         try {
+            Log::info('Starting logout process', [
+                'phone' => $this->phone,
+                'session_file' => $this->sessionFile,
+            ]);
+
+            // Call MadelineProto logout
             $this->MadelineProto->logout();
-            if (file_exists($this->sessionFile)) {
-                unlink($this->sessionFile);
-            }
+            
+            // Clear from session manager cache
+            $sessionKey = md5($this->apiId . $this->apiHash . $this->phone);
+            Cache::forget("telegram_session_{$sessionKey}");
+            
+            // Remove session files
+            $this->removeSessionFiles();
+            
             $this->authenticated = false;
+            
+            Log::info('Logout successful', [
+                'phone' => $this->phone,
+            ]);
+            
             return true;
         } catch (Exception $e) {
-            Log::error('Logout failed', ['error' => $e->getMessage()]);
+            Log::error('Logout failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return false;
         }
+    }
+
+    /**
+     * Remove all session files
+     */
+    protected function removeSessionFiles(): void
+    {
+        try {
+            // Main session file
+            if (file_exists($this->sessionFile)) {
+                unlink($this->sessionFile);
+                Log::info('Removed main session file', ['path' => $this->sessionFile]);
+            }
+
+            // Session directory (MadelineProto creates a directory with the session)
+            $sessionDir = $this->sessionFile;
+            if (is_dir($sessionDir)) {
+                $this->deleteDirectory($sessionDir);
+                Log::info('Removed session directory', ['path' => $sessionDir]);
+            }
+            
+            // Lock files
+            $lockFile = $this->sessionFile . '.lock';
+            if (file_exists($lockFile)) {
+                unlink($lockFile);
+                Log::info('Removed lock file', ['path' => $lockFile]);
+            }
+        } catch (Exception $e) {
+            Log::warning('Failed to remove some session files', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Recursively delete directory
+     */
+    protected function deleteDirectory(string $dir): bool
+    {
+        if (!is_dir($dir)) {
+            return false;
+        }
+
+        $files = array_diff(scandir($dir), ['.', '..']);
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+            is_dir($path) ? $this->deleteDirectory($path) : unlink($path);
+        }
+
+        return rmdir($dir);
     }
 
     /**
@@ -581,6 +638,7 @@ class TelegramUserClient implements TelegramClientInterface
                 'phone' => $this->phone,
                 'has_phone_code_hash' => isset($result['phone_code_hash']),
             ]);
+            
             return [
                 'needs_code' => true,
                 'phone' => $this->phone,
@@ -593,80 +651,33 @@ class TelegramUserClient implements TelegramClientInterface
                 'trace' => $e->getTraceAsString(),
             ]);
             
+            // Handle AUTH_RESTART error specifically
+            if (str_contains($e->getMessage(), 'AUTH_RESTART')) {
+                Log::warning('AUTH_RESTART error - clearing old session and retrying');
+                
+                // Clear old session
+                $this->removeSessionFiles();
+                
+                // Try to reinitialize and restart login
+                try {
+                    $this->initializeMadelineProto();
+                    $result = $this->MadelineProto->phoneLogin($this->phone);
+                    
+                    return [
+                        'needs_code' => true,
+                        'phone' => $this->phone,
+                        'phone_code_hash' => $result['phone_code_hash'] ?? null,
+                    ];
+                } catch (Exception $retryEx) {
+                    Log::error('Retry after AUTH_RESTART also failed', [
+                        'error' => $retryEx->getMessage(),
+                    ]);
+                }
+            }
+            
             throw TelegramAuthException::invalidCredentials($e->getMessage());
         }
     }
-    // /**
-    //  * Verify code and complete login
-    //  *
-    //  * @param string $code
-    //  * @return array
-    //  * @throws TelegramAuthException
-    //  */
-    // public function verifyCode(string $code): array
-    // {
-    //     try {
-    //         // Check current authorization state
-    //         $currentAuth = $this->MadelineProto->getAuthorization();
-            
-    //         Log::info('Verifying code', [
-    //             'phone' => $this->phone,
-    //             'code_length' => strlen($code),
-    //             'current_auth_state' => $currentAuth,
-    //             'session_file' => $this->sessionFile,
-    //         ]);
-            
-    //         // If not waiting for code, something went wrong
-    //         if ($currentAuth !== API::WAITING_CODE && $currentAuth !== API::WAITING_PASSWORD) {
-    //             Log::error('Not in correct state for verification', [
-    //                 'current_state' => $currentAuth,
-    //                 'expected_state' => 'WAITING_CODE or WAITING_PASSWORD',
-    //             ]);
-                
-    //             throw new MadelineException("Invalid state for code verification. Current state: {$currentAuth}");
-    //         }
-
-    //         // Complete phone login with code
-    //         $result = $this->MadelineProto->completePhoneLogin($code);
-
-    //         Log::info('Code verification result', [
-    //             'result_type' => $result['_'] ?? 'unknown',
-    //             'has_user' => isset($result['user']),
-    //         ]);
-
-    //         // Check if 2FA is required
-    //         if (isset($result['_']) && $result['_'] === 'account.password') {
-    //             Log::info('2FA required for login');
-                
-    //             return [
-    //                 'needs_password' => true,
-    //                 'is_authorized' => false,
-    //                 'hint' => $result['hint'] ?? '',
-    //             ];
-    //         }
-
-    //         // Login successful
-    //         $this->authenticated = true;
-
-    //         Log::info('Login successful', [
-    //             'phone' => $this->phone,
-    //         ]);
-
-    //         return [
-    //             'is_authorized' => true,
-    //             'session_file' => $this->sessionFile,
-    //         ];
-    //     } catch (MadelineException $e) {
-    //         Log::error('Failed to verify code', [
-    //             'phone' => $this->phone,
-    //             'error' => $e->getMessage(),
-    //             'code' => $e->getCode(),
-    //             'trace' => $e->getTraceAsString(),
-    //         ]);
-            
-    //         throw TelegramAuthException::invalidCredentials('Login verification failed: ' . $e->getMessage());
-    //     }
-    // }
 
     /**
      * Verify code and complete login
@@ -713,7 +724,7 @@ class TelegramUserClient implements TelegramClientInterface
             $result = $this->MadelineProto->completePhoneLogin($code);
 
             Log::info('Code verification completed', [
-               'result_type' => gettype($result),
+                'result_type' => gettype($result),
                 'is_array' => is_array($result),
                 'result' => is_array($result) ? $result : 'not-array',
             ]);
