@@ -35,8 +35,8 @@ class TelegramAdapter implements FilesystemAdapter
         // $this->channelId = $config['channel_id'] ?? config('services.telegram.channel_id');
         // Try to get channel_id from: config array, database settings, or env/config
         $this->channelId = $config['channel_id'] 
-            ?? settings('storage_telegram_channel_id')
-            ?? config('services.telegram.channel_id');
+            ?? config('services.telegram.channel_id')
+            ?? settings('storage_telegram_channel_id');
         $this->prefix = $config['prefix'] ?? '';
 
         $this->manager = new TelegramFileManager($this->channelId);

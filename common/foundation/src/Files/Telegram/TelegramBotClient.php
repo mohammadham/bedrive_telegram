@@ -30,10 +30,9 @@ class TelegramBotClient implements TelegramClientInterface
 
     public function __construct(?string $botToken = null)
     {
-        // Get bot token from parameter, database settings, or config/env
+        // Get bot token from parameter or config/env (not from database)
         $this->botToken = $botToken 
-            ?? settings('storage_telegram_bot_token')
-            ?? config('services.telegram.bot_token');
+            ?? config('services.telegram.bot_token') ?? settings('storage_telegram_bot_token');
 
         if (empty($this->botToken)) {
             throw TelegramConfigException::missingConfig('bot_token');

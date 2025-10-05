@@ -7,13 +7,18 @@ namespace Common\Files\Telegram\Exceptions;
  */
 class TelegramConfigException extends TelegramException
 {
-    public static function missingConfig(string $key): self
+    public static function missingConfig(string $key, ?string $hint = null): self
     {
+        $message = "Missing required configuration: {$key}";
+        if ($hint) {
+            $message .= ". {$hint}";
+        }
+        
         return new self(
-            "Missing required configuration: {$key}",
+            $message,
             500,
             null,
-            ['missing_key' => $key]
+            ['missing_key' => $key, 'hint' => $hint]
         );
     }
 

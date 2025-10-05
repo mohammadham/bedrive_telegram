@@ -26,11 +26,16 @@ class TelegramFileManager
 
     public function __construct(?string $channelId = null)
     {
-        $this->defaultChannelId =
-            $channelId ?? config('services.telegram.channel_id');
+        // Channel ID should come from config (loaded from .env)
+        $this->defaultChannelId = $channelId 
+            ?? config('services.telegram.channel_id')
+            ?? '';
 
         if (empty($this->defaultChannelId)) {
-            throw TelegramConfigException::missingConfig('channel_id');
+            throw TelegramConfigException::missingConfig(
+                'channel_id',
+                'Please configure Telegram settings in Admin Panel → Settings → Uploading'
+            );
         }
 
         // Initialize clients lazily

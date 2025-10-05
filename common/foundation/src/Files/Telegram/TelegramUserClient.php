@@ -43,19 +43,15 @@ class TelegramUserClient implements TelegramClientInterface
         ?string $phone = null,
         ?string $sessionFile = null
     ) {
-        // Get credentials from parameters, database settings, or config/env
+        // Get credentials from parameters or config/env (not from database)
         $this->apiId = $apiId 
-            ?? (int) settings('storage_telegram_api_id')
-            ?? (int) config('services.telegram.api_id');
+            ?? (int) config('services.telegram.api_id') ?? (int) settings('storage_telegram_api_id');
         $this->apiHash = $apiHash 
-            ?? settings('storage_telegram_api_hash')
-            ?? config('services.telegram.api_hash');
+            ?? config('services.telegram.api_hash')  ?? settings('storage_telegram_api_hash');
         $this->phone = $phone 
-            ?? settings('storage_telegram_phone')
-            ?? config('services.telegram.phone');
+            ?? config('services.telegram.phone') ?? settings('storage_telegram_phone');
         $this->sessionFile = $sessionFile 
-            ?? settings('storage_telegram_session_file')
-            ?? config('services.telegram.session_file');
+            ?? config('services.telegram.session_file') ?? settings('storage_telegram_session_file');
 
         Log::info('TelegramUserClient constructor called', [
             'api_id' => $this->apiId,

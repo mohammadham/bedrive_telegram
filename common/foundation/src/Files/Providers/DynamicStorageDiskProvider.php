@@ -46,15 +46,15 @@ class DynamicStorageDiskProvider extends ServiceProvider
         // For telegram driver, also load settings from database
         if ($driverName === 'telegram') {
             $telegramSettings = array_filter([
-                'bot_token' => settings('storage_telegram_bot_token'),
-                'channel_id' => settings('storage_telegram_channel_id'),
-                'api_id' => settings('storage_telegram_api_id'),
-                'api_hash' => settings('storage_telegram_api_hash'),
-                'phone' => settings('storage_telegram_phone'),
-                'session_file' => settings('storage_telegram_session_file'),
+                'bot_token' => settings('storage_telegram_bot_token') ?? env('STORAGE_TELEGRAM_BOT_TOKEN'),
+                'channel_id' => settings('storage_telegram_channel_id') ?? env('STORAGE_TELEGRAM_CHANNEL_ID') ,
+                'api_id' => settings('storage_telegram_api_id')?? env('STORAGE_TELEGRAM_API_ID') ,
+                'api_hash' => settings('storage_telegram_api_hash')?? env('STORAGE_TELEGRAM_API_HASH'),
+                'phone' => settings('storage_telegram_phone')?? env('STORAGE_TELEGRAM_PHONE'),
+                'session_file' => settings('storage_telegram_session_file')?? env('STORAGE_TELEGRAM_SESSION_FILE'),
             ], fn($value) => !empty($value));
             
-            \Log::info('DynamicStorageDiskProvider loading Telegram settings', [
+            Log::info('DynamicStorageDiskProvider loading Telegram settings', [
                 'type' => $type,
                 'settings_loaded' => array_keys($telegramSettings),
                 'channel_id' => $telegramSettings['channel_id'] ?? 'MISSING',
