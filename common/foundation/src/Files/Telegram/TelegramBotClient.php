@@ -107,21 +107,47 @@ class TelegramBotClient implements TelegramClientInterface
             $response = $this->uploadByType($inputFile, $channelId, $mimeType, $options);
 
             // Extract result
+            $fileId = null;
+            $fileUniqueId = null;
+            
+            if ($response->getDocument()) {
+                $fileId = $response->getDocument()->getFileId();
+                $fileUniqueId = $response->getDocument()->getFileUniqueId();
+            } elseif ($response->getPhoto()) {
+                $photos = $response->getPhoto();
+                $fileId = end($photos)->getFileId();
+                $fileUniqueId = end($photos)->getFileUniqueId();
+            } elseif ($response->getVideo()) {
+                $fileId = $response->getVideo()->getFileId();
+                $fileUniqueId = $response->getVideo()->getFileUniqueId();
+            } elseif ($response->getAudio()) {
+                $fileId = $response->getAudio()->getFileId();
+                $fileUniqueId = $response->getAudio()->getFileUniqueId();
+            }
+            
+            if (!$fileId) {
+                Log::error('No file_id in Telegram response', [
+                    'response' => json_encode($response),
+                    'file' => $filePath,
+                ]);
+                throw TelegramUploadException::uploadFailed('No file_id in response');
+            }
+            
+            Log::info('File uploaded to Telegram via Bot', [
+                'file_id' => $fileId,
+                'message_id' => $response->getMessageId(),
+                'size' => $fileSize,
+            ]);
+            
             return [
                 'success' => true,
-                'file_id' => $response->getDocument()
-                    ? $response->getDocument()->getFileId()
-                    : ($response->getPhoto()
-                        ? end($response->getPhoto())->getFileId()
-                        : ($response->getVideo()
-                            ? $response->getVideo()->getFileId()
-                            : null)),
-                'file_unique_id' => $response->getDocument()
-                    ? $response->getDocument()->getFileUniqueId()
-                    : null,
+                'file_id' => $fileId,
+                'file_unique_id' => $fileUniqueId,
                 'message_id' => $response->getMessageId(),
+                'channel_id' => $channelId,
                 'file_size' => $fileSize,
                 'mime_type' => $mimeType,
+                'upload_method' => 'bot',
                 'uploaded_at' => now()->toDateTimeString(),
             ];
         } catch (TelegramSDKException $e) {

@@ -66,11 +66,27 @@ class TelegramAdapter implements FilesystemAdapter
             
             // Create temporary file
             $tempPath = $this->createTempFile($contents);
+            
+            Log::info('Temporary file created', [
+                'temp_path' => $tempPath,
+                'exists' => file_exists($tempPath),
+            ]);
 
             // Upload to Telegram
+            Log::info('Starting Telegram upload', [
+                'channel_id' => $this->channelId,
+                'filename' => basename($path),
+            ]);
+            
             $result = $this->manager->uploadFile($tempPath, $this->channelId, [
                 'filename' => basename($path),
                 'caption' => $config->get('caption', ''),
+            ]);
+            
+            Log::info('Upload result received', [
+                'result_keys' => array_keys($result),
+                'file_id' => $result['file_id'] ?? 'MISSING',
+                'message_id' => $result['message_id'] ?? 'MISSING',
             ]);
 
             // Store metadata mapping
@@ -85,6 +101,12 @@ class TelegramAdapter implements FilesystemAdapter
                 'message_id' => $result['message_id'],
             ]);
         } catch (TelegramException $e) {
+            Log::error('TelegramException during write', [
+                'path' => $path,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             throw UnableToWriteFile::atLocation($path, $e->getMessage(), $e);
         } catch (\Exception $e) {
             Log::error('Failed to write file to Telegram', [
