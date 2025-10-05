@@ -8,6 +8,7 @@ use Common\Files\Telegram\TelegramUserClient;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class TelegramTestController extends BaseController
 {
