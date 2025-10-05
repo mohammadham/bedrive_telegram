@@ -17,7 +17,6 @@ use danog\MadelineProto\Settings\Logger as LoggerSettings;
 use Exception;
 use Illuminate\Support\Facades\Log;
 
-
 /**
  * Telegram User Account Client (MTProto)
  * Handles file operations using user account (files up to 2GB)
@@ -97,10 +96,13 @@ class TelegramUserClient implements TelegramClientInterface
 
             $this->MadelineProto = new API($this->sessionFile, $settings);
 
-            // Start and authenticate
-            $this->MadelineProto->start();
-
-            $this->authenticated = true;
+            // Check if already authorized
+            try {
+                $authorization = $this->MadelineProto->getAuthorization();
+                $this->authenticated = ($authorization === API::LOGGED_IN);
+            } catch (Exception $e) {
+                $this->authenticated = false;
+            }
 
             Log::info('MadelineProto initialized successfully', [
                 'session_file' => $this->sessionFile,

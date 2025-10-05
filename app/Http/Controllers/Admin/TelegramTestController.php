@@ -51,36 +51,48 @@ class TelegramTestController extends BaseController
                 }
             }
             
-            // Test 4: Try to send a test message
+            // Test 4: Send a test message to channel (keep it as proof)
+            $testMessage = "✅ **Bot Connection Test Successful!**\n\n";
+            $testMessage .= "🤖 Bot: @{$botInfo['username']}\n";
+            $testMessage .= "📱 Bot Name: {$botInfo['first_name']}\n";
+            $testMessage .= "🆔 Channel: `{$request->channel_id}`\n";
+            $testMessage .= "⏰ Time: " . now()->toDateTimeString() . "\n\n";
+            $testMessage .= "✓ Bot has permission to post messages\n";
+            $testMessage .= "✓ Webhook configured: " . ($webhookStatus['configured'] ? 'Yes' : 'No') . "\n";
+            $testMessage .= "✓ System is ready for file uploads";
+            
             $result = $botClient->sendMessage(
                 $request->channel_id,
-                "✅ Test message from BeDrive - Bot is working correctly!\n\nBot: @{$botInfo['username']}\nTime: " . now()->toDateTimeString()
+                $testMessage,
+                ['parse_mode' => 'Markdown']
             );
             
             if (!$result || !isset($result['message_id'])) {
                 throw new Exception('Could not send message to channel. Make sure bot is admin with post permissions.');
             }
-
-            // Test 5: Delete the test message
-            try {
-                $botClient->deleteFile($request->channel_id, $result['message_id']);
-            } catch (Exception $e) {
-                // Deletion failed - bot might not have delete permissions
-                return response()->json([
-                'success' => false,
-                'message' => 'Bot connection failed: ' . $e->getMessage(),
-                'error' => $this->classifyBotError($e->getMessage()),
-            ], 422);
-            }
+            //    // Test 5: Delete the test message
+            // try {
+            //     $botClient->deleteFile($request->channel_id, $result['message_id']);
+            // } catch (Exception $e) {
+            //     // Deletion failed - bot might not have delete permissions
+            //     return response()->json([
+            //     'success' => false,
+            //     'message' => 'Bot connection failed: ' . $e->getMessage(),
+            //     'error' => $this->classifyBotError($e->getMessage()),
+            // ], 422);
+            // }
+            $testMessageId = $result['message_id'];
 
             return response()->json([
                 'success' => true,
-                'message' => 'Bot connection successful! Bot can post to the channel.',
+                'message' => 'Bot connection successful! A test message has been posted to your channel.',
                 'data' => [
                     'bot_username' => $botInfo['username'] ?? 'Unknown',
                     'bot_name' => $botInfo['first_name'] ?? 'Unknown',
                     'channel_id' => $request->channel_id,
                     'test_message_sent' => true,
+                    'test_message_id' => $testMessageId,
+                    'test_message_link' => $this->getChannelMessageLink($request->channel_id, $testMessageId),
                     'webhook' => $webhookStatus,
                 ],
             ]);
@@ -413,6 +425,20 @@ class TelegramTestController extends BaseController
         }
 
         return response()->download($sessionPath, 'telegram_session.json');
+    }
+
+    /**
+     * Get channel message link
+     */
+    protected function getChannelMessageLink(string $channelId, int $messageId): ?string
+    {
+        // Remove '-100' prefix if exists
+        $cleanChannelId = str_replace('-100', '', $channelId);
+        
+        // Public channel format: https://t.me/channel_username/message_id
+        // Private channel: We can't create a direct link without username
+        
+        return "Channel message ID: {$messageId}";
     }
 
     /**
