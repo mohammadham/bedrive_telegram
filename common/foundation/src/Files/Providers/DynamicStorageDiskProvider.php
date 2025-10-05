@@ -45,17 +45,22 @@ class DynamicStorageDiskProvider extends ServiceProvider
         
         // For telegram driver, also load settings from database
         if ($driverName === 'telegram') {
-            $config = array_merge(
-                $config,
-                array_filter([
-                    'bot_token' => settings('storage_telegram_bot_token'),
-                    'channel_id' => settings('storage_telegram_channel_id'),
-                    'api_id' => settings('storage_telegram_api_id'),
-                    'api_hash' => settings('storage_telegram_api_hash'),
-                    'phone' => settings('storage_telegram_phone'),
-                    'session_file' => settings('storage_telegram_session_file'),
-                ], fn($value) => !empty($value))
-            );
+            $telegramSettings = array_filter([
+                'bot_token' => settings('storage_telegram_bot_token'),
+                'channel_id' => settings('storage_telegram_channel_id'),
+                'api_id' => settings('storage_telegram_api_id'),
+                'api_hash' => settings('storage_telegram_api_hash'),
+                'phone' => settings('storage_telegram_phone'),
+                'session_file' => settings('storage_telegram_session_file'),
+            ], fn($value) => !empty($value));
+            
+            \Log::info('DynamicStorageDiskProvider loading Telegram settings', [
+                'type' => $type,
+                'settings_loaded' => array_keys($telegramSettings),
+                'channel_id' => $telegramSettings['channel_id'] ?? 'MISSING',
+            ]);
+            
+            $config = array_merge($config, $telegramSettings);
         }
         
         $config['driver'] = $driverName;
