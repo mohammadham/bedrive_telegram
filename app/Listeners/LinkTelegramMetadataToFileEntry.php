@@ -24,7 +24,7 @@ class LinkTelegramMetadataToFileEntry
      */
     public function handle(FileEntryCreated $event): void
     {
-        $fileEntry = $event->entry;
+        $fileEntry = $event->fileEntry;
 
         // Only for file types (not folders)
         if ($fileEntry->type !== 'file') {
