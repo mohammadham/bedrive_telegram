@@ -822,11 +822,16 @@ class TelegramUserClient implements TelegramClientInterface
      * @return array
      * @throws TelegramAuthException
      */
-    public function complete2FA(string $password): array
+        public function complete2FA(string $password): array
     {
         try {
             // First, check if already logged in
             $currentAuth = $this->MadelineProto->getAuthorization();
+            
+            Log::info('2FA: Current auth state before attempt', [
+                'state' => $currentAuth,
+                'state_name' => $this->getStateName($currentAuth),
+            ]);
             
             if ($currentAuth === API::LOGGED_IN) {
                 $this->authenticated = true;
@@ -844,12 +849,17 @@ class TelegramUserClient implements TelegramClientInterface
             }
             
             // If not logged in, complete 2FA
-            Log::info('Attempting 2FA completion', [
+            Log::info('Calling complete2faLogin', [
                 'phone' => $this->phone,
                 'current_state' => $currentAuth,
             ]);
             
             $result = $this->MadelineProto->complete2faLogin($password);
+
+            Log::info('complete2faLogin result', [
+                'result_type' => gettype($result),
+                'result' => is_scalar($result) ? $result : 'non-scalar',
+            ]);
 
             if ($result === API::LOGGED_IN) {
                 $this->authenticated = true;
@@ -864,32 +874,81 @@ class TelegramUserClient implements TelegramClientInterface
                     'session_file' => $this->sessionFile,
                 ];
             }
+            
+            // If result is not LOGGED_IN, check current state again
+            $newAuth = $this->MadelineProto->getAuthorization();
+            Log::info('After complete2faLogin, checking auth state', [
+                'new_state' => $newAuth,
+                'state_name' => $this->getStateName($newAuth),
+            ]);
+            
+            if ($newAuth === API::LOGGED_IN) {
+                $this->authenticated = true;
+                Log::info('Actually logged in (state changed to LOGGED_IN)');
+                return [
+                    'success' => true,
+                    'is_authorized' => true,
+                    'session_file' => $this->sessionFile,
+                ];
+            }
 
             throw TelegramAuthException::invalidCredentials('2FA password verification failed');
         } catch (MadelineException $e) {
-            Log::error('Failed to complete 2FA login', [
+            Log::error('MadelineException in complete2FA', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error_code' => $e->getCode(),
             ]);
             
-            // Check if already logged in (error might be because of this)
+            // CRITICAL: Check if already logged in despite exception
             try {
+                // Wait a moment for session to be saved
+                usleep(500000); // 0.5 second
+                
                 $auth = $this->MadelineProto->getAuthorization();
+                Log::info('Checking auth after exception', [
+                    'state' => $auth,
+                    'state_name' => $this->getStateName($auth),
+                ]);
+                
                 if ($auth === API::LOGGED_IN) {
-                    Log::info('Actually already logged in despite error');
+                    Log::info('✅ Login actually successful despite exception!');
                     $this->authenticated = true;
                     return [
                         'success' => true,
                         'is_authorized' => true,
                         'session_file' => $this->sessionFile,
-                        'message' => 'Login successful (recovered from error)',
+                        'message' => 'Login successful',
                     ];
                 }
             } catch (Exception $checkEx) {
-                // Ignore
+                Log::error('Failed to check auth state', [
+                    'error' => $checkEx->getMessage(),
+                ]);
             }
             
-            throw TelegramAuthException::invalidCredentials('Invalid 2FA password: ' . $e->getMessage());
+            throw TelegramAuthException::invalidCredentials('2FA failed: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Unexpected exception in complete2FA', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            throw TelegramAuthException::invalidCredentials('Unexpected error: ' . $e->getMessage());
         }
     }
+    
+    /**
+     * Get human-readable state name
+     */
+    protected function getStateName(int $state): string
+    {
+        $states = [
+            0 => 'NOT_LOGGED_IN',
+            1 => 'WAITING_CODE',
+            2 => 'WAITING_PASSWORD',
+            3 => 'LOGGED_IN',
+        ];
+        return $states[$state] ?? "UNKNOWN($state)";
+    }
+    
 }
