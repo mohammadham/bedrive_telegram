@@ -236,7 +236,10 @@ class UserTelegramSettingsController extends BaseController
      */
     protected function isTelegramDriverEnabled(): bool
     {
-        $driver = config('common.site.uploads_disk');
-        return $driver === 'telegram';
+        // Check if telegram is set as uploads or public disk driver
+        $uploadsDriver = config('common.site.uploads_disk_driver');
+        $publicDriver = config('common.site.public_disk_driver');
+        
+        return $uploadsDriver === 'telegram' || $publicDriver === 'telegram';
     }
 }

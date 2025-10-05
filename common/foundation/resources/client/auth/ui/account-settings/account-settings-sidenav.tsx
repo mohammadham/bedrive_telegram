@@ -31,11 +31,14 @@ export function AccountSettingsSidenav() {
   const p = AccountSettingsId;
 
   const {hasPermission} = useAuth();
-  const {api, uploads} = useSettings();
+  const {api, uploads, server} = useSettings();
   const {auth} = useContext(SiteConfigContext);
 
   const allSocialsDisabled = useAllSocialLoginsDisabled();
-  const isTelegramDriver = uploads?.disk === 'telegram';
+  // Check if telegram is enabled for uploads or public storage
+  const isTelegramDriver = 
+    server?.uploads_disk_driver === 'telegram' || 
+    server?.public_disk_driver === 'telegram';
 
   return (
     <aside className="sticky top-10 hidden flex-shrink-0 lg:block">
