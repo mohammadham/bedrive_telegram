@@ -88,13 +88,10 @@ class TelegramSessionManager
             $logger->setLevel(\danog\MadelineProto\Logger::NOTICE);
             $settings->setLogger($logger);
 
-            // CRITICAL: Enable IPC for session persistence
-            $settings->getIpc()->setSlow(false);
-
-            // Create API instance with IPC server
+            // Create API instance - MadelineProto v8+ uses IPC by default
             $api = new API($sessionFile, $settings);
 
-            // Start the IPC server in background (non-blocking)
+            // Start the session (this will use IPC mode automatically)
             // This keeps the session alive between HTTP requests
             $api->start();
 
