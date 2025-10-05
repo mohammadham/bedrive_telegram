@@ -36,10 +36,28 @@ class DynamicStorageDiskProvider extends ServiceProvider
     private function resolveDisk(string $type, array $initialConfig): Filesystem
     {
         $driverName = config("common.site.{$type}_disk_driver") ?? 'local';
+        
+        // Get base config from services
         $config = array_merge(
             $initialConfig,
             config("services.$driverName") ?? [],
         );
+        
+        // For telegram driver, also load settings from database
+        if ($driverName === 'telegram') {
+            $config = array_merge(
+                $config,
+                array_filter([
+                    'bot_token' => settings('storage_telegram_bot_token'),
+                    'channel_id' => settings('storage_telegram_channel_id'),
+                    'api_id' => settings('storage_telegram_api_id'),
+                    'api_hash' => settings('storage_telegram_api_hash'),
+                    'phone' => settings('storage_telegram_phone'),
+                    'session_file' => settings('storage_telegram_session_file'),
+                ], fn($value) => !empty($value))
+            );
+        }
+        
         $config['driver'] = $driverName;
 
         // set root based on drive type and name
