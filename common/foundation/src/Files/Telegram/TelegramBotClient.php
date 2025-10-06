@@ -106,96 +106,22 @@ class TelegramBotClient implements TelegramClientInterface
             $mimeType = mime_content_type($filePath);
             $response = $this->uploadByType($inputFile, $channelId, $mimeType, $options);
 
-            // Extract result
+            // Extract result (always document now)
             $fileId = null;
             $fileUniqueId = null;
             
             if ($response->getDocument()) {
                 $fileId = $response->getDocument()->getFileId();
                 $fileUniqueId = $response->getDocument()->getFileUniqueId();
-            } elseif ($response->getPhoto()) {
-                $photos = $response->getPhoto();
                 
-                Log::info('Photo array received', [
-                    'is_array' => is_array($photos),
-                    'is_object' => is_object($photos),
-                    'count' => is_countable($photos) ? count($photos) : 0,
-                    'type' => gettype($photos),
-                    'class' => is_object($photos) ? get_class($photos) : null,
+                Log::info('Document uploaded successfully', [
+                    'file_id' => $fileId,
+                    'file_unique_id' => $fileUniqueId,
                 ]);
-                
-                // Get the largest photo (last element)
-                $lastPhoto = null;
-                $photoCount = 0;
-                
-                if (is_array($photos)) {
-                    $photoCount = count($photos);
-                    if ($photoCount > 0) {
-                        $lastPhoto = $photos[$photoCount - 1];
-                    }
-                } elseif (is_object($photos) && $photos instanceof \Countable) {
-                    $photoCount = count($photos);
-                    if ($photoCount > 0) {
-                        // Access last element - works for ArrayObject and Collection
-                        if ($photos instanceof \ArrayAccess) {
-                            $lastPhoto = $photos[$photoCount - 1];
-                        } elseif (method_exists($photos, 'last')) {
-                            $lastPhoto = $photos->last();
-                        } elseif (method_exists($photos, 'get')) {
-                            $lastPhoto = $photos->get($photoCount - 1);
-                        }
-                    }
-                }
-                
-                Log::info('Last photo element', [
-                    'type' => gettype($lastPhoto),
-                    'is_object' => is_object($lastPhoto),
-                    'is_array' => is_array($lastPhoto),
-                    'class' => is_object($lastPhoto) ? get_class($lastPhoto) : null,
+            } else {
+                Log::error('Document not found in response', [
+                    'response_keys' => method_exists($response, 'keys') ? $response->keys() : 'N/A',
                 ]);
-                
-                if ($lastPhoto) {
-                    // Extract file_id from Telegram Bot SDK object
-                    if (is_object($lastPhoto)) {
-                        // Try different methods to access file_id
-                        if (method_exists($lastPhoto, 'getFileId')) {
-                            $fileId = $lastPhoto->getFileId();
-                            $fileUniqueId = $lastPhoto->getFileUniqueId();
-                        } elseif (method_exists($lastPhoto, 'get')) {
-                            // Telegram Bot SDK uses get() method
-                            $fileId = $lastPhoto->get('file_id');
-                            $fileUniqueId = $lastPhoto->get('file_unique_id');
-                        } elseif (isset($lastPhoto->file_id)) {
-                            // Magic getter
-                            $fileId = $lastPhoto->file_id;
-                            $fileUniqueId = $lastPhoto->file_unique_id ?? null;
-                        } elseif (property_exists($lastPhoto, 'file_id')) {
-                            $fileId = $lastPhoto->file_id;
-                            $fileUniqueId = $lastPhoto->file_unique_id ?? null;
-                        }
-                        
-                        if ($fileId) {
-                            Log::info('Extracted file_id from photo object', [
-                                'file_id' => $fileId,
-                                'file_unique_id' => $fileUniqueId,
-                            ]);
-                        }
-                    }
-                    // If it's an array (from toArray conversion)
-                    elseif (is_array($lastPhoto) && isset($lastPhoto['file_id'])) {
-                        $fileId = $lastPhoto['file_id'];
-                        $fileUniqueId = $lastPhoto['file_unique_id'] ?? null;
-                        Log::info('Extracted file_id from photo array', ['file_id' => $fileId]);
-                    }
-                } else {
-                    Log::error('lastPhoto is null or empty');
-                }
-            } elseif ($response->getVideo()) {
-                $fileId = $response->getVideo()->getFileId();
-                $fileUniqueId = $response->getVideo()->getFileUniqueId();
-            } elseif ($response->getAudio()) {
-                $fileId = $response->getAudio()->getFileId();
-                $fileUniqueId = $response->getAudio()->getFileUniqueId();
             }
             
             if (!$fileId) {
@@ -272,30 +198,11 @@ class TelegramBotClient implements TelegramClientInterface
             'channel_id' => $channelId,
         ]);
 
-        // Photo
-        if (str_starts_with($mimeType, 'image/') && !str_contains($mimeType, 'gif')) {
-            $params['photo'] = $inputFile;
-            Log::info('Sending as photo');
-            return $this->telegram->sendPhoto($params);
-        }
-
-        // Video
-        if (str_starts_with($mimeType, 'video/')) {
-            $params['video'] = $inputFile;
-            Log::info('Sending as video');
-            return $this->telegram->sendVideo($params);
-        }
-
-        // Audio
-        if (str_starts_with($mimeType, 'audio/')) {
-            $params['audio'] = $inputFile;
-            Log::info('Sending as audio');
-            return $this->telegram->sendAudio($params);
-        }
-
-        // Document (default)
+        // IMPORTANT: Upload everything as DOCUMENT to preserve original quality
+        // Photo/Video/Audio types compress files and change file_id, making download difficult
+        // Document type keeps the original file unchanged
         $params['document'] = $inputFile;
-        Log::info('Sending as document');
+        Log::info('Sending as document (preserves original quality)');
         $response = $this->telegram->sendDocument($params);
         
         Log::info('Upload response received', [
