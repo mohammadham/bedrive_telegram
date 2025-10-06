@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Models\TelegramFileMetadata;
 use Common\Files\Events\FileEntryCreated;
+use Common\Files\Events\FileUploaded;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -62,6 +63,15 @@ class LinkTelegramMetadataToFileEntry
                 'telegram_file_id' => $metadata->telegram_file_id,
                 'file_name' => $fileEntry->file_name,
             ]);
+            
+            // 🔥 IMPORTANT: Dispatch FileUploaded event for Telegram uploads
+            // This triggers Auto-Forward listener if enabled by user
+            Log::info('Dispatching FileUploaded event for Telegram file', [
+                'file_entry_id' => $fileEntry->id,
+                'file_name' => $fileEntry->file_name,
+            ]);
+            
+            event(new FileUploaded($fileEntry));
         } else {
             Log::warning('No Telegram metadata found for FileEntry', [
                 'file_entry_id' => $fileEntry->id,
