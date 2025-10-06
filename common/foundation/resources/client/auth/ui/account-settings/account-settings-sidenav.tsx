@@ -43,8 +43,8 @@ export function AccountSettingsSidenav() {
   }catch(e)
   {
     const settings = getBootstrapData().settings;
-     isTelegramDriver = settings.uploads.uploads_driver
-      ?? settings.uploads.public_driver;
+     isTelegramDriver = settings.uploads.uploads_driver  === 'telegram'
+      || settings.uploads.public_driver  === 'telegram' ;
   }
   return (
     <aside className="sticky top-10 hidden flex-shrink-0 lg:block">
