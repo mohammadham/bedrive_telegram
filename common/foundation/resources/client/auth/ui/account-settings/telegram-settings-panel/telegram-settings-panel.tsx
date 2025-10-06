@@ -10,6 +10,7 @@ import {useForm} from 'react-hook-form';
 import {Form} from '@ui/forms/form';
 import {SectionHelper} from '@common/ui/other/section-helper';
 import {useEffect} from 'react';
+import {ProgressCircle} from '@ui/progress/progress-circle';
 
 interface TelegramSettings {
   auto_forward: boolean;
@@ -26,10 +27,11 @@ export function TelegramSettingsPanel() {
   const queryClient = useQueryClient();
 
   // Fetch current settings
-  const {data: settings, isLoading, isError} = useQuery<TelegramSettings>({
+  const {data: settings, isLoading, isError, error} = useQuery<TelegramSettings>({
     queryKey: ['user-telegram-settings'],
     queryFn: () => fetchTelegramSettings(),
     retry: 1,
+    refetchInterval: 5000, // Re-check every 5 seconds for driver status
   });
 
   const form = useForm<TelegramSettingsFormData>({
@@ -56,6 +58,8 @@ export function TelegramSettingsPanel() {
     onSuccess: () => {
       toast.positive('Telegram settings updated successfully');
       queryClient.invalidateQueries({queryKey: ['user-telegram-settings']});
+      // Also invalidate driver status in sidenav
+      queryClient.invalidateQueries({queryKey: ['telegram-driver-status']});
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Failed to update settings';
@@ -63,13 +67,23 @@ export function TelegramSettingsPanel() {
     },
   });
 
-  // Don't show panel if loading
+  // Show loading state
   if (isLoading) {
-    return null;
+    return (
+      <AccountSettingsPanel
+        id="telegram-settings"
+        title={<Trans message="Telegram Settings" />}
+      >
+        <div className="flex items-center justify-center py-24">
+          <ProgressCircle isIndeterminate size="md" />
+        </div>
+      </AccountSettingsPanel>
+    );
   }
 
-  // Don't show panel if Telegram driver is not enabled or error
+  // Don't show panel if Telegram driver is not enabled
   if (isError || !settings?.driver_enabled) {
+    // Return null silently - sidenav won't show the icon either
     return null;
   }
 

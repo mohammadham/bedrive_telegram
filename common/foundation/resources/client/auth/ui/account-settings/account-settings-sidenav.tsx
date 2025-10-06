@@ -14,7 +14,8 @@ import {useSettings} from '@ui/settings/use-settings';
 import {SiteConfigContext} from '@common/core/settings/site-config-context';
 import {useAllSocialLoginsDisabled} from '@common/auth/ui/use-all-social-logins-disabled';
 import {TelegramIcon} from '@ui/icons/social/telegram';
-import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
+import {useQuery} from '@tanstack/react-query';
+import {apiClient} from '@common/http/query-client';
 
 export enum AccountSettingsId {
   AccountDetails = 'account-details',
@@ -28,29 +29,32 @@ export enum AccountSettingsId {
   Sessions = 'sessions',
 }
 
+// Fetch real-time telegram driver status
+async function fetchTelegramDriverStatus(): Promise<{driver_enabled: boolean}> {
+  return apiClient.get('user/telegram/settings').then(r => r.data);
+}
+
 export function AccountSettingsSidenav() {
   const p = AccountSettingsId;
 
   const {hasPermission} = useAuth();
-  const {api, uploads} = useSettings();
+  const {api} = useSettings();
   const {auth} = useContext(SiteConfigContext);
   const allSocialsDisabled = useAllSocialLoginsDisabled();
-  const settings = getBootstrapData().settings;
-  // Check if telegram is enabled for uploads or public storage
-    const isTelegramDriver = useMemo(() => {
-    if (!uploads && !settings.uploads) return false;
-    if(!uploads)
-    {
-      return settings.uploads.uploads_driver === 'telegram' || 
-             settings.uploads.public_driver === 'telegram';
-    }
-    return uploads.uploads_driver === 'telegram' || 
-           uploads.public_driver === 'telegram';
-  }, [uploads, settings.uploads]);
-    // const settings = getBootstrapData().settings;
-    // const isTelegramDriver = settings.uploads.uploads_driver  === 'telegram'
-    //   || settings.uploads.public_driver  === 'telegram' ;
-  
+
+  // Query telegram driver status in real-time
+  const {data: telegramStatus} = useQuery({
+    queryKey: ['telegram-driver-status'],
+    queryFn: fetchTelegramDriverStatus,
+    refetchInterval: 5000, // Re-check every 5 seconds
+    retry: false,
+    staleTime: 0, // Always consider data stale
+  });
+
+  const isTelegramDriver = useMemo(() => {
+    return telegramStatus?.driver_enabled ?? false;
+  }, [telegramStatus]);
+
   return (
     <aside className="sticky top-10 hidden flex-shrink-0 lg:block">
       <List padding="p-0">
