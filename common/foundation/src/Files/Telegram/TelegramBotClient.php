@@ -155,18 +155,34 @@ class TelegramBotClient implements TelegramClientInterface
                 ]);
                 
                 if ($lastPhoto) {
+                    Log::info('Attempting to extract file_id', [
+                        'is_object' => is_object($lastPhoto),
+                        'has_method' => is_object($lastPhoto) ? method_exists($lastPhoto, 'getFileId') : false,
+                        'is_array' => is_array($lastPhoto),
+                    ]);
+                    
                     // If it's an object with getFileId method
                     if (is_object($lastPhoto) && method_exists($lastPhoto, 'getFileId')) {
+                        Log::info('Calling getFileId method');
                         $fileId = $lastPhoto->getFileId();
                         $fileUniqueId = $lastPhoto->getFileUniqueId();
-                        Log::info('Extracted file_id from photo object', ['file_id' => $fileId]);
+                        Log::info('Extracted file_id from photo object', [
+                            'file_id' => $fileId,
+                            'file_unique_id' => $fileUniqueId,
+                        ]);
                     }
                     // If it's an array (from toArray conversion), access by key
                     elseif (is_array($lastPhoto) && isset($lastPhoto['file_id'])) {
                         $fileId = $lastPhoto['file_id'];
                         $fileUniqueId = $lastPhoto['file_unique_id'] ?? null;
                         Log::info('Extracted file_id from photo array', ['file_id' => $fileId]);
+                    } else {
+                        Log::warning('Could not extract file_id - no matching condition', [
+                            'last_photo_dump' => print_r($lastPhoto, true),
+                        ]);
                     }
+                } else {
+                    Log::error('lastPhoto is null or empty');
                 }
             } elseif ($response->getVideo()) {
                 $fileId = $response->getVideo()->getFileId();
