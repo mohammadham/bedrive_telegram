@@ -86,7 +86,7 @@ class LinkTelegramMetadataToFileEntry
                 'file_name' => $fileEntry->file_name,
             ]);
             
-            event(new FileUploaded($fileEntry));
+            // event(new FileUploaded($fileEntry));
         } else {
             Log::warning('No Telegram metadata found for FileEntry', [
                 'file_entry_id' => $fileEntry->id,
