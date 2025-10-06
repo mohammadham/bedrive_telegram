@@ -39,7 +39,7 @@ class LinkTelegramMetadataToFileEntry
         $fileEntry = $event->fileEntry;
 
         Log::info('Linked Telegram metadata to FileEntry', [
-                'isTelegramDriverEnabled' => isTelegramDriverEnabled(),
+                'isTelegramDriverEnabled' => $this->isTelegramDriverEnabled(),
                 'file_entry_id' => $fileEntry->type,
                 
             ]);
