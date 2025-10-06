@@ -106,10 +106,11 @@ class TelegramBotClient implements TelegramClientInterface
             $mimeType = mime_content_type($filePath);
             $response = $this->uploadByType($inputFile, $channelId, $mimeType, $options);
 
-            // Extract result (always document now)
+            // Extract result (document or type-specific)
             $fileId = null;
             $fileUniqueId = null;
             
+            // Try document first (primary method)
             if ($response->getDocument()) {
                 $fileId = $response->getDocument()->getFileId();
                 $fileUniqueId = $response->getDocument()->getFileUniqueId();
@@ -118,9 +119,40 @@ class TelegramBotClient implements TelegramClientInterface
                     'file_id' => $fileId,
                     'file_unique_id' => $fileUniqueId,
                 ]);
-            } else {
-                Log::error('Document not found in response', [
-                    'response_keys' => method_exists($response, 'keys') ? $response->keys() : 'N/A',
+            }
+            // Fallback: Photo (from fallback upload method)
+            elseif ($response->getPhoto()) {
+                $photos = $response->getPhoto();
+                // Get largest photo (last element)
+                if (method_exists($photos, 'last')) {
+                    $photo = $photos->last();
+                } elseif (is_array($photos)) {
+                    $photo = end($photos);
+                } else {
+                    $photo = null;
+                }
+                
+                if ($photo && method_exists($photo, 'getFileId')) {
+                    $fileId = $photo->getFileId();
+                    $fileUniqueId = $photo->getFileUniqueId();
+                    Log::info('Photo uploaded (fallback method)', ['file_id' => $fileId]);
+                }
+            }
+            // Fallback: Video
+            elseif ($response->getVideo()) {
+                $fileId = $response->getVideo()->getFileId();
+                $fileUniqueId = $response->getVideo()->getFileUniqueId();
+                Log::info('Video uploaded (fallback method)', ['file_id' => $fileId]);
+            }
+            // Fallback: Audio
+            elseif ($response->getAudio()) {
+                $fileId = $response->getAudio()->getFileId();
+                $fileUniqueId = $response->getAudio()->getFileUniqueId();
+                Log::info('Audio uploaded (fallback method)', ['file_id' => $fileId]);
+            }
+            else {
+                Log::error('No file found in response', [
+                    'response_type' => get_class($response),
                 ]);
             }
             
@@ -198,11 +230,45 @@ class TelegramBotClient implements TelegramClientInterface
             'channel_id' => $channelId,
         ]);
 
-        // IMPORTANT: Upload everything as DOCUMENT to preserve original quality
-        // Photo/Video/Audio types compress files and change file_id, making download difficult
-        // Document type keeps the original file unchanged
+        // PRIMARY METHOD: Upload as DOCUMENT to preserve original quality
+        // Document type keeps the original file unchanged and easier to download
+        try {
+            $params['document'] = $inputFile;
+            Log::info('Primary: Sending as document (preserves original quality)');
+            $response = $this->telegram->sendDocument($params);
+            return $response;
+        } catch (TelegramSDKException $e) {
+            Log::warning('Document upload failed, trying type-specific fallback', [
+                'error' => $e->getMessage(),
+                'mime_type' => $mimeType,
+            ]);
+        }
+
+        // FALLBACK: Try type-specific upload methods
+        // Photo
+        if (str_starts_with($mimeType, 'image/') && !str_contains($mimeType, 'gif')) {
+            $params['photo'] = $inputFile;
+            Log::info('Fallback: Sending as photo');
+            return $this->telegram->sendPhoto($params);
+        }
+
+        // Video
+        if (str_starts_with($mimeType, 'video/')) {
+            $params['video'] = $inputFile;
+            Log::info('Fallback: Sending as video');
+            return $this->telegram->sendVideo($params);
+        }
+
+        // Audio
+        if (str_starts_with($mimeType, 'audio/')) {
+            $params['audio'] = $inputFile;
+            Log::info('Fallback: Sending as audio');
+            return $this->telegram->sendAudio($params);
+        }
+
+        // Last resort: try document again
         $params['document'] = $inputFile;
-        Log::info('Sending as document (preserves original quality)');
+        Log::info('Last resort: Sending as document');
         $response = $this->telegram->sendDocument($params);
         
         Log::info('Upload response received', [
@@ -214,17 +280,20 @@ class TelegramBotClient implements TelegramClientInterface
     }
 
     /**
-     * Download a file from Telegram
+     * Download file from Telegram
      *
-     * @param string $fileId
-     * @param string $savePath
+     * @param string $fileId Telegram file ID
+     * @param string $savePath Local path to save the file
+     * @param array $fallbackData Optional: message_id & channel_id for fallback
      * @return bool
      * @throws TelegramDownloadException
      */
-    public function downloadFile(string $fileId, string $savePath): bool
+    public function downloadFile(string $fileId, string $savePath, array $fallbackData = []): bool
     {
         try {
-            // Get file info
+            // Method 1: Try with file_id (direct approach)
+            Log::info('Attempting download with file_id', ['file_id' => $fileId]);
+            
             $file = $this->telegram->getFile(['file_id' => $fileId]);
             $filePath = $file->getFilePath();
 
@@ -235,42 +304,86 @@ class TelegramBotClient implements TelegramClientInterface
             }
 
             // Download file directly to path
-            // API signature: downloadFile($filePath, $destinationPath)
-            // Returns: string (file path) on success, or throws exception
             $downloadedPath = $this->telegram->downloadFile($filePath, $savePath);
 
             // Verify file was saved
             if (!file_exists($savePath)) {
-                throw TelegramDownloadException::downloadFailed(
-                    'File was not saved to: ' . $savePath
-                );
+                throw new \Exception('File was not saved to: ' . $savePath);
             }
 
             $fileSize = filesize($savePath);
 
-            Log::info('File downloaded via Bot API', [
+            Log::info('File downloaded via Bot API (file_id method)', [
                 'file_id' => $fileId,
                 'save_path' => $savePath,
-                'downloaded_path' => $downloadedPath,
                 'size' => $fileSize,
             ]);
 
             return true;
-        } catch (TelegramSDKException $e) {
-            Log::error('Telegram Bot download failed', [
+            
+        } catch (\Exception $e) {
+            Log::warning('file_id method failed, trying fallback', [
                 'file_id' => $fileId,
                 'error' => $e->getMessage(),
+                'has_fallback' => !empty($fallbackData['message_id']),
             ]);
 
-            if (str_contains($e->getMessage(), 'file not found')) {
-                throw TelegramDownloadException::fileNotFound($fileId);
+            // Method 2: Fallback - Get message and extract file_id
+            if (!empty($fallbackData['message_id']) && !empty($fallbackData['channel_id'])) {
+                return $this->downloadFileByMessage(
+                    $fallbackData['message_id'],
+                    $fallbackData['channel_id'],
+                    $savePath
+                );
             }
 
-            throw TelegramDownloadException::downloadFailed($e->getMessage(), [
-                'file_id' => $fileId,
+            // No fallback available
+            throw TelegramDownloadException::downloadFailed(
+                'Download failed and no fallback data available: ' . $e->getMessage(),
+                ['file_id' => $fileId]
+            );
+        }
+    }
+
+    /**
+     * Download file by fetching message first (fallback method)
+     *
+     * @param int $messageId
+     * @param string $channelId
+     * @param string $savePath
+     * @return bool
+     * @throws TelegramDownloadException
+     */
+    protected function downloadFileByMessage(int $messageId, string $channelId, string $savePath): bool
+    {
+        try {
+            Log::info('Fallback: Fetching message to get fresh file_id', [
+                'message_id' => $messageId,
+                'channel_id' => $channelId,
             ]);
-        } catch (Exception $e) {
-            throw TelegramDownloadException::downloadFailed($e->getMessage());
+
+            // Forward message to get fresh file object
+            // Note: We can't directly get a message, so we use a workaround
+            // Get updates or use forwardMessage
+            
+            // Alternative: Try to get file via channel post
+            // This is a limitation - Bot API doesn't provide direct message fetching
+            // We need to use User Account (MTProto) for this
+            
+            throw TelegramDownloadException::downloadFailed(
+                'Message-based download requires User Account (MTProto). Bot API limitation.',
+                [
+                    'message_id' => $messageId,
+                    'channel_id' => $channelId,
+                    'solution' => 'Use TelegramUserClient for large files or problematic downloads',
+                ]
+            );
+            
+        } catch (\Exception $e) {
+            throw TelegramDownloadException::downloadFailed(
+                'Fallback download failed: ' . $e->getMessage(),
+                ['message_id' => $messageId, 'channel_id' => $channelId]
+            );
         }
     }
 

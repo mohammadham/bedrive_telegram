@@ -163,10 +163,17 @@ public function __construct(array $config = [])
                 ? $metadata->telegram_file_id
                 : "{$metadata->channel_id}:{$metadata->message_id}";
 
+            // Prepare fallback data for Bot API
+            $fallbackData = [
+                'message_id' => $metadata->message_id,
+                'channel_id' => $metadata->channel_id,
+            ];
+
             $this->manager->downloadFile(
                 $fileId,
                 $tempPath,
-                $metadata->upload_method
+                $metadata->upload_method,
+                $fallbackData
             );
 
             // Read contents

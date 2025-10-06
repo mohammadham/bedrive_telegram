@@ -147,15 +147,23 @@ class TelegramFileManager
      * @param string $fileId File ID or reference (format: channel_id:message_id for user)
      * @param string $savePath
      * @param string $method 'bot' or 'user'
+     * @param array $fallbackData Optional: message_id, channel_id for fallback
      * @return bool
      */
     public function downloadFile(
         string $fileId,
         string $savePath,
-        string $method = 'bot'
+        string $method = 'bot',
+        array $fallbackData = []
     ): bool {
         $client =
             $method === 'bot' ? $this->getBotClient() : $this->getUserClient();
+        
+        // Pass fallback data if bot client
+        if ($method === 'bot' && method_exists($client, 'downloadFile')) {
+            return $client->downloadFile($fileId, $savePath, $fallbackData);
+        }
+        
         return $client->downloadFile($fileId, $savePath);
     }
 
