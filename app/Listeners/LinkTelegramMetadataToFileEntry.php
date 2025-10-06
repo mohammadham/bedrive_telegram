@@ -38,8 +38,9 @@ class LinkTelegramMetadataToFileEntry
         }
 
         // Try to find unlinked metadata for this file
-        // We search by file_name (which includes the UUID)
-        $metadata = TelegramFileMetadata::where('file_entry_id', 0)
+        // We search by original_file_size and recent upload time
+        // Note: file_entry_id is now nullable (not 0) for unlinked metadata
+        $metadata = TelegramFileMetadata::whereNull('file_entry_id')
             ->where('original_file_size', $fileEntry->file_size)
             ->where('upload_status', 'completed')
             ->whereBetween('uploaded_at', [
@@ -58,6 +59,7 @@ class LinkTelegramMetadataToFileEntry
                 'file_entry_id' => $fileEntry->id,
                 'metadata_id' => $metadata->id,
                 'message_id' => $metadata->message_id,
+                'telegram_file_id' => $metadata->telegram_file_id,
                 'file_name' => $fileEntry->file_name,
             ]);
         } else {
@@ -65,6 +67,7 @@ class LinkTelegramMetadataToFileEntry
                 'file_entry_id' => $fileEntry->id,
                 'file_name' => $fileEntry->file_name,
                 'file_size' => $fileEntry->file_size,
+                'note' => 'Metadata should be created within 5 minutes of FileEntry',
             ]);
         }
     }

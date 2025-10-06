@@ -573,8 +573,10 @@ public function __construct(array $config = [])
             }
             
             // Create new metadata entry
+            // Note: file_entry_id is null here because FileEntry is created AFTER storage
+            // It will be linked later via UpdateTelegramMetadataListener
             $metadata = TelegramFileMetadata::create([
-                'file_entry_id' => $fileEntry ? $fileEntry->id : 0,
+                'file_entry_id' => null, // Will be updated by event listener
                 'telegram_file_id' => $uploadResult['file_id'],
                 'telegram_file_unique_id' => $uploadResult['file_unique_id'] ?? null,
                 'message_id' => $uploadResult['message_id'],
