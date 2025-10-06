@@ -186,6 +186,26 @@ class TelegramFileManager
     }
 
     /**
+     * Forward a file to another channel/user
+     *
+     * @param string $fromChannelId
+     * @param int $messageId
+     * @param string $toId Target channel/user ID
+     * @param string $method 'bot' or 'user'
+     * @return array
+     */
+    public function forwardFile(
+        string $fromChannelId,
+        int $messageId,
+        string $toId,
+        string $method = 'bot'
+    ): array {
+        $client =
+            $method === 'bot' ? $this->getBotClient() : $this->getUserClient();
+        return $client->forwardMessage($fromChannelId, $messageId, $toId);
+    }
+
+    /**
      * Get file information
      *
      * @param string $fileId

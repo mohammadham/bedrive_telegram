@@ -15,14 +15,50 @@ use Illuminate\Support\Facades\Storage;
 
 class UserTelegramSettingsController extends BaseController
 {
-    protected TelegramFileManager $telegramManager;
-    protected TelegramStorageService $storageService;
+    protected ?TelegramFileManager $telegramManager = null;
+    protected ?TelegramStorageService $storageService = null;
 
     public function __construct()
     {
         $this->middleware('auth');
-        $this->telegramManager = new TelegramFileManager();
-        $this->storageService = new TelegramStorageService();
+        // تأخیر در initialization - فقط وقتی نیاز باشد ایجاد می‌شوند
+    }
+
+    /**
+     * Get or initialize TelegramFileManager lazily
+     */
+    protected function getTelegramManager(?string $channelId = null): TelegramFileManager
+    {
+        if (!$this->telegramManager) {
+            // اگر channelId داده نشده، از user's forward_target استفاده کن
+            // یا از channel_id اصلی admin
+            $user = auth()->user();
+            
+            $effectiveChannelId = $channelId 
+                ?? ($user->telegram_forward_target ?: null)
+                ?? config('services.telegram.channel_id');
+            
+            $config = [
+                'bot_token' => config('services.telegram.bot_token'),
+                'api_id' => config('services.telegram.api_id'),
+                'api_hash' => config('services.telegram.api_hash'),
+                'phone' => config('services.telegram.phone'),
+            ];
+
+            $this->telegramManager = new TelegramFileManager($effectiveChannelId, $config);
+        }
+        return $this->telegramManager;
+    }
+
+    /**
+     * Get or initialize TelegramStorageService lazily
+     */
+    protected function getStorageService(): TelegramStorageService
+    {
+        if (!$this->storageService) {
+            $this->storageService = new TelegramStorageService();
+        }
+        return $this->storageService;
     }
 
     /**
@@ -62,9 +98,9 @@ class UserTelegramSettingsController extends BaseController
         if (!empty($validated['forward_target'])) {
             $target = $validated['forward_target'];
             
-            // باید یا کانال/گروه ID (-100...) یا username (@...) باشد
-            if (!preg_match('/^-100\d+$/', $target) && !preg_match('/^@\w+$/', $target)) {
-                return $this->error('Invalid Telegram ID format. Use channel/group ID (-1001234567890) or username (@username)', 422);
+            // باید یا کانال/گروه ID (-100...) یا username (@...) یا user ID باشد
+            if (!preg_match('/^-100\d+$/', $target) && !preg_match('/^@\w+$/', $target) && !preg_match('/^\d+$/', $target)) {
+                return $this->error('Invalid Telegram ID format. Use channel/group ID (-1001234567890), username (@username), or user ID', 422);
             }
         }
 
@@ -99,6 +135,7 @@ class UserTelegramSettingsController extends BaseController
     {
         $validated = $request->validate([
             'caption' => 'nullable|string|max:1024',
+            'channel_id' => 'nullable|string|max:100', // اختیاری - کاربر می‌تواند کانال خاص را مشخص کند
         ]);
 
         /** @var User $user */
@@ -128,8 +165,13 @@ class UserTelegramSettingsController extends BaseController
             $contents = $disk->get($fileEntry->getStoragePath());
             file_put_contents($tempPath, $contents);
 
-            // آپلود به تلگرام
-            $result = $this->storageService->uploadFile(
+            // تعیین channel_id - اولویت: request > user's forward_target > admin channel
+            $channelId = $validated['channel_id'] 
+                ?? $user->getTelegramForwardTarget() 
+                ?? config('services.telegram.channel_id');
+
+            // آپلود به تلگرام با استفاده از storage service
+            $result = $this->getStorageService()->uploadFile(
                 $tempPath,
                 [
                     'id' => $fileEntry->id,
@@ -152,16 +194,28 @@ class UserTelegramSettingsController extends BaseController
                     'message_id' => $result['metadata']->message_id,
                     'file_id' => $result['metadata']->telegram_file_id,
                     'upload_method' => $result['metadata']->upload_method,
+                    'channel_id' => $result['metadata']->channel_id,
                 ],
             ]);
 
         } catch (TelegramException $e) {
+            // حذف فایل موقت در صورت خطا
+            if (isset($tempPath) && file_exists($tempPath)) {
+                unlink($tempPath);
+            }
+            
             return $this->error('Failed to upload to Telegram: ' . $e->getMessage(), 500);
         } catch (\Exception $e) {
+            // حذف فایل موقت در صورت خطا
+            if (isset($tempPath) && file_exists($tempPath)) {
+                unlink($tempPath);
+            }
+            
             Log::error('Failed to upload file to Telegram', [
                 'file_id' => $fileId,
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return $this->error('Failed to upload file to Telegram', 500);
@@ -200,16 +254,15 @@ class UserTelegramSettingsController extends BaseController
         }
 
         try {
+            // Initialize manager with proper channel
+            $manager = $this->getTelegramManager($metadata->channel_id);
+            
             // Forward message به target
-            $client = $metadata->isUploadedViaBot()
-                ? $this->telegramManager->getBotClient()
-                : $this->telegramManager->getUserClient();
-
-            // Forward message
-            $result = $client->forwardMessage(
+            $result = $manager->forwardFile(
                 $metadata->channel_id,
                 $metadata->message_id,
-                $targetId
+                $targetId,
+                $metadata->upload_method
             );
 
             return $this->success([
