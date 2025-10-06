@@ -28,6 +28,7 @@ class AutoForwardToTelegram implements ShouldQueue
         // $this->telegramManager = new TelegramFileManager();
            // Don't initialize TelegramFileManager here!
         // It will be created lazily when needed
+        Log::info('Auto-forward: Target detected');
     }
 
     /**
@@ -37,7 +38,7 @@ class AutoForwardToTelegram implements ShouldQueue
     {
         /** @var FileEntry $fileEntry */
         $fileEntry = $event->fileEntry;
-
+        Log::info('Auto-forward: Target detecteda');
         // چک کنیم که driver تلگرام فعال است
         if (config('common.site.uploads_disk') !== 'telegram') {
             return;
