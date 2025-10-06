@@ -14,6 +14,7 @@ import {useSettings} from '@ui/settings/use-settings';
 import {SiteConfigContext} from '@common/core/settings/site-config-context';
 import {useAllSocialLoginsDisabled} from '@common/auth/ui/use-all-social-logins-disabled';
 import {TelegramIcon} from '@ui/icons/social/telegram';
+import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 
 export enum AccountSettingsId {
   AccountDetails = 'account-details',
@@ -33,13 +34,18 @@ export function AccountSettingsSidenav() {
   const {hasPermission} = useAuth();
   const {api, uploads} = useSettings();
   const {auth} = useContext(SiteConfigContext);
-
   const allSocialsDisabled = useAllSocialLoginsDisabled();
   // Check if telegram is enabled for uploads or public storage
-  const isTelegramDriver = 
-    uploads?.uploads_driver === 'telegram' || 
+  var isTelegramDriver = null;
+  try{ 
+    isTelegramDriver= uploads?.uploads_driver === 'telegram' || 
     uploads?.public_driver === 'telegram';
-
+  }catch(e)
+  {
+    const settings = getBootstrapData().settings;
+     isTelegramDriver = settings.uploads.uploads_driver
+      ?? settings.uploads.public_driver;
+  }
   return (
     <aside className="sticky top-10 hidden flex-shrink-0 lg:block">
       <List padding="p-0">
