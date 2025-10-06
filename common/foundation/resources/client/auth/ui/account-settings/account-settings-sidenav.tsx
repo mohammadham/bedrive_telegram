@@ -32,9 +32,10 @@ export function AccountSettingsSidenav() {
   const p = AccountSettingsId;
 
   const {hasPermission} = useAuth();
-  const {api, uploads} = useSettings();
+  const {api} = useSettings();
   const {auth} = useContext(SiteConfigContext);
   const allSocialsDisabled = useAllSocialLoginsDisabled();
+  const {uploads} = getBootstrapData().settings;
   // Check if telegram is enabled for uploads or public storage
     const isTelegramDriver = useMemo(() => {
     if (!uploads) return false;
