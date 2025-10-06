@@ -158,23 +158,78 @@ public function __construct(array $config = [])
             // Create temp download path
             $tempPath = $this->getTempPath();
 
-            // Download from Telegram
-            $fileId = $metadata->isUploadedViaBot()
-                ? $metadata->telegram_file_id
-                : "{$metadata->channel_id}:{$metadata->message_id}";
+            // IMPORTANT: Bot API file_id often becomes invalid
+            // PRIMARY: Try User Account if available (more reliable)
+            // FALLBACK: Try Bot with file_id
+            
+            $downloaded = false;
+            $lastError = null;
 
-            // Prepare fallback data for Bot API
-            $fallbackData = [
-                'message_id' => $metadata->message_id,
-                'channel_id' => $metadata->channel_id,
-            ];
+            // Strategy 1: If User Account is configured, use it (most reliable)
+            try {
+                // Check if user credentials are configured
+                $hasUserConfig = !empty($this->manager->getConfig()['api_id']) 
+                    && !empty($this->manager->getConfig()['api_hash']);
 
-            $this->manager->downloadFile(
-                $fileId,
-                $tempPath,
-                $metadata->upload_method,
-                $fallbackData
-            );
+                if ($hasUserConfig) {
+                    Log::info('Attempting download via User Account (primary)', [
+                        'message_id' => $metadata->message_id,
+                        'channel_id' => $metadata->channel_id,
+                    ]);
+
+                    // Use User Account with message_id
+                    $fileId = "{$metadata->channel_id}:{$metadata->message_id}";
+                    $this->manager->downloadFile($fileId, $tempPath, 'user');
+                    $downloaded = true;
+                    
+                    Log::info('Downloaded successfully via User Account');
+                }
+            } catch (\Exception $e) {
+                $lastError = $e;
+                Log::warning('User Account download failed, will try Bot', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // Strategy 2: Try Bot API with file_id (if not downloaded yet)
+            if (!$downloaded && $metadata->isUploadedViaBot()) {
+                try {
+                    Log::info('Attempting download via Bot API (fallback)', [
+                        'file_id' => $metadata->telegram_file_id,
+                    ]);
+
+                    $fallbackData = [
+                        'message_id' => $metadata->message_id,
+                        'channel_id' => $metadata->channel_id,
+                    ];
+
+                    $this->manager->downloadFile(
+                        $metadata->telegram_file_id,
+                        $tempPath,
+                        'bot',
+                        $fallbackData
+                    );
+                    $downloaded = true;
+                    
+                    Log::info('Downloaded successfully via Bot API');
+                } catch (\Exception $e) {
+                    $lastError = $e;
+                    Log::error('Bot API download also failed', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // If still not downloaded, fail
+            if (!$downloaded) {
+                $errorMsg = 'Failed to download file using any method. ';
+                if ($lastError) {
+                    $errorMsg .= 'Last error: ' . $lastError->getMessage();
+                }
+                $errorMsg .= ' Configure User Account credentials for reliable downloads.';
+                
+                throw new \Exception($errorMsg);
+            }
 
             // Read contents
             $contents = file_get_contents($tempPath);

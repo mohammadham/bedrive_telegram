@@ -304,4 +304,14 @@ class TelegramFileManager
     {
         $this->defaultChannelId = $channelId;
     }
+
+    /**
+     * Get config array
+     *
+     * @return array
+     */
+    public function getConfig(): array
+    {
+        return $this->config;
+    }
 }

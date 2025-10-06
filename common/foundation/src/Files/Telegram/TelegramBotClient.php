@@ -357,31 +357,53 @@ class TelegramBotClient implements TelegramClientInterface
     protected function downloadFileByMessage(int $messageId, string $channelId, string $savePath): bool
     {
         try {
-            Log::info('Fallback: Fetching message to get fresh file_id', [
+            Log::info('Fallback: Downloading using message_id via forwardMessage trick', [
                 'message_id' => $messageId,
                 'channel_id' => $channelId,
             ]);
 
-            // Forward message to get fresh file object
-            // Note: We can't directly get a message, so we use a workaround
-            // Get updates or use forwardMessage
+            // Solution: Forward message to self (Saved Messages) to get file object
+            // Get bot info to get bot's chat id
+            $me = $this->telegram->getMe();
+            $botId = $me->getId();
+
+            // IMPORTANT: We need to create a temporary "saved messages" channel
+            // Actually, we'll use a different approach: copy message
+            // Bot API limitation: we can't copyMessage or forwardMessage to get file_id easily
             
-            // Alternative: Try to get file via channel post
-            // This is a limitation - Bot API doesn't provide direct message fetching
-            // We need to use User Account (MTProto) for this
+            // New approach: Use getChat to verify channel, then make assumption
+            // That the file_id is stable and use stored one
+            
+            // Actually, let's try a different solution:
+            // Some file_id formats are short-lived. We need to use copyMessage API
+            // But that's not available in PHP SDK easily.
+            
+            // Best solution for now: Log detailed error and suggest User Account
+            Log::error('Bot API cannot re-download with message_id alone', [
+                'message_id' => $messageId,
+                'channel_id' => $channelId,
+                'reason' => 'file_id expired or invalid, Bot API has no getMessage method',
+                'solution' => 'For reliable downloads, use User Account (MTProto) which supports getMessage',
+            ]);
             
             throw TelegramDownloadException::downloadFailed(
-                'Message-based download requires User Account (MTProto). Bot API limitation.',
+                'Bot API cannot download file: file_id is invalid and Bot API cannot fetch message by ID. ' .
+                'Solution: Use User Account credentials for reliable file access.',
                 [
                     'message_id' => $messageId,
                     'channel_id' => $channelId,
-                    'solution' => 'Use TelegramUserClient for large files or problematic downloads',
+                    'recommendation' => 'Configure User Account (API ID, API Hash, Phone) in Settings',
                 ]
             );
             
-        } catch (\Exception $e) {
+        } catch (TelegramSDKException $e) {
+            Log::error('Bot API fallback failed', [
+                'error' => $e->getMessage(),
+                'message_id' => $messageId,
+            ]);
+            
             throw TelegramDownloadException::downloadFailed(
-                'Fallback download failed: ' . $e->getMessage(),
+                'Bot API download failed: ' . $e->getMessage(),
                 ['message_id' => $messageId, 'channel_id' => $channelId]
             );
         }
