@@ -42,7 +42,7 @@ class TelegramWebhookController extends BaseController
 
             // Telegram expects 200 OK response
             return response()->json(['ok' => true]);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Webhook handling error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

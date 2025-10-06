@@ -109,7 +109,7 @@ public function __construct(array $config = [])
                 'trace' => $e->getTraceAsString(),
             ]);
             throw UnableToWriteFile::atLocation($path, $e->getMessage(), $e);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Failed to write file to Telegram', [
                 'path' => $path,
                 'error' => $e->getMessage(),
@@ -134,7 +134,7 @@ public function __construct(array $config = [])
             // Read stream to string
             $data = stream_get_contents($contents);
             $this->write($path, $data, $config);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             throw UnableToWriteFile::atLocation($path, $e->getMessage(), $e);
         }
     }
@@ -152,7 +152,7 @@ public function __construct(array $config = [])
             $metadata = $this->getMetadataByPath($path);
 
             if (!$metadata) {
-                throw new Exception("File not found: {$path}");
+                throw UnableToReadFile::fromLocation($path, "File not found in Telegram storage");
             }
 
             // Create temp download path
@@ -179,7 +179,7 @@ public function __construct(array $config = [])
             $metadata->touchLastAccessed();
 
             return $contents;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Failed to read file from Telegram', [
                 'path' => $path,
                 'error' => $e->getMessage(),
@@ -203,7 +203,7 @@ public function __construct(array $config = [])
             fwrite($stream, $contents);
             rewind($stream);
             return $stream;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             throw UnableToReadFile::fromLocation($path, $e->getMessage(), $e);
         }
     }
@@ -239,7 +239,7 @@ public function __construct(array $config = [])
                 'path' => $path,
                 'message_id' => $metadata->message_id,
             ]);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('Failed to delete file from Telegram', [
                 'path' => $path,
                 'error' => $e->getMessage(),
@@ -296,7 +296,7 @@ public function __construct(array $config = [])
         try {
             $metadata = $this->getMetadataByPath($path);
             return $metadata !== null;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return false;
         }
     }
@@ -397,14 +397,14 @@ public function __construct(array $config = [])
             $metadata = $this->getMetadataByPath($path);
 
             if (!$metadata) {
-                throw new Exception("File not found: {$path}");
+                throw UnableToRetrieveMetadata::fileSize($path, "File not found in Telegram storage");
             }
 
             return new FileAttributes(
                 $path,
                 $metadata->original_file_size
             );
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             throw UnableToRetrieveMetadata::fileSize($path, $e->getMessage(), $e);
         }
     }
@@ -422,7 +422,7 @@ public function __construct(array $config = [])
             $metadata = $this->getMetadataByPath($path);
 
             if (!$metadata) {
-                throw new Exception("File not found: {$path}");
+                throw UnableToRetrieveMetadata::mimeType($path, "File not found in Telegram storage");
             }
 
             return new FileAttributes(
@@ -432,7 +432,7 @@ public function __construct(array $config = [])
                 null,
                 $metadata->original_mime_type
             );
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             throw UnableToRetrieveMetadata::mimeType($path, $e->getMessage(), $e);
         }
     }
@@ -450,7 +450,7 @@ public function __construct(array $config = [])
             $metadata = $this->getMetadataByPath($path);
 
             if (!$metadata) {
-                throw new Exception("File not found: {$path}");
+                throw UnableToRetrieveMetadata::lastModified($path, "File not found in Telegram storage");
             }
 
             return new FileAttributes(
@@ -459,7 +459,7 @@ public function __construct(array $config = [])
                 null,
                 $metadata->uploaded_at?->timestamp
             );
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             throw UnableToRetrieveMetadata::lastModified($path, $e->getMessage(), $e);
         }
     }

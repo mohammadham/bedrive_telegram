@@ -253,7 +253,7 @@ class TelegramFileManager
                 'success' => $botClient->isAuthenticated(),
                 'info' => $botClient->getBotInfo(),
             ];
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $results['bot'] = [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -267,7 +267,7 @@ class TelegramFileManager
                 'success' => $userClient->isAuthenticated(),
                 'info' => $userClient->getUserInfo(),
             ];
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $results['user'] = [
                 'success' => false,
                 'error' => $e->getMessage(),
