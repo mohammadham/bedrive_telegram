@@ -30,7 +30,17 @@ class AutoForwardToTelegram implements ShouldQueue
         // It will be created lazily when needed
         Log::info('Auto-forward: Target detected');
     }
-
+    /**
+     * Check if Telegram driver is enabled
+     */
+    protected function isTelegramDriverEnabled(): bool
+    {
+        // Check if telegram is set as uploads or public disk driver
+        $uploadsDriver = config('common.site.uploads_disk_driver');
+        $publicDriver = config('common.site.public_disk_driver');
+        
+        return $uploadsDriver === 'telegram' || $publicDriver === 'telegram';
+    }
     /**
      * Handle the event.
      */
@@ -38,12 +48,15 @@ class AutoForwardToTelegram implements ShouldQueue
     {
         /** @var FileEntry $fileEntry */
         $fileEntry = $event->fileEntry;
-        Log::info('Auto-forward: Target detecteda');
-        // چک کنیم که driver تلگرام فعال است
-        if (config('common.site.uploads_disk') !== 'telegram') {
+        Log::info('Auto-forward: Target detected', [
+                'isTelegramDriverEnabled' => $this->isTelegramDriverEnabled(),
+                'file_entry_id' => $fileEntry,
+            ]);
+        // Check if the file is stored on Telegram disk
+        
+        if (! $this->isTelegramDriverEnabled()) {
             return;
         }
-
         // دریافت user
         $user = $fileEntry->user;
         if (!$user) {
