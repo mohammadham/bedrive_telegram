@@ -18,6 +18,17 @@ use Illuminate\Support\Facades\Storage;
 class LinkTelegramMetadataToFileEntry
 {
     /**
+     * Check if Telegram driver is enabled
+     */
+    protected function isTelegramDriverEnabled(): bool
+    {
+        // Check if telegram is set as uploads or public disk driver
+        $uploadsDriver = config('common.site.uploads_disk_driver');
+        $publicDriver = config('common.site.public_disk_driver');
+        
+        return $uploadsDriver === 'telegram' || $publicDriver === 'telegram';
+    }
+    /**
      * Handle the event.
      *
      * @param FileEntryCreated $event
@@ -31,10 +42,13 @@ class LinkTelegramMetadataToFileEntry
         if ($fileEntry->type !== 'file') {
             return;
         }
-
+        Log::info('Linked Telegram metadata to FileEntry', [
+                'isTelegramDriverEnabled' => isTelegramDriverEnabled(),
+                
+            ]);
         // Check if the file is stored on Telegram disk
-        $uploadsDisk = config('common.site.uploads_disk_driver');
-        if ($uploadsDisk !== 'telegram') {
+        
+        if (! $this->isTelegramDriverEnabled()) {
             return;
         }
 
