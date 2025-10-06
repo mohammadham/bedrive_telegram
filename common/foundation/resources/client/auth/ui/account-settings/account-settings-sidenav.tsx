@@ -32,17 +32,21 @@ export function AccountSettingsSidenav() {
   const p = AccountSettingsId;
 
   const {hasPermission} = useAuth();
-  const {api} = useSettings();
+  const {api, uploads} = useSettings();
   const {auth} = useContext(SiteConfigContext);
   const allSocialsDisabled = useAllSocialLoginsDisabled();
-  const {uploads} = getBootstrapData().settings;
+  const settings = getBootstrapData().settings;
   // Check if telegram is enabled for uploads or public storage
     const isTelegramDriver = useMemo(() => {
-    if (!uploads) return false;
-    
+    if (!uploads && !settings.uploads) return false;
+    if(!uploads)
+    {
+      return settings.uploads.uploads_driver === 'telegram' || 
+             settings.uploads.public_driver === 'telegram';
+    }
     return uploads.uploads_driver === 'telegram' || 
            uploads.public_driver === 'telegram';
-  }, [uploads]);
+  }, [uploads, settings.uploads]);
     // const settings = getBootstrapData().settings;
     // const isTelegramDriver = settings.uploads.uploads_driver  === 'telegram'
     //   || settings.uploads.public_driver  === 'telegram' ;
