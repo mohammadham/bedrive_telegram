@@ -44,7 +44,7 @@ class LinkTelegramMetadataToFileEntry
                 
             ]);
         // Only for file types (not folders)
-        if ($fileEntry->type !== 'file') {
+        if ($fileEntry->type === 'folder') {
             return;
         }
         // Check if the file is stored on Telegram disk
