@@ -116,48 +116,56 @@ class TelegramBotClient implements TelegramClientInterface
             } elseif ($response->getPhoto()) {
                 $photos = $response->getPhoto();
                 
-                // Convert to array if it's an object (ArrayObject, Collection, etc.)
-                if (is_object($photos)) {
-                    if (method_exists($photos, 'toArray')) {
-                        $photos = $photos->toArray();
-                    } elseif ($photos instanceof \ArrayAccess && $photos instanceof \Countable) {
-                        // Convert ArrayObject to array
-                        $photosArray = [];
-                        for ($i = 0; $i < count($photos); $i++) {
-                            $photosArray[] = $photos[$i];
+                Log::info('Photo array received', [
+                    'is_array' => is_array($photos),
+                    'is_object' => is_object($photos),
+                    'count' => is_countable($photos) ? count($photos) : 0,
+                    'type' => gettype($photos),
+                    'class' => is_object($photos) ? get_class($photos) : null,
+                ]);
+                
+                // Get the largest photo (last element)
+                $lastPhoto = null;
+                $photoCount = 0;
+                
+                if (is_array($photos)) {
+                    $photoCount = count($photos);
+                    if ($photoCount > 0) {
+                        $lastPhoto = $photos[$photoCount - 1];
+                    }
+                } elseif (is_object($photos) && $photos instanceof \Countable) {
+                    $photoCount = count($photos);
+                    if ($photoCount > 0) {
+                        // Access last element - works for ArrayObject and Collection
+                        if ($photos instanceof \ArrayAccess) {
+                            $lastPhoto = $photos[$photoCount - 1];
+                        } elseif (method_exists($photos, 'last')) {
+                            $lastPhoto = $photos->last();
+                        } elseif (method_exists($photos, 'get')) {
+                            $lastPhoto = $photos->get($photoCount - 1);
                         }
-                        $photos = $photosArray;
                     }
                 }
                 
-                Log::info('Photo array received', [
-                    'is_array' => is_array($photos),
-                    'count' => is_array($photos) ? count($photos) : (is_countable($photos) ? count($photos) : 0),
-                    'type' => gettype($photos),
+                Log::info('Last photo element', [
+                    'type' => gettype($lastPhoto),
+                    'is_object' => is_object($lastPhoto),
+                    'is_array' => is_array($lastPhoto),
+                    'class' => is_object($lastPhoto) ? get_class($lastPhoto) : null,
                 ]);
                 
-                if (!empty($photos)) {
-                    // Get the largest photo (last element)
-                    $lastPhoto = null;
-                    
-                    if (is_array($photos)) {
-                        $lastPhoto = end($photos);
-                    } elseif (is_object($photos) && $photos instanceof \ArrayAccess && $photos instanceof \Countable) {
-                        $lastPhoto = $photos[count($photos) - 1];
+                if ($lastPhoto) {
+                    // If it's an object with getFileId method
+                    if (is_object($lastPhoto) && method_exists($lastPhoto, 'getFileId')) {
+                        $fileId = $lastPhoto->getFileId();
+                        $fileUniqueId = $lastPhoto->getFileUniqueId();
+                        Log::info('Extracted file_id from photo object', ['file_id' => $fileId]);
                     }
-                    
-                    if ($lastPhoto) {
-                        Log::info('Last photo object', [
-                            'type' => gettype($lastPhoto),
-                            'class' => is_object($lastPhoto) ? get_class($lastPhoto) : 'not_object',
-                            'has_getFileId' => is_object($lastPhoto) && method_exists($lastPhoto, 'getFileId'),
-                        ]);
-                        
-                        if (is_object($lastPhoto) && method_exists($lastPhoto, 'getFileId')) {
-                            $fileId = $lastPhoto->getFileId();
-                            $fileUniqueId = $lastPhoto->getFileUniqueId();
-                            Log::info('Extracted file_id from photo', ['file_id' => $fileId]);
-                        }
+                    // If it's an array (from toArray conversion), access by key
+                    elseif (is_array($lastPhoto) && isset($lastPhoto['file_id'])) {
+                        $fileId = $lastPhoto['file_id'];
+                        $fileUniqueId = $lastPhoto['file_unique_id'] ?? null;
+                        Log::info('Extracted file_id from photo array', ['file_id' => $fileId]);
                     }
                 }
             } elseif ($response->getVideo()) {
