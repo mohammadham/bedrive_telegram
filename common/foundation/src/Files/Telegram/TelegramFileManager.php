@@ -54,7 +54,7 @@ class TelegramFileManager
     /**
      * Get or initialize Bot client
      */
-    protected function getBotClient(): TelegramBotClient
+    public function getBotClient(): TelegramBotClient
     {
         if (!$this->botClient) {
             // Pass bot_token from config if available
@@ -67,7 +67,7 @@ class TelegramFileManager
     /**
      * Get or initialize User client
      */
-    protected function getUserClient(): TelegramUserClient
+    public function getUserClient(): TelegramUserClient
     {
         if (!$this->userClient) {
             // Pass user account credentials from config

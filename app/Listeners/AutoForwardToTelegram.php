@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Models\FileEntry;
 use Common\Files\Events\FileUploaded;
 use Common\Files\Telegram\TelegramFileManager;
+use Common\Files\Telegram\TelegramTargetDetector;
 use Common\Files\Telegram\Exceptions\TelegramException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -73,26 +74,46 @@ class AutoForwardToTelegram implements ShouldQueue
             // At this point, config is already loaded from .env
             $telegramManager = app(TelegramFileManager::class);
             
-            // Forward message به target
-            $client = $metadata->isUploadedViaBot()
+            // 🔍 SMART TARGET DETECTION:
+            // تشخیص نوع target و انتخاب روش مناسب forward
+            $targetDetection = TelegramTargetDetector::detectTarget($targetId);
+            $forwardMethod = $targetDetection['method']; // 'bot' or 'user'
+            
+            Log::info('Auto-forward: Target detected', [
+                'target_id' => $targetId,
+                'detected_type' => $targetDetection['type'],
+                'forward_method' => $forwardMethod,
+                'reason' => $targetDetection['reason'],
+                'original_upload_method' => $metadata->upload_method,
+            ]);
+            
+            // انتخاب client مناسب بر اساس نوع target
+            // ✅ کانال/گروه → Bot Client
+            // ✅ User Account → User Client
+            $client = ($forwardMethod === 'bot')
                 ? $telegramManager->getBotClient()
                 : $telegramManager->getUserClient();
-            // // Forward message به target
-            // $client = $metadata->isUploadedViaBot()
-            //     ? $this->telegramManager->getBotClient()
-            //     : $this->telegramManager->getUserClient();
+            
+            Log::info('Auto-forward: Using client', [
+                'client_type' => $client->getClientType(),
+                'target_type' => $targetDetection['type'],
+            ]);
 
+            // Forward message
             $result = $client->forwardMessage(
                 $metadata->channel_id,
                 $metadata->message_id,
-                $targetId
+                $targetDetection['target_normalized'] ?? $targetId
             );
 
             Log::info('File auto-forwarded successfully', [
                 'file_id' => $fileEntry->id,
                 'user_id' => $user->id,
                 'target_id' => $targetId,
+                'target_type' => $targetDetection['type'],
+                'forward_method' => $forwardMethod,
                 'message_id' => $metadata->message_id,
+                'new_message_id' => $result['message_id'] ?? null,
             ]);
 
         } catch (TelegramException $e) {

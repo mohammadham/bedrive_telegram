@@ -7,6 +7,7 @@ use App\Models\User;
 use Common\Core\BaseController;
 use Common\Files\Telegram\TelegramFileManager;
 use Common\Files\Telegram\TelegramStorageService;
+use Common\Files\Telegram\TelegramTargetDetector;
 use Common\Files\Telegram\Exceptions\TelegramException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -257,17 +258,41 @@ class UserTelegramSettingsController extends BaseController
             // Initialize manager with proper channel
             $manager = $this->getTelegramManager($metadata->channel_id);
             
-            // Forward message به target
-            $result = $manager->forwardFile(
+            // 🔍 SMART TARGET DETECTION:
+            // تشخیص نوع target و انتخاب روش مناسب forward
+            $targetDetection = TelegramTargetDetector::detectTarget($targetId);
+            $forwardMethod = $targetDetection['method']; // 'bot' or 'user'
+            
+            Log::info('Manual forward: Target detected', [
+                'target_id' => $targetId,
+                'detected_type' => $targetDetection['type'],
+                'forward_method' => $forwardMethod,
+                'reason' => $targetDetection['reason'],
+            ]);
+            
+            // انتخاب client مناسب بر اساس نوع target
+            // ✅ کانال/گروه → Bot Client
+            // ✅ User Account → User Client
+            $client = ($forwardMethod === 'bot')
+                ? $manager->getBotClient()
+                : $manager->getUserClient();
+            
+            // Forward message
+            $result = $client->forwardMessage(
                 $metadata->channel_id,
                 $metadata->message_id,
-                $targetId,
+                $targetDetection['target_normalized'] ?? $targetId,
                 $metadata->upload_method
             );
 
             return $this->success([
                 'message' => 'File forwarded successfully',
                 'forward_result' => $result,
+                'target_info' => [
+                    'type' => $targetDetection['type'],
+                    'method' => $forwardMethod,
+                    'reason' => $targetDetection['reason'],
+                ],
             ]);
 
         } catch (TelegramException $e) {
