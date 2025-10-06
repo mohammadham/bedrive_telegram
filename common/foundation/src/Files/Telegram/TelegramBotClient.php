@@ -115,11 +115,26 @@ class TelegramBotClient implements TelegramClientInterface
                 $fileUniqueId = $response->getDocument()->getFileUniqueId();
             } elseif ($response->getPhoto()) {
                 $photos = $response->getPhoto();
+                 Log::info('Photo array received', [
+                    'is_array' => is_array($photos),
+                    'count' => is_array($photos) ? count($photos) : 0,
+                    'type' => gettype($photos),
+                ]);
+                
                 if (!empty($photos) && is_array($photos)) {
-                    $lastPhoto = end($photos);
-                    if ($lastPhoto) {
+                    // Get the largest photo (last element)
+                    $lastPhoto = $photos[count($photos) - 1];
+                    
+                    Log::info('Last photo object', [
+                        'type' => gettype($lastPhoto),
+                        'class' => is_object($lastPhoto) ? get_class($lastPhoto) : 'not_object',
+                        'has_getFileId' => is_object($lastPhoto) && method_exists($lastPhoto, 'getFileId'),
+                    ]);
+                    
+                    if (is_object($lastPhoto) && method_exists($lastPhoto, 'getFileId')) {
                         $fileId = $lastPhoto->getFileId();
                         $fileUniqueId = $lastPhoto->getFileUniqueId();
+                        Log::info('Extracted file_id from photo', ['file_id' => $fileId]);
                     }
                 }
             } elseif ($response->getVideo()) {
