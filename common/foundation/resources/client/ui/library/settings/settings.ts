@@ -8,9 +8,8 @@ export interface Settings {
     format: string;
     default_timezone: string;
   };
-  server?: {
-    uploads_disk_driver?: string;
-    public_disk_driver?: string;
-    [key: string]: any;
+  uploads?: {
+    uploads_driver?: string;
+    public_driver?: string;
   };
 }
