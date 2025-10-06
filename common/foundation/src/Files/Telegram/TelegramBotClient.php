@@ -321,27 +321,31 @@ class TelegramBotClient implements TelegramClientInterface
             $file = $this->telegram->getFile(['file_id' => $fileId]);
             $filePath = $file->getFilePath();
 
-            // Download file
-            $fileContent = $this->telegram->downloadFile($filePath);
-
-            // Save to disk
+            // Ensure directory exists
             $directory = dirname($savePath);
             if (!is_dir($directory)) {
                 mkdir($directory, 0755, true);
             }
 
-            $result = file_put_contents($savePath, $fileContent);
+            // Download file directly to path
+            // API signature: downloadFile($filePath, $destinationPath)
+            // Returns: string (file path) on success, or throws exception
+            $downloadedPath = $this->telegram->downloadFile($filePath, $savePath);
 
-            if ($result === false) {
+            // Verify file was saved
+            if (!file_exists($savePath)) {
                 throw TelegramDownloadException::downloadFailed(
-                    'Failed to save file to: ' . $savePath
+                    'File was not saved to: ' . $savePath
                 );
             }
+
+            $fileSize = filesize($savePath);
 
             Log::info('File downloaded via Bot API', [
                 'file_id' => $fileId,
                 'save_path' => $savePath,
-                'size' => $result,
+                'downloaded_path' => $downloadedPath,
+                'size' => $fileSize,
             ]);
 
             return true;
