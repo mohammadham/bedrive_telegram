@@ -38,14 +38,15 @@ class LinkTelegramMetadataToFileEntry
     {
         $fileEntry = $event->fileEntry;
 
+        Log::info('Linked Telegram metadata to FileEntry', [
+                'isTelegramDriverEnabled' => isTelegramDriverEnabled(),
+                'file_entry_id' => $fileEntry->type,
+                
+            ]);
         // Only for file types (not folders)
         if ($fileEntry->type !== 'file') {
             return;
         }
-        Log::info('Linked Telegram metadata to FileEntry', [
-                'isTelegramDriverEnabled' => isTelegramDriverEnabled(),
-                
-            ]);
         // Check if the file is stored on Telegram disk
         
         if (! $this->isTelegramDriverEnabled()) {
