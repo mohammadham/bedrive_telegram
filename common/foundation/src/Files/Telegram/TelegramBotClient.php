@@ -115,8 +115,13 @@ class TelegramBotClient implements TelegramClientInterface
                 $fileUniqueId = $response->getDocument()->getFileUniqueId();
             } elseif ($response->getPhoto()) {
                 $photos = $response->getPhoto();
-                $fileId = end($photos)->getFileId();
-                $fileUniqueId = end($photos)->getFileUniqueId();
+                if (!empty($photos) && is_array($photos)) {
+                    $lastPhoto = end($photos);
+                    if ($lastPhoto) {
+                        $fileId = $lastPhoto->getFileId();
+                        $fileUniqueId = $lastPhoto->getFileUniqueId();
+                    }
+                }
             } elseif ($response->getVideo()) {
                 $fileId = $response->getVideo()->getFileId();
                 $fileUniqueId = $response->getVideo()->getFileUniqueId();
@@ -127,7 +132,11 @@ class TelegramBotClient implements TelegramClientInterface
             
             if (!$fileId) {
                 Log::error('No file_id in Telegram response', [
-                    'response' => json_encode($response),
+                    'response_type' => get_class($response),
+                    'has_document' => $response->getDocument() ? 'yes' : 'no',
+                    'has_photo' => $response->getPhoto() ? 'yes' : 'no',
+                    'has_video' => $response->getVideo() ? 'yes' : 'no',
+                    'has_audio' => $response->getAudio() ? 'yes' : 'no',
                     'file' => $filePath,
                 ]);
                 throw TelegramUploadException::uploadFailed('No file_id in response');
@@ -190,27 +199,43 @@ class TelegramBotClient implements TelegramClientInterface
             'caption' => $options['caption'] ?? '',
         ];
 
+        Log::info('Uploading file by type', [
+            'mime_type' => $mimeType,
+            'channel_id' => $channelId,
+        ]);
+
         // Photo
         if (str_starts_with($mimeType, 'image/') && !str_contains($mimeType, 'gif')) {
             $params['photo'] = $inputFile;
+            Log::info('Sending as photo');
             return $this->telegram->sendPhoto($params);
         }
 
         // Video
         if (str_starts_with($mimeType, 'video/')) {
             $params['video'] = $inputFile;
+            Log::info('Sending as video');
             return $this->telegram->sendVideo($params);
         }
 
         // Audio
         if (str_starts_with($mimeType, 'audio/')) {
             $params['audio'] = $inputFile;
+            Log::info('Sending as audio');
             return $this->telegram->sendAudio($params);
         }
 
         // Document (default)
         $params['document'] = $inputFile;
-        return $this->telegram->sendDocument($params);
+        Log::info('Sending as document');
+        $response = $this->telegram->sendDocument($params);
+        
+        Log::info('Upload response received', [
+            'response_class' => get_class($response),
+            'message_id' => $response->getMessageId() ?? 'N/A',
+        ]);
+        
+        return $response;
     }
 
     /**
