@@ -19,18 +19,18 @@ class TelegramServiceProvider extends ServiceProvider
     public function boot()
     {
         Storage::extend('telegram', function ($app, $config) {
-            // Get settings from database (storage_telegram_*) or fallback to env/config
-            $channelId = $config['channel_id'] 
-            ?? config('services.telegram.channel_id')
-                ?? settings('storage_telegram_channel_id');
-
-            // Telegram configuration
+            // Load telegram settings directly from database if available
+            // This ensures we always get fresh settings, not cached ones
             $telegramConfig = [
-                'channel_id' => $channelId,
+                'bot_token' => settings('storage_telegram_bot_token') ?? $config['bot_token'] ?? null,
+                'channel_id' => settings('storage_telegram_channel_id') ?? $config['channel_id'] ?? config('services.telegram.channel_id') ?? null,
+                'api_id' => settings('storage_telegram_api_id') ?? $config['api_id'] ?? null,
+                'api_hash' => settings('storage_telegram_api_hash') ?? $config['api_hash'] ?? null,
+                'phone' => settings('storage_telegram_phone') ?? $config['phone'] ?? null,
                 'prefix' => $config['prefix'] ?? '',
             ];
 
-            // Create Telegram adapter
+            // Create Telegram adapter with full config
             $adapter = new TelegramAdapter($telegramConfig);
 
             // Return Laravel Filesystem adapter
