@@ -9,6 +9,7 @@ import {Button} from '@ui/buttons/button';
 import {useForm} from 'react-hook-form';
 import {Form} from '@ui/forms/form';
 import {SectionHelper} from '@common/ui/other/section-helper';
+import {useEffect} from 'react';
 
 interface TelegramSettings {
   auto_forward: boolean;
@@ -25,17 +26,28 @@ export function TelegramSettingsPanel() {
   const queryClient = useQueryClient();
 
   // Fetch current settings
-  const {data: settings, isLoading} = useQuery<TelegramSettings>({
+  const {data: settings, isLoading, isError} = useQuery<TelegramSettings>({
     queryKey: ['user-telegram-settings'],
     queryFn: () => fetchTelegramSettings(),
+    retry: 1,
   });
 
   const form = useForm<TelegramSettingsFormData>({
     defaultValues: {
-      auto_forward: settings?.auto_forward ?? false,
-      forward_target: settings?.forward_target ?? '',
+      auto_forward: false,
+      forward_target: '',
     },
   });
+
+  // Update form when settings load
+  useEffect(() => {
+    if (settings) {
+      form.reset({
+        auto_forward: settings.auto_forward ?? false,
+        forward_target: settings.forward_target ?? '',
+      });
+    }
+  }, [settings, form]);
 
   // Update settings mutation
   const updateSettings = useMutation({
@@ -51,8 +63,13 @@ export function TelegramSettingsPanel() {
     },
   });
 
-  // Don't show panel if Telegram driver is not enabled
-  if (!isLoading && !settings?.driver_enabled) {
+  // Don't show panel if loading
+  if (isLoading) {
+    return null;
+  }
+
+  // Don't show panel if Telegram driver is not enabled or error
+  if (isError || !settings?.driver_enabled) {
     return null;
   }
 
@@ -91,7 +108,7 @@ export function TelegramSettingsPanel() {
             description={
               <Trans message="Enter channel ID (-1001234567890), username (@username), or user ID" />
             }
-            placeholder="-1001234567890 or @channel"
+            placeholder="-1001234567890 or @channel or user_id"
             required={form.watch('auto_forward')}
             className="mb-24"
           />
@@ -114,6 +131,9 @@ export function TelegramSettingsPanel() {
                 </li>
                 <li>
                   <Trans message="Only files uploaded to Telegram storage will be forwarded" />
+                </li>
+                <li>
+                  <Trans message="If no target is specified, files will be uploaded to admin's default channel" />
                 </li>
               </ul>
             </div>

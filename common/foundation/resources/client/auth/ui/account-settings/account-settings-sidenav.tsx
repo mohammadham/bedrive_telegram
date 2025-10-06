@@ -7,7 +7,7 @@ import {PhonelinkLockIcon} from '@ui/icons/material/PhonelinkLock';
 import {LanguageIcon} from '@ui/icons/material/Language';
 import {ApiIcon} from '@ui/icons/material/Api';
 import {DangerousIcon} from '@ui/icons/material/Dangerous';
-import {ReactNode, useContext} from 'react';
+import {ReactNode, useContext, useMemo} from 'react';
 import {DevicesIcon} from '@ui/icons/material/Devices';
 import {useAuth} from '@common/auth/use-auth';
 import {useSettings} from '@ui/settings/use-settings';
@@ -36,16 +36,16 @@ export function AccountSettingsSidenav() {
   const {auth} = useContext(SiteConfigContext);
   const allSocialsDisabled = useAllSocialLoginsDisabled();
   // Check if telegram is enabled for uploads or public storage
-  var isTelegramDriver = null;
-  try{ 
-    isTelegramDriver= uploads?.uploads_driver === 'telegram' || 
-    uploads?.public_driver === 'telegram';
-  }catch(e)
-  {
-    const settings = getBootstrapData().settings;
-     isTelegramDriver = settings.uploads.uploads_driver  === 'telegram'
-      || settings.uploads.public_driver  === 'telegram' ;
-  }
+    const isTelegramDriver = useMemo(() => {
+    if (!uploads) return false;
+    
+    return uploads.uploads_driver === 'telegram' || 
+           uploads.public_driver === 'telegram';
+  }, [uploads]);
+    // const settings = getBootstrapData().settings;
+    // const isTelegramDriver = settings.uploads.uploads_driver  === 'telegram'
+    //   || settings.uploads.public_driver  === 'telegram' ;
+  
   return (
     <aside className="sticky top-10 hidden flex-shrink-0 lg:block">
       <List padding="p-0">
