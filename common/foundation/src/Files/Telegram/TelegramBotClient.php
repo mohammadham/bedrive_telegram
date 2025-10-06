@@ -155,31 +155,37 @@ class TelegramBotClient implements TelegramClientInterface
                 ]);
                 
                 if ($lastPhoto) {
-                    Log::info('Attempting to extract file_id', [
-                        'is_object' => is_object($lastPhoto),
-                        'has_method' => is_object($lastPhoto) ? method_exists($lastPhoto, 'getFileId') : false,
-                        'is_array' => is_array($lastPhoto),
-                    ]);
-                    
-                    // If it's an object with getFileId method
-                    if (is_object($lastPhoto) && method_exists($lastPhoto, 'getFileId')) {
-                        Log::info('Calling getFileId method');
-                        $fileId = $lastPhoto->getFileId();
-                        $fileUniqueId = $lastPhoto->getFileUniqueId();
-                        Log::info('Extracted file_id from photo object', [
-                            'file_id' => $fileId,
-                            'file_unique_id' => $fileUniqueId,
-                        ]);
+                    // Extract file_id from Telegram Bot SDK object
+                    if (is_object($lastPhoto)) {
+                        // Try different methods to access file_id
+                        if (method_exists($lastPhoto, 'getFileId')) {
+                            $fileId = $lastPhoto->getFileId();
+                            $fileUniqueId = $lastPhoto->getFileUniqueId();
+                        } elseif (method_exists($lastPhoto, 'get')) {
+                            // Telegram Bot SDK uses get() method
+                            $fileId = $lastPhoto->get('file_id');
+                            $fileUniqueId = $lastPhoto->get('file_unique_id');
+                        } elseif (isset($lastPhoto->file_id)) {
+                            // Magic getter
+                            $fileId = $lastPhoto->file_id;
+                            $fileUniqueId = $lastPhoto->file_unique_id ?? null;
+                        } elseif (property_exists($lastPhoto, 'file_id')) {
+                            $fileId = $lastPhoto->file_id;
+                            $fileUniqueId = $lastPhoto->file_unique_id ?? null;
+                        }
+                        
+                        if ($fileId) {
+                            Log::info('Extracted file_id from photo object', [
+                                'file_id' => $fileId,
+                                'file_unique_id' => $fileUniqueId,
+                            ]);
+                        }
                     }
-                    // If it's an array (from toArray conversion), access by key
+                    // If it's an array (from toArray conversion)
                     elseif (is_array($lastPhoto) && isset($lastPhoto['file_id'])) {
                         $fileId = $lastPhoto['file_id'];
                         $fileUniqueId = $lastPhoto['file_unique_id'] ?? null;
                         Log::info('Extracted file_id from photo array', ['file_id' => $fileId]);
-                    } else {
-                        Log::warning('Could not extract file_id - no matching condition', [
-                            'last_photo_dump' => print_r($lastPhoto, true),
-                        ]);
                     }
                 } else {
                     Log::error('lastPhoto is null or empty');
