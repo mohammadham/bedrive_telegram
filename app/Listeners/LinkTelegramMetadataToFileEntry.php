@@ -82,6 +82,18 @@ class LinkTelegramMetadataToFileEntry
             // 🔥 Dispatch FileUploaded event برای Telegram uploads
             // اولین FileUploaded از FileEntriesController هنوز metadata ندارد
             // این dispatch دوم است که metadata دارد و AutoForward می‌تواند کار کند
+            // 
+            // ✅ IMPORTANT: فقط یک بار dispatch کنیم!
+            // چون این listener ممکن است چند بار فراخوانی شود (مثلاً از queue retry)
+            // بررسی می‌کنیم که metadata تازه به این FileEntry link شده باشد
+            if (!$metadata->wasChanged('file_entry_id')) {
+                // metadata قبلاً به این FileEntry link شده بود، skip
+                Log::debug('Skipping FileUploaded dispatch: metadata already linked', [
+                    'file_entry_id' => $fileEntry->id,
+                    'metadata_id' => $metadata->id,
+                ]);
+                return;
+            }
             Log::debug('Dispatching FileUploaded with metadata for AutoForward', [
                 'file_entry_id' => $fileEntry->id,
                 'metadata_id' => $metadata->id,
