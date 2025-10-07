@@ -108,31 +108,24 @@ class AutoForwardToTelegram implements ShouldQueue
         }
 
 try {
-        // از DB::table استفاده می‌کنیم تا از cache بگذریم
-            $settingsKeys = [
-                'storage_telegram_bot_token',
-                'storage_telegram_channel_id', 
-                'storage_telegram_api_id',
-                'storage_telegram_api_hash',
-                'storage_telegram_phone',
+            // 🔧 CRITICAL FIX: در BeDrive، تنظیمات server در .env ذخیره می‌شوند
+            // و queue worker .env را cache می‌کند! پس باید fresh بخوانیم
+            $envSettings = (new \Common\Settings\DotEnvEditor())->load();
+            
+            $config = [
+                'bot_token' => $envSettings['storage_telegram_bot_token'] ?? null,
+                'channel_id' => $envSettings['storage_telegram_channel_id'] ?? null,
+                'api_id' => $envSettings['storage_telegram_api_id'] ?? null,
+                'api_hash' => $envSettings['storage_telegram_api_hash'] ?? null,
+                'phone' => $envSettings['storage_telegram_phone'] ?? null,
             ];
             
-            $settingsData = \DB::table('settings')
-                ->whereIn('name', $settingsKeys)
-                ->pluck('value', 'name')
-                ->toArray();
-            // دریافت config از services
-            $config = [
-                'bot_token' => $settingsData['storage_telegram_bot_token'] ?? config('services.telegram.bot_token') ?? settings('storage_telegram_bot_token')??env('STORAGE_TELEGRAM_BOT_TOKEN'),
-                'api_id' => $settingsData['storage_telegram_api_id'] ?? config('services.telegram.api_id') ?? settings('storage_telegram_api_id') ?? env('STORAGE_TELEGRAM_API_ID'),
-                'api_hash' => $settingsData['storage_telegram_api_hash'] ?? config('services.telegram.api_hash') ?? settings('storage_telegram_api_hash') ?? env('STORAGE_TELEGRAM_API_HASH'),
-                'phone' => $settingsData['storage_telegram_phone'] ?? config('services.telegram.phone') ?? settings('storage_telegram_phone') ?? env('STORAGE_TELEGRAM_PHONE'),
-            ];
-            Log::debug('Auto-forward: Loading Telegram config from database', [
+            Log::debug('Auto-forward: Loading Telegram config from .env (fresh)', [
                 'has_bot_token' => !empty($config['bot_token']),
+                'has_channel_id' => !empty($config['channel_id']),
                 'has_api_id' => !empty($config['api_id']),
                 'has_phone' => !empty($config['phone']),
-                'settings_found' => count($settingsData),
+                'env_keys_found' => count(array_filter($config)),
             ]);
             // Initialize TelegramFileManager با channel_id از metadata
             // Constructor signature: __construct(?string $channelId, array $config)
