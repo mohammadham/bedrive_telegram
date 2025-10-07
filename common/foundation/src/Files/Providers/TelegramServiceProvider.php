@@ -51,14 +51,17 @@ class TelegramServiceProvider extends ServiceProvider
     {
         // Register TelegramFileManager as singleton
         $this->app->singleton(TelegramFileManager::class, function ($app) {
-            // Get channel_id from database settings or fallback to config
-            $channelId = config('services.telegram.channel_id') ?? settings('storage_telegram_channel_id') ;
-            try{
-            return new TelegramFileManager($channelId);
-            }catch(Exeption $e)
-            {
-                return new TelegramFileManager();
-            }
+            // Load telegram settings from database first, then fallback to config
+            $telegramConfig = [
+                'bot_token' => settings('storage_telegram_bot_token') ?? config('services.telegram.bot_token'),
+                'channel_id' => settings('storage_telegram_channel_id') ?? config('services.telegram.channel_id'),
+                'api_id' => settings('storage_telegram_api_id') ?? config('services.telegram.api_id'),
+                'api_hash' => settings('storage_telegram_api_hash') ?? config('services.telegram.api_hash'),
+                'phone' => settings('storage_telegram_phone') ?? config('services.telegram.phone'),
+            ];
+
+            // Return TelegramFileManager with full config
+            return new TelegramFileManager($telegramConfig['channel_id'], $telegramConfig);
         });
     }
 }

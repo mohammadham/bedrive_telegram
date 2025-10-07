@@ -30,11 +30,11 @@ return [
     ],
 
     'telegram' => [
-        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
-        'channel_id' => env('TELEGRAM_CHANNEL_ID'),
-        'api_id' => env('TELEGRAM_API_ID'),
-        'api_hash' => env('TELEGRAM_API_HASH'),
-        'phone' => env('TELEGRAM_PHONE'),
-        'session_file' => env('TELEGRAM_SESSION_FILE', storage_path('app/telegram/session.madeline')),
+        'bot_token' => env('TELEGRAM_BOT_TOKEN') ?? env('STORAGE_TELEGRAM_BOT_TOKEN'),
+        'channel_id' => env('TELEGRAM_CHANNEL_ID') ?? env('STORAGE_TELEGRAM_CHANNEL_ID'),
+        'api_id' => env('TELEGRAM_API_ID') ?? env('STORAGE_TELEGRAM_API_ID'),
+        'api_hash' => env('TELEGRAM_API_HASH') ?? env('STORAGE_TELEGRAM_API_HASH'),
+        'phone' => env('TELEGRAM_PHONE') ?? env('STORAGE_TELEGRAM_PHONE'),
+        'session_file' => env('TELEGRAM_SESSION_FILE') ?? env('STORAGE_TELEGRAM_SESSION_FILE', storage_path('app/telegram/session.madeline')),
     ],
 ];

@@ -30,15 +30,29 @@ class TelegramFileManager
         // Store config for later use
         $this->config = $config;
         
-        // Channel ID should come from config (loaded from .env)
+        // Channel ID should come from:
+        // 1. Passed parameter
+        // 2. Config array
+        // 3. Database settings
+        // 4. Environment config
         $this->defaultChannelId = $channelId 
+            ?? ($config['channel_id'] ?? null)
+            ?? settings('storage_telegram_channel_id')
             ?? config('services.telegram.channel_id')
             ?? '';
 
         if (empty($this->defaultChannelId)) {
+            // Log all attempted sources for debugging
+            Log::error('TelegramFileManager: channel_id not found', [
+                'param_channel_id' => $channelId,
+                'config_channel_id' => $config['channel_id'] ?? null,
+                'settings_channel_id' => settings('storage_telegram_channel_id'),
+                'env_channel_id' => config('services.telegram.channel_id'),
+            ]);
+
             throw TelegramConfigException::missingConfig(
                 'channel_id',
-                'Please configure Telegram settings in Admin Panel → Settings → Uploading'
+                'Please configure Telegram settings in Admin Panel → Settings → Uploading. Current values checked: parameter, config array, database settings, and environment config - all returned empty.'
             );
         }
 
