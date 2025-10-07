@@ -39,6 +39,7 @@ class TelegramFileManager
             ?? ($config['channel_id'] ?? null)
             ?? settings('storage_telegram_channel_id')
             ?? config('services.telegram.channel_id')
+            ??env('TELEGRAM_CHANNEL_ID') ?? env('STORAGE_TELEGRAM_CHANNEL_ID')
             ?? '';
 
         if (empty($this->defaultChannelId)) {

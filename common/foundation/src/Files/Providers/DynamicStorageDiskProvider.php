@@ -2,6 +2,7 @@
 
 namespace Common\Files\Providers;
 
+use Common\Settings\DotEnvEditor;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Arr;
@@ -44,15 +45,18 @@ class DynamicStorageDiskProvider extends ServiceProvider
             config("services.$driverName") ?? [],
         );
         
-        // For telegram driver, also load settings from database
+        // For telegram driver, also load settings from .env file
         if ($driverName === 'telegram') {
+            // Load from .env file first (where admin panel saves settings)
+            $envSettings = (new DotEnvEditor())->load();
+            
             $telegramSettings = array_filter([
-                'bot_token' => settings('storage_telegram_bot_token') ?? env('STORAGE_TELEGRAM_BOT_TOKEN'),
-                'channel_id' => settings('storage_telegram_channel_id') ?? env('STORAGE_TELEGRAM_CHANNEL_ID') ,
-                'api_id' => settings('storage_telegram_api_id')?? env('STORAGE_TELEGRAM_API_ID') ,
-                'api_hash' => settings('storage_telegram_api_hash')?? env('STORAGE_TELEGRAM_API_HASH'),
-                'phone' => settings('storage_telegram_phone')?? env('STORAGE_TELEGRAM_PHONE'),
-                'session_file' => settings('storage_telegram_session_file')?? env('STORAGE_TELEGRAM_SESSION_FILE'),
+                'bot_token' => $envSettings['storage_telegram_bot_token'] ?? settings('storage_telegram_bot_token') ?? env('STORAGE_TELEGRAM_BOT_TOKEN'),
+                'channel_id' => $envSettings['storage_telegram_channel_id'] ?? settings('storage_telegram_channel_id') ?? env('STORAGE_TELEGRAM_CHANNEL_ID'),
+                'api_id' => $envSettings['storage_telegram_api_id'] ?? settings('storage_telegram_api_id') ?? env('STORAGE_TELEGRAM_API_ID'),
+                'api_hash' => $envSettings['storage_telegram_api_hash'] ?? settings('storage_telegram_api_hash') ?? env('STORAGE_TELEGRAM_API_HASH'),
+                'phone' => $envSettings['storage_telegram_phone'] ?? settings('storage_telegram_phone') ?? env('STORAGE_TELEGRAM_PHONE'),
+                'session_file' => $envSettings['storage_telegram_session_file'] ?? settings('storage_telegram_session_file') ?? env('STORAGE_TELEGRAM_SESSION_FILE'),
             ], fn($value) => !empty($value));
             
             Log::info('DynamicStorageDiskProvider loading Telegram settings', [
