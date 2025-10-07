@@ -8,6 +8,7 @@ use Common\Core\BaseController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Telegram URL Upload Controller
@@ -140,9 +141,9 @@ class TelegramUrlUploadController extends BaseController
     public function validateUrl(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'url' => 'required|url|max:2048',
+            'url' => 'required|url',
         ]);
-
+        Log::info($request->all());
         if ($validator->fails()) {
             return $this->error($validator->errors()->first(),[], 422);
         }
