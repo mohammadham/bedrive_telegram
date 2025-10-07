@@ -8,6 +8,7 @@ import {Trans} from '@ui/i18n/trans';
 import {Dialog} from '@ui/overlays/dialog/dialog';
 import {DialogHeader} from '@ui/overlays/dialog/dialog-header';
 import {DialogBody} from '@ui/overlays/dialog/dialog-body';
+import {useDialogContext} from '@ui/overlays/dialog/dialog-context';
 import {Tabs} from '@ui/tabs/tabs';
 import {TabList} from '@ui/tabs/tab-list';
 import {Tab} from '@ui/tabs/tab';
@@ -18,18 +19,10 @@ import {TelegramUploadProgress} from './telegram-upload-progress';
 import {TelegramUploadTab} from './telegram-types';
 import {uploadFromUrl, uploadBulkFromUrls} from './telegram-url-upload-api';
 import {toast} from '@ui/toast/toast';
-import {useDriveStore} from '../drive-store';
 import {queryClient} from '@common/http/query-client';
 
-interface TelegramUrlUploadDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export function TelegramUrlUploadDialog({
-  isOpen,
-  onClose,
-}: TelegramUrlUploadDialogProps) {
+export function TelegramUrlUploadDialog() {
+  const {close} = useDialogContext();
   const [activeTab, setActiveTab] = useState<TelegramUploadTab>('single');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadSessionId, setUploadSessionId] = useState<string | null>(null);
@@ -71,7 +64,7 @@ export function TelegramUrlUploadDialog({
 
     // بستن dialog بعد از 1 ثانیه
     setTimeout(() => {
-      onClose();
+      close();
     }, 1000);
   };
 
@@ -112,7 +105,7 @@ export function TelegramUrlUploadDialog({
         console.log('Failed uploads:', response.failed);
       }
 
-      onClose();
+      close();
     } catch (error: any) {
       toast.danger(
         error.message || <Trans message="خطا در آپلود فایل‌ها به تلگرام" />,
@@ -121,8 +114,6 @@ export function TelegramUrlUploadDialog({
       setIsSubmitting(false);
     }
   };
-
-  if (!isOpen) return null;
 
   return (
     <Dialog size="lg">
