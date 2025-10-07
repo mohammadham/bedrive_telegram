@@ -79,15 +79,16 @@ class LinkTelegramMetadataToFileEntry
                 'file_name' => $fileEntry->file_name,
             ]);
             
-            // 🔥 IMPORTANT: Dispatch FileUploaded event for Telegram uploads
-            // This triggers Auto-Forward listener if enabled by user
-            Log::info('Dispatching FileUploaded event for Telegram file', [
+            // 🔥 Dispatch FileUploaded event برای Telegram uploads
+            // اولین FileUploaded از FileEntriesController هنوز metadata ندارد
+            // این dispatch دوم است که metadata دارد و AutoForward می‌تواند کار کند
+            Log::debug('Dispatching FileUploaded with metadata for AutoForward', [
                 'file_entry_id' => $fileEntry->id,
-                'file_name' => $fileEntry->file_name,
+                'metadata_id' => $metadata->id,
             ]);
             
-            // بارگذاری relations قبل از dispatch event
-            $fileEntry->load('owner');
+            // Refresh fileEntry to ensure metadata is loaded
+            $fileEntry = $fileEntry->fresh(['owner', 'telegramMetadata']);
             
             event(new FileUploaded($fileEntry));
         } else {

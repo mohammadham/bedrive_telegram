@@ -86,20 +86,39 @@ class AutoForwardToTelegram implements ShouldQueue
             return;
         }
 
-        // چک کنیم که فایل در تلگرام آپلود شده
+        // چک کنیم که فایل در تلگرام آپلود شده و metadata موجود است
         $metadata = $fileEntry->telegramMetadata;
-        if (!$metadata || !$metadata->isUploadCompleted()) {
-            Log::warning('Auto-forward skipped: file not in Telegram', [
+        if (!$metadata) {
+            // اولین بار که FileUploaded dispatch می‌شود، metadata هنوز link نشده
+            // دفعه دوم که از LinkTelegramMetadataToFileEntry dispatch می‌شود، metadata موجود است
+            Log::debug('Auto-forward skipped: metadata not yet linked', [
                 'file_id' => $fileEntry->id,
                 'user_id' => $user->id,
             ]);
             return;
         }
+        
+        if (!$metadata->isUploadCompleted()) {
+            Log::warning('Auto-forward skipped: upload not completed', [
+                'file_id' => $fileEntry->id,
+                'user_id' => $user->id,
+                'metadata_status' => $metadata->upload_status,
+            ]);
+            return;
+        }
 
         try {
-            // Initialize TelegramFileManager only when needed (lazy initialization)
-            // At this point, config is already loaded from .env
-            $telegramManager = app(TelegramFileManager::class);
+            // دریافت config از metadata که در زمان آپلود استفاده شده
+            $config = [
+                'bot_token' => config('services.telegram.bot_token'),
+                'channel_id' => $metadata->channel_id, // از metadata می‌گیریم
+                'api_id' => config('services.telegram.api_id'),
+                'api_hash' => config('services.telegram.api_hash'),
+                'phone' => config('services.telegram.phone'),
+            ];
+            
+            // Initialize TelegramFileManager با config کامل
+            $telegramManager = new TelegramFileManager($config);
             
             // 🔍 SMART TARGET DETECTION:
             // تشخیص نوع target و انتخاب روش مناسب forward
@@ -110,6 +129,7 @@ class AutoForwardToTelegram implements ShouldQueue
                 'file_id' => $fileEntry->id,
                 'user_id' => $user->id,
                 'target_id' => $targetId,
+                'source_channel_id' => $metadata->channel_id,
                 'detected_type' => $targetDetection['type'],
                 'forward_method' => $forwardMethod,
                 'reason' => $targetDetection['reason'],
