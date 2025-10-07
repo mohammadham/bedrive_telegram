@@ -108,17 +108,31 @@ class AutoForwardToTelegram implements ShouldQueue
         }
 
 try {
+        // از DB::table استفاده می‌کنیم تا از cache بگذریم
+            $settingsKeys = [
+                'storage_telegram_bot_token',
+                'storage_telegram_channel_id', 
+                'storage_telegram_api_id',
+                'storage_telegram_api_hash',
+                'storage_telegram_phone',
+            ];
+            
+            $settingsData = \DB::table('settings')
+                ->whereIn('name', $settingsKeys)
+                ->pluck('value', 'name')
+                ->toArray();
             // دریافت config از services
             $config = [
-                'bot_token' => config('services.telegram.bot_token') ?? settings('storage_telegram_bot_token'),
-                'api_id' => config('services.telegram.api_id') ?? settings('storage_telegram_api_id'),
-                'api_hash' => config('services.telegram.api_hash') ?? settings('storage_telegram_api_hash'),
-                'phone' => config('services.telegram.phone') ?? settings('storage_telegram_phone'),
+                'bot_token' => $settingsData['storage_telegram_bot_token'] ?? config('services.telegram.bot_token') ?? settings('storage_telegram_bot_token'),
+                'api_id' => $settingsData['storage_telegram_api_id'] ?? config('services.telegram.api_id') ?? settings('storage_telegram_api_id'),
+                'api_hash' => $settingsData['storage_telegram_api_hash'] ?? config('services.telegram.api_hash') ?? settings('storage_telegram_api_hash'),
+                'phone' => $settingsData['storage_telegram_phone'] ?? config('services.telegram.phone') ?? settings('storage_telegram_phone'),
             ];
-             Log::debug('Auto-forward: Loading Telegram config from settings', [
+            Log::debug('Auto-forward: Loading Telegram config from database', [
                 'has_bot_token' => !empty($config['bot_token']),
                 'has_api_id' => !empty($config['api_id']),
                 'has_phone' => !empty($config['phone']),
+                'settings_found' => count($settingsData),
             ]);
             // Initialize TelegramFileManager با channel_id از metadata
             // Constructor signature: __construct(?string $channelId, array $config)
