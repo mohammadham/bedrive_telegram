@@ -25,10 +25,8 @@ class AutoForwardToTelegram implements ShouldQueue
      */
     public function __construct()
     {
-        // $this->telegramManager = new TelegramFileManager();
-           // Don't initialize TelegramFileManager here!
+        // Don't initialize TelegramFileManager here!
         // It will be created lazily when needed
-        Log::info('Auto-forward: Target detected');
     }
     /**
      * Check if Telegram driver is enabled
@@ -48,20 +46,29 @@ class AutoForwardToTelegram implements ShouldQueue
     {
         /** @var FileEntry $fileEntry */
         $fileEntry = $event->fileEntry;
-        Log::info('Auto-forward: Target detected', [
-                'isTelegramDriverEnabled' => $this->isTelegramDriverEnabled(),
-                'file_entry_id' => $fileEntry,
-            ]);
-        // Check if the file is stored on Telegram disk
         
+        // Check if the file is stored on Telegram disk
         if (! $this->isTelegramDriverEnabled()) {
             return;
         }
-        // دریافت user
-        $user = $fileEntry->user;
+        
+        // بارگذاری relations لازم
+        $fileEntry->load(['owner', 'telegramMetadata']);
+        
+        // دریافت owner (user)
+        $user = $fileEntry->owner;
         if (!$user) {
+            Log::info('Auto-forward skipped: no owner', [
+                'file_entry_id' => $fileEntry->id,
+            ]);
             return;
         }
+        
+        Log::info('Auto-forward: Checking user settings', [
+            'file_entry_id' => $fileEntry->id,
+            'owner_id' => $user->id,
+            'has_auto_forward' => $user->hasTelegramAutoForward(),
+        ]);
 
         // چک کنیم که auto-forward فعال است
         if (!$user->hasTelegramAutoForward()) {
@@ -93,7 +100,9 @@ class AutoForwardToTelegram implements ShouldQueue
             $targetDetection = TelegramTargetDetector::detectTarget($targetId);
             $forwardMethod = $targetDetection['method']; // 'bot' or 'user'
             
-            Log::info('Auto-forward: Target detected', [
+            Log::info('Auto-forward: Processing forward', [
+                'file_id' => $fileEntry->id,
+                'user_id' => $user->id,
                 'target_id' => $targetId,
                 'detected_type' => $targetDetection['type'],
                 'forward_method' => $forwardMethod,
@@ -107,11 +116,6 @@ class AutoForwardToTelegram implements ShouldQueue
             $client = ($forwardMethod === 'bot')
                 ? $telegramManager->getBotClient()
                 : $telegramManager->getUserClient();
-            
-            Log::info('Auto-forward: Using client', [
-                'client_type' => $client->getClientType(),
-                'target_type' => $targetDetection['type'],
-            ]);
 
             // Forward message
             $result = $client->forwardMessage(

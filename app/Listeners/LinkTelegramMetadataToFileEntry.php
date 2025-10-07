@@ -86,7 +86,10 @@ class LinkTelegramMetadataToFileEntry
                 'file_name' => $fileEntry->file_name,
             ]);
             
-            // event(new FileUploaded($fileEntry));
+            // بارگذاری relations قبل از dispatch event
+            $fileEntry->load('owner');
+            
+            event(new FileUploaded($fileEntry));
         } else {
             Log::warning('No Telegram metadata found for FileEntry', [
                 'file_entry_id' => $fileEntry->id,
