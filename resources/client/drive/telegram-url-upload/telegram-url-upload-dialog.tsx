@@ -9,10 +9,8 @@ import {Dialog} from '@ui/overlays/dialog/dialog';
 import {DialogHeader} from '@ui/overlays/dialog/dialog-header';
 import {DialogBody} from '@ui/overlays/dialog/dialog-body';
 import {useDialogContext} from '@ui/overlays/dialog/dialog-context';
-import {Tabs} from '@ui/tabs/tabs';
-import {TabList} from '@ui/tabs/tab-list';
-import {Tab} from '@ui/tabs/tab';
-import {TabPanel} from '@ui/tabs/tab-panels';
+import {Button} from '@ui/buttons/button';
+import {ButtonGroup} from '@ui/buttons/button-group';
 import {SingleUrlForm} from './single-url-form';
 import {BulkUrlsForm} from './bulk-urls-form';
 import {TelegramUploadProgress} from './telegram-upload-progress';
@@ -118,14 +116,14 @@ export function TelegramUrlUploadDialog() {
   return (
     <Dialog size="lg">
       <DialogHeader>
-        <Trans message="آپلود از URL به تلگرام" />
+        <Trans message="Upload from URL to Telegram" />
       </DialogHeader>
       <DialogBody>
         {/* نمایش Progress اگر آپلود شروع شده */}
         {uploadSessionId ? (
           <div className="space-y-16">
             <div className="text-center text-sm text-muted mb-16">
-              <Trans message="در حال آپلود..." />
+              <Trans message="Uploading..." />
             </div>
             <TelegramUploadProgress
               sessionId={uploadSessionId}
@@ -136,32 +134,42 @@ export function TelegramUrlUploadDialog() {
             />
           </div>
         ) : (
-          <Tabs selectedTab={activeTab === 'single' ? 0 : 1} onTabChange={(index) => setActiveTab(index === 0 ? 'single' : 'bulk')}>
-            <TabList className="mb-24">
-              <Tab index={0}>
-                <Trans message="آپلود تکی" />
-              </Tab>
-              <Tab index={1}>
-                <Trans message="آپلود دسته‌ای" />
-              </Tab>
-            </TabList>
+          <div className="space-y-24">
+            {/* Tab Buttons */}
+            <ButtonGroup variant="outline" size="sm" className="w-full">
+              <Button
+                className="flex-1"
+                color={activeTab === 'single' ? 'primary' : 'paper'}
+                variant={activeTab === 'single' ? 'flat' : 'outline'}
+                onClick={() => setActiveTab('single')}
+              >
+                <Trans message="Single Upload" />
+              </Button>
+              <Button
+                className="flex-1"
+                color={activeTab === 'bulk' ? 'primary' : 'paper'}
+                variant={activeTab === 'bulk' ? 'flat' : 'outline'}
+                onClick={() => setActiveTab('bulk')}
+              >
+                <Trans message="Bulk Upload" />
+              </Button>
+            </ButtonGroup>
 
+            {/* Tab Content */}
             <div className="pt-12">
-              <TabPanel index={0}>
+              {activeTab === 'single' ? (
                 <SingleUrlForm
                   onSubmit={handleSingleSubmit}
                   isSubmitting={isSubmitting}
                 />
-              </TabPanel>
-
-              <TabPanel index={1}>
+              ) : (
                 <BulkUrlsForm
                   onSubmit={handleBulkSubmit}
                   isSubmitting={isSubmitting}
                 />
-              </TabPanel>
+              )}
             </div>
-          </Tabs>
+          </div>
         )}
       </DialogBody>
     </Dialog>

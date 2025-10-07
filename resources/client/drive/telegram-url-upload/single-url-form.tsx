@@ -63,7 +63,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
       setPreview(previewData);
       
       if (!previewData.is_accessible) {
-        setUrlError(previewData.error || 'فایل قابل دسترسی نیست');
+        setUrlError(previewData.error || 'File is not accessible');
       } else {
         setUrlError('');
         // Update filename if available
@@ -72,7 +72,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
         }
       }
     } catch (error: any) {
-      setUrlError(error.message || 'خطا در بارگذاری اطلاعات URL');
+      setUrlError(error.message || 'Error loading URL information');
     } finally {
       setIsLoadingPreview(false);
     }
@@ -100,7 +100,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
     <form onSubmit={handleSubmit} className="space-y-24">
       {/* URL Input */}
       <TextField
-        label={<Trans message="فایل URL" />}
+        label={<Trans message="File URL" />}
         placeholder="https://example.com/file.pdf"
         value={url}
         onChange={e => setUrl(e.target.value)}
@@ -111,7 +111,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
         startAdornment={<LinkIcon className="text-muted" />}
         errorMessage={urlError}
         description={
-          <Trans message="لینک مستقیم فایلی که می‌خواهید به تلگرام آپلود کنید" />
+          <Trans message="Direct link to the file you want to upload to Telegram" />
         }
       />
 
@@ -120,7 +120,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
         <div className="flex items-center gap-8 rounded border border-primary-light bg-primary-light/10 p-12">
           <ProgressCircle size="sm" isIndeterminate />
           <span className="text-sm text-muted">
-            <Trans message="در حال دریافت اطلاعات..." />
+            <Trans message="Loading information..." />
           </span>
         </div>
       )}
@@ -130,18 +130,18 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
           <div className="mb-6 flex items-center gap-8">
             <CheckCircleIcon size="sm" className="text-positive" />
             <span className="text-sm font-medium text-positive">
-              <Trans message="فایل قابل دسترسی است" />
+              <Trans message="File is accessible" />
             </span>
           </div>
           <div className="space-y-4 text-xs text-muted">
             {preview.size && (
               <div>
-                <Trans message="حجم" />: {formatFileSize(preview.size)}
+                <Trans message="Size" />: {formatFileSize(preview.size)}
               </div>
             )}
             {preview.mime_type && (
               <div>
-                <Trans message="نوع" />: {preview.mime_type}
+                <Trans message="Type" />: {preview.mime_type}
               </div>
             )}
           </div>
@@ -153,7 +153,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
           <div className="flex items-center gap-8">
             <ErrorIcon size="sm" className="text-danger" />
             <span className="text-sm text-danger">
-              {preview.error || <Trans message="فایل قابل دسترسی نیست" />}
+              {preview.error || <Trans message="File is not accessible" />}
             </span>
           </div>
         </div>
@@ -161,13 +161,13 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
 
       {/* Filename Input */}
       <TextField
-        label={<Trans message="نام فایل (اختیاری)" />}
+        label={<Trans message="Filename (Optional)" />}
         placeholder="document.pdf"
         value={filename}
         onChange={e => setFilename(e.target.value)}
         disabled={isSubmitting}
         description={
-          <Trans message="نام فایل در سیستم شما. در صورت خالی بودن، از نام فایل اصلی استفاده می‌شود" />
+          <Trans message="File name in your system. If empty, the original file name will be used" />
         }
       />
 
@@ -181,26 +181,26 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
         startIcon={<CloudUploadIcon />}
       >
         {isSubmitting ? (
-          <Trans message="در حال آپلود..." />
+          <Trans message="Uploading..." />
         ) : (
-          <Trans message="آپلود به تلگرام" />
+          <Trans message="Upload to Telegram" />
         )}
       </Button>
 
       {/* Help Text */}
       <div className="rounded bg-alt p-12 text-xs text-muted">
         <div className="mb-6 font-medium">
-          <Trans message="💡 نکته:" />
+          <Trans message="💡 Note:" />
         </div>
         <ul className="list-inside list-disc space-y-2">
           <li>
-            <Trans message="فایل‌های کمتر از 50MB از طریق Bot آپلود می‌شوند (سریع)" />
+            <Trans message="Files less than 50MB are uploaded via Bot (fast)" />
           </li>
           <li>
-            <Trans message="فایل‌های 50MB تا 2GB از طریق User Account (کندتر)" />
+            <Trans message="Files 50MB to 2GB via User Account (slower)" />
           </li>
           <li>
-            <Trans message="حداکثر حجم قابل آپلود: 2GB" />
+            <Trans message="Maximum upload size: 2GB" />
           </li>
         </ul>
       </div>
