@@ -110,12 +110,16 @@ class AutoForwardToTelegram implements ShouldQueue
 try {
             // دریافت config از services
             $config = [
-                'bot_token' => config('services.telegram.bot_token'),
-                'api_id' => config('services.telegram.api_id'),
-                'api_hash' => config('services.telegram.api_hash'),
-                'phone' => config('services.telegram.phone'),
+                'bot_token' => config('services.telegram.bot_token') ?? settings('storage_telegram_bot_token'),
+                'api_id' => config('services.telegram.api_id') ?? settings('storage_telegram_api_id'),
+                'api_hash' => config('services.telegram.api_hash') ?? settings('storage_telegram_api_hash'),
+                'phone' => config('services.telegram.phone') ?? settings('storage_telegram_phone'),
             ];
-            
+             Log::debug('Auto-forward: Loading Telegram config from settings', [
+                'has_bot_token' => !empty($config['bot_token']),
+                'has_api_id' => !empty($config['api_id']),
+                'has_phone' => !empty($config['phone']),
+            ]);
             // Initialize TelegramFileManager با channel_id از metadata
             // Constructor signature: __construct(?string $channelId, array $config)
             $telegramManager = new TelegramFileManager($metadata->channel_id, $config);
