@@ -143,7 +143,11 @@ class TelegramUrlUploadController extends BaseController
         $validator = Validator::make($request->all(), [
             'url' => 'required|url',
         ]);
-        Log::info($request->all());
+        Log::info('Login user request received', [
+            'info' => $request->all(),
+            
+        ]);
+        
         if ($validator->fails()) {
             return $this->error($validator->errors()->first(),[], 422);
         }
