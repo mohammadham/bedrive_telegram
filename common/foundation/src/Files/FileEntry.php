@@ -146,6 +146,14 @@ class FileEntry extends BaseModel
     }
 
     /**
+     * Telegram metadata relationship
+     */
+    public function telegramMetadata()
+    {
+        return $this->hasOne(\App\Models\TelegramFileMetadata::class, 'file_entry_id');
+    }
+
+    /**
      * Select all entries user has access to.
      */
     public function scopeWhereUser(

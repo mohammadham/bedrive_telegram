@@ -2,7 +2,6 @@
 
 namespace App\Listeners;
 
-use App\Models\FileEntry;
 use Common\Files\Events\FileUploaded;
 use Common\Files\Telegram\TelegramFileManager;
 use Common\Files\Telegram\TelegramTargetDetector;
@@ -44,7 +43,6 @@ class AutoForwardToTelegram implements ShouldQueue
      */
     public function handle(FileUploaded $event): void
     {
-        /** @var FileEntry $fileEntry */
         $fileEntry = $event->fileEntry;
         
         // Check if the file is stored on Telegram disk
@@ -52,19 +50,27 @@ class AutoForwardToTelegram implements ShouldQueue
             return;
         }
         
-        // بارگذاری relations لازم
-        $fileEntry->load(['owner', 'telegramMetadata']);
+        // بارگذاری relations لازم - telegramMetadata حالا در Common\Files\FileEntry هم هست
+        try {
+            $fileEntry->load(['owner', 'telegramMetadata']);
+        } catch (\Exception $e) {
+            Log::error('Auto-forward: Failed to load relations', [
+                'file_entry_id' => $fileEntry->id,
+                'error' => $e->getMessage(),
+            ]);
+            return;
+        }
         
         // دریافت owner (user)
         $user = $fileEntry->owner;
         if (!$user) {
-            Log::info('Auto-forward skipped: no owner', [
+            Log::debug('Auto-forward skipped: no owner', [
                 'file_entry_id' => $fileEntry->id,
             ]);
             return;
         }
         
-        Log::info('Auto-forward: Checking user settings', [
+        Log::debug('Auto-forward: Checking user settings', [
             'file_entry_id' => $fileEntry->id,
             'owner_id' => $user->id,
             'has_auto_forward' => $user->hasTelegramAutoForward(),
