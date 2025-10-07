@@ -123,10 +123,10 @@ try {
                 ->toArray();
             // دریافت config از services
             $config = [
-                'bot_token' => $settingsData['storage_telegram_bot_token'] ?? config('services.telegram.bot_token') ?? settings('storage_telegram_bot_token'),
-                'api_id' => $settingsData['storage_telegram_api_id'] ?? config('services.telegram.api_id') ?? settings('storage_telegram_api_id'),
-                'api_hash' => $settingsData['storage_telegram_api_hash'] ?? config('services.telegram.api_hash') ?? settings('storage_telegram_api_hash'),
-                'phone' => $settingsData['storage_telegram_phone'] ?? config('services.telegram.phone') ?? settings('storage_telegram_phone'),
+                'bot_token' => $settingsData['storage_telegram_bot_token'] ?? config('services.telegram.bot_token') ?? settings('storage_telegram_bot_token')??env('STORAGE_TELEGRAM_BOT_TOKEN'),
+                'api_id' => $settingsData['storage_telegram_api_id'] ?? config('services.telegram.api_id') ?? settings('storage_telegram_api_id') ?? env('STORAGE_TELEGRAM_API_ID'),
+                'api_hash' => $settingsData['storage_telegram_api_hash'] ?? config('services.telegram.api_hash') ?? settings('storage_telegram_api_hash') ?? env('STORAGE_TELEGRAM_API_HASH'),
+                'phone' => $settingsData['storage_telegram_phone'] ?? config('services.telegram.phone') ?? settings('storage_telegram_phone') ?? env('STORAGE_TELEGRAM_PHONE'),
             ];
             Log::debug('Auto-forward: Loading Telegram config from database', [
                 'has_bot_token' => !empty($config['bot_token']),
