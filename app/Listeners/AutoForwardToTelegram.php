@@ -107,18 +107,18 @@ class AutoForwardToTelegram implements ShouldQueue
             return;
         }
 
-        try {
-            // دریافت config از metadata که در زمان آپلود استفاده شده
+try {
+            // دریافت config از services
             $config = [
                 'bot_token' => config('services.telegram.bot_token'),
-                'channel_id' => $metadata->channel_id, // از metadata می‌گیریم
                 'api_id' => config('services.telegram.api_id'),
                 'api_hash' => config('services.telegram.api_hash'),
                 'phone' => config('services.telegram.phone'),
             ];
             
-            // Initialize TelegramFileManager با config کامل
-            $telegramManager = new TelegramFileManager($config);
+            // Initialize TelegramFileManager با channel_id از metadata
+            // Constructor signature: __construct(?string $channelId, array $config)
+            $telegramManager = new TelegramFileManager($metadata->channel_id, $config);
             
             // 🔍 SMART TARGET DETECTION:
             // تشخیص نوع target و انتخاب روش مناسب forward
