@@ -23,7 +23,7 @@ class TelegramStatsController extends BaseController
 
             return $this->success($stats);
         } catch (\Exception $e) {
-            return $this->error('Failed to fetch Telegram statistics: ' . $e->getMessage(), 500);
+            return $this->error('Failed to fetch Telegram statistics: ' . $e->getMessage(),[], 500);
         }
     }
 }

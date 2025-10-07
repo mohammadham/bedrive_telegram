@@ -32,12 +32,12 @@ class TelegramUploadProgressController extends BaseController
         $progress = $this->progressService->getProgress($sessionId);
 
         if (!$progress) {
-            return $this->error('Progress session not found', 404);
+            return $this->error('Progress session not found',[], 404);
         }
 
         // Check authorization - user can only see their own progress
         if ($progress->user_id !== auth()->id()) {
-            return $this->error('Unauthorized', 403);
+            return $this->error('Unauthorized',[], 403);
         }
 
         return $this->success([
@@ -58,7 +58,7 @@ class TelegramUploadProgressController extends BaseController
         ]);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            return $this->error($validator->errors()->first(),[], 422);
         }
 
         $limit = $request->input('limit', 10);
@@ -86,17 +86,17 @@ class TelegramUploadProgressController extends BaseController
         $progress = $this->progressService->getProgress($sessionId);
 
         if (!$progress) {
-            return $this->error('Progress session not found', 404);
+            return $this->error('Progress session not found',[], 404);
         }
 
         // Check authorization
         if ($progress->user_id !== auth()->id()) {
-            return $this->error('Unauthorized', 403);
+            return $this->error('Unauthorized',[], 403);
         }
 
         // Check if can be cancelled
         if (!$progress->isInProgress()) {
-            return $this->error('Cannot cancel - upload is not in progress', 400);
+            return $this->error('Cannot cancel - upload is not in progress',[], 400);
         }
 
         $this->progressService->cancel($sessionId);

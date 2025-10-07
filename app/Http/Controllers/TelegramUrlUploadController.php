@@ -46,7 +46,7 @@ class TelegramUrlUploadController extends BaseController
         ]);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            return $this->error($validator->errors()->first(),[], 422);
         }
 
         try {
@@ -73,7 +73,7 @@ class TelegramUrlUploadController extends BaseController
 
         } catch (\Exception $e) {
             return $this->error(
-                'Failed to upload file from URL: ' . $e->getMessage(),
+                'Failed to upload file from URL: ' . $e->getMessage(),[],
                 500
             );
         }
@@ -96,7 +96,7 @@ class TelegramUrlUploadController extends BaseController
         ]);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            return $this->error($validator->errors()->first(),[], 422);
         }
 
         try {
@@ -123,7 +123,7 @@ class TelegramUrlUploadController extends BaseController
 
         } catch (\Exception $e) {
             return $this->error(
-                'Failed to process bulk upload: ' . $e->getMessage(),
+                'Failed to process bulk upload: ' . $e->getMessage(),[],
                 500
             );
         }
@@ -144,7 +144,7 @@ class TelegramUrlUploadController extends BaseController
         ]);
 
         if ($validator->fails()) {
-            return $this->error($validator->errors()->first(), 422);
+            return $this->error($validator->errors()->first(),[], 422);
         }
 
         $url = $request->input('url');
@@ -154,7 +154,7 @@ class TelegramUrlUploadController extends BaseController
             $headers = @get_headers($url, 1);
             
             if (!$headers || !str_contains($headers[0], '200')) {
-                return $this->error('URL is not accessible', 400);
+                return $this->error('URL is not accessible',[], 400);
             }
 
             // Get content type and size
@@ -182,7 +182,7 @@ class TelegramUrlUploadController extends BaseController
             ]);
 
         } catch (\Exception $e) {
-            return $this->error('Failed to validate URL: ' . $e->getMessage(), 500);
+            return $this->error('Failed to validate URL: ' . $e->getMessage(),[], 500);
         }
     }
 

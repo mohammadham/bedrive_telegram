@@ -92,7 +92,7 @@ class UserTelegramSettingsController extends BaseController
 
         // اگر auto_forward فعال است، target الزامی است
         if ($validated['auto_forward'] && empty($validated['forward_target'])) {
-            return $this->error('Forward target is required when auto-forward is enabled', 422);
+            return $this->error('Forward target is required when auto-forward is enabled',[], 422);
         }
 
         // اگر target وجود دارد، format آن را چک کن
@@ -101,7 +101,7 @@ class UserTelegramSettingsController extends BaseController
             
             // باید یا کانال/گروه ID (-100...) یا username (@...) یا user ID باشد
             if (!preg_match('/^-100\d+$/', $target) && !preg_match('/^@\w+$/', $target) && !preg_match('/^\d+$/', $target)) {
-                return $this->error('Invalid Telegram ID format. Use channel/group ID (-1001234567890), username (@username), or user ID', 422);
+                return $this->error('Invalid Telegram ID format. Use channel/group ID (-1001234567890), username (@username), or user ID',[], 422);
             }
         }
 
@@ -125,7 +125,7 @@ class UserTelegramSettingsController extends BaseController
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->error('Failed to update settings', 500);
+            return $this->error('Failed to update settings',[], 500);
         }
     }
 
@@ -149,7 +149,7 @@ class UserTelegramSettingsController extends BaseController
 
         // چک کردن اینکه آیا قبلاً در تلگرام آپلود شده یا نه
         if ($fileEntry->telegramMetadata && $fileEntry->telegramMetadata->isUploadCompleted()) {
-            return $this->error('File is already uploaded to Telegram', 422);
+            return $this->error('File is already uploaded to Telegram',[], 422);
         }
 
         try {
@@ -205,7 +205,7 @@ class UserTelegramSettingsController extends BaseController
                 unlink($tempPath);
             }
             
-            return $this->error('Failed to upload to Telegram: ' . $e->getMessage(), 500);
+            return $this->error('Failed to upload to Telegram: ' . $e->getMessage(),[], 500);
         } catch (\Exception $e) {
             // حذف فایل موقت در صورت خطا
             if (isset($tempPath) && file_exists($tempPath)) {
@@ -219,7 +219,7 @@ class UserTelegramSettingsController extends BaseController
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->error('Failed to upload file to Telegram', 500);
+            return $this->error('Failed to upload file to Telegram', [],500);
         }
     }
 
@@ -243,7 +243,7 @@ class UserTelegramSettingsController extends BaseController
 
         // چک کردن اینکه فایل در تلگرام باشد
         if (!$fileEntry->telegramMetadata || !$fileEntry->telegramMetadata->isUploadCompleted()) {
-            return $this->error('File is not uploaded to Telegram', 422);
+            return $this->error('File is not uploaded to Telegram', [],422);
         }
 
         $metadata = $fileEntry->telegramMetadata;
@@ -251,7 +251,7 @@ class UserTelegramSettingsController extends BaseController
 
         // Validate target ID format
         if (!preg_match('/^-100\d+$/', $targetId) && !preg_match('/^@\w+$/', $targetId) && !preg_match('/^\d+$/', $targetId)) {
-            return $this->error('Invalid Telegram ID format', 422);
+            return $this->error('Invalid Telegram ID format',[], 422);
         }
 
         try {
@@ -296,7 +296,7 @@ class UserTelegramSettingsController extends BaseController
             ]);
 
         } catch (TelegramException $e) {
-            return $this->error('Failed to forward file: ' . $e->getMessage(), 500);
+            return $this->error('Failed to forward file: ' . $e->getMessage(),[], 500);
         } catch (\Exception $e) {
             Log::error('Failed to forward file', [
                 'file_id' => $fileId,
@@ -305,7 +305,7 @@ class UserTelegramSettingsController extends BaseController
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->error('Failed to forward file', 500);
+            return $this->error('Failed to forward file',[], 500);
         }
     }
 
