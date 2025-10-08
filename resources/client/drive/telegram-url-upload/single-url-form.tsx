@@ -63,7 +63,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
       setPreview(previewData);
       
       if (!previewData.is_accessible) {
-        setUrlError(previewData.error || 'File is not accessible');
+        setUrlError(previewData.error || 'File is not accessible1');
       } else {
         setUrlError('');
         // Update filename if available
@@ -153,7 +153,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
           <div className="flex items-center gap-8">
             <ErrorIcon size="sm" className="text-danger" />
             <span className="text-sm text-danger">
-              {preview.error || <Trans message="File is not accessible" />}
+              {preview.error || <Trans message="File is not accessible2" />}
             </span>
           </div>
         </div>
