@@ -4,20 +4,21 @@ namespace Common\Files\Telegram;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use App\Models\FileEntry;
 
 /**
  * Phase 8.2 Integration: URL Upload با Progress Tracking
  * 
- * Wrapper برای TelegramUrlUploadService که progress tracking را اضافه می‌کند
+ * Wrapper برای آپلود با progress tracking
  */
 class TelegramUrlUploadWithProgress
 {
-    protected TelegramUrlUploadService $uploadService;
+    protected TelegramFileManager $fileManager;
     protected TelegramUploadProgressService $progressService;
 
     public function __construct()
     {
-        $this->uploadService = new TelegramUrlUploadService();
+        $this->fileManager = app(TelegramFileManager::class);
         $this->progressService = new TelegramUploadProgressService();
     }
 
@@ -60,16 +61,26 @@ class TelegramUrlUploadWithProgress
             // شروع upload
             $this->progressService->startUpload($sessionId);
 
-            // آپلود به تلگرام
-            $result = $this->uploadService->uploadFile(
-                $tempPath,
-                array_merge($fileData, ['name' => $filename])
+            // آپلود به تلگرام با TelegramFileManager
+            $uploadResult = $this->fileManager->uploadFile($tempPath, null, [
+                'filename' => $filename,
+                'caption' => $fileData['caption'] ?? '',
+            ]);
+
+            // ایجاد FileEntry
+            $mimeType = mime_content_type($tempPath) ?: 'application/octet-stream';
+            $fileEntry = $this->createFileEntry(
+                $uploadResult,
+                $fileData,
+                $filename,
+                $fileSize,
+                $mimeType
             );
 
             // علامت‌گذاری به عنوان completed
             $this->progressService->markAsCompleted(
                 $sessionId,
-                $result['file_entry']->id ?? null
+                $fileEntry->id
             );
 
             // پاک کردن فایل موقت
@@ -77,8 +88,8 @@ class TelegramUrlUploadWithProgress
 
             return [
                 'session_id' => $sessionId,
-                'file_entry' => $result['file_entry'],
-                'metadata' => $result['metadata'],
+                'file_entry' => $fileEntry,
+                'metadata' => $fileEntry->telegramMetadata,
             ];
 
         } catch (\Exception $e) {
@@ -250,6 +261,66 @@ class TelegramUrlUploadWithProgress
         }
 
         return $filename;
+    }
+
+    /**
+     * ایجاد FileEntry
+     */
+    protected function createFileEntry(
+        array $uploadResult,
+        array $metadata,
+        string $fileName,
+        int $fileSize,
+        string $mimeType
+    ): FileEntry {
+        // Create FileEntry
+        $fileEntry = FileEntry::create([
+            'name' => $metadata['name'] ?? $fileName,
+            'file_name' => $fileName,
+            'mime' => $mimeType,
+            'file_size' => $fileSize,
+            'user_id' => $metadata['user_id'] ?? null,
+            'owner_id' => $metadata['owner_id'] ?? $metadata['user_id'] ?? null,
+            'parent_id' => $metadata['parent_id'] ?? null,
+            'disk_prefix' => 'telegram',
+            'type' => $this->determineFileType($mimeType),
+            'path' => 'telegram/' . $fileName,
+        ]);
+
+        // Create Telegram metadata
+        $telegramMetadata = TelegramMetadataHelper::createMetadata($fileEntry, [
+            'file_id' => $uploadResult['file_id'],
+            'message_id' => $uploadResult['message_id'],
+            'channel_id' => $uploadResult['channel_id'],
+            'upload_method' => $uploadResult['upload_method'],
+            'upload_status' => 'completed',
+            'uploaded_at' => now(),
+        ]);
+
+        return $fileEntry->load('telegramMetadata');
+    }
+
+    /**
+     * تعیین نوع فایل از MIME type
+     */
+    protected function determineFileType(string $mimeType): string
+    {
+        if (str_starts_with($mimeType, 'image/')) {
+            return 'image';
+        }
+        if (str_starts_with($mimeType, 'video/')) {
+            return 'video';
+        }
+        if (str_starts_with($mimeType, 'audio/')) {
+            return 'audio';
+        }
+        if ($mimeType === 'application/pdf') {
+            return 'pdf';
+        }
+        if (str_contains($mimeType, 'text/')) {
+            return 'text';
+        }
+        return 'file';
     }
 
     /**
