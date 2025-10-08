@@ -8,7 +8,7 @@ use Common\Core\BaseController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-
+use Illuminate\Support\Facades\Log;
 /**
  * Telegram URL Upload Controller
  * 
