@@ -1,12 +1,15 @@
 import {Trans} from '@ui/i18n/trans';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
-import {Fragment} from 'react';
+import {Fragment, useState} from 'react';
 import {SectionHelper} from '@common/ui/other/section-helper';
 import {Link} from 'react-router';
 import {TelegramStats} from './telegram-stats';
 import {TelegramTestButtons} from './telegram-test-buttons';
 import {useSettings} from '@ui/settings/use-settings';
 import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
+import {WorkerGuideDialog} from './worker-guide-dialog';
+import {Button} from '@ui/buttons/button';
+import {HelpOutlineIcon} from '@ui/icons/material/HelpOutline';
 
 export interface TelegramFormProps {
   isInvalid: boolean;
@@ -15,9 +18,14 @@ export interface TelegramFormProps {
 export function TelegramForm({isInvalid}: TelegramFormProps) {
   const settings = useSettings();
   const isTelegramActive = settings.uploads?.disk === 'telegram';
+  const [showWorkerGuide, setShowWorkerGuide] = useState(false);
 
   return (
     <Fragment>
+      <WorkerGuideDialog 
+        isOpen={showWorkerGuide} 
+        onClose={() => setShowWorkerGuide(false)} 
+      />
       {isTelegramActive && (
         <SectionHelper
           className="mb-30"
@@ -131,6 +139,40 @@ export function TelegramForm({isInvalid}: TelegramFormProps) {
         }
         type="tel"
       />
+
+      <SectionHelper
+        className="mb-30 mt-30"
+        color="neutral"
+        title={<Trans message="Optional: Cloudflare Worker for Blocked URLs" />}
+        description={
+          <div>
+            <Trans message="If some URLs are blocked from your server IP, you can use a Cloudflare Worker as a proxy. This is completely optional and only needed if you encounter 'File is not accessible' errors." />
+          </div>
+        }
+      />
+
+      <div className="flex gap-12 items-end mb-30">
+        <div className="flex-1">
+          <FormTextField
+            invalid={isInvalid}
+            name="server.storage_telegram_worker_url"
+            label={<Trans message="Worker URL (Optional)" />}
+            placeholder="https://telegram-proxy.your-subdomain.workers.dev"
+            description={
+              <Trans message="Leave empty to disable worker fallback. Click help icon for setup guide." />
+            }
+          />
+        </div>
+        <Button
+          variant="outline"
+          color="primary"
+          startIcon={<HelpOutlineIcon />}
+          onClick={() => setShowWorkerGuide(true)}
+          className="mb-6"
+        >
+          <Trans message="راهنمای نصب Worker" />
+        </Button>
+      </div>
 
       <SectionHelper
         className="mt-30"

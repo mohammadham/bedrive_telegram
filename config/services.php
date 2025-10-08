@@ -36,5 +36,6 @@ return [
         'api_hash' => env('TELEGRAM_API_HASH') ?? env('STORAGE_TELEGRAM_API_HASH'),
         'phone' => env('TELEGRAM_PHONE') ?? env('STORAGE_TELEGRAM_PHONE'),
         'session_file' => env('TELEGRAM_SESSION_FILE') ?? env('STORAGE_TELEGRAM_SESSION_FILE', storage_path('app/telegram/session.madeline')),
+        'worker_url' => env('TELEGRAM_WORKER_URL') ?? env('STORAGE_TELEGRAM_WORKER_URL'), // Cloudflare Worker URL for fallback
     ],
 ];

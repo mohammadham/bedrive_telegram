@@ -9,11 +9,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
+
 /**
  * Telegram URL Upload Controller
  * 
  * Handles uploading files from URLs directly to Telegram
  * Phase 8.2: با Progress Tracking
+ * Phase 8.3: با Cloudflare Worker Fallback
  */
 class TelegramUrlUploadController extends BaseController
 {
@@ -184,46 +187,119 @@ public function validateUrl(Request $request): JsonResponse
         'url' => 'required|url|max:2048',
     ]);
 
-    if ($validator->fails()) {
-        return $this->error('URL format is invalid even after sanitization.', [], 422);
-    }
-
-    try {
-        // Check if URL is accessible (از URL پاک‌سازی شده استفاده می‌کنیم)
-        $headers = @get_headers($sanitizedUrl, 1);
-        
-        if (!$headers || !str_contains($headers[0], '200')) {
-            return $this->error('URL is not accessible or does not return a 200 OK status.', [], 400);
+        if ($validator->fails()) {
+            return $this->error($validator->errors()->first(), [], 422);
         }
 
-        // Get content type and size
-        $contentType = $headers['Content-Type'] ?? 'unknown';
-        $contentLength = $headers['Content-Length'] ?? 0;
+        $url = $request->input('url');
+        $workerUrl = config('services.telegram.worker_url');
+        $useWorker = !empty($workerUrl);
 
-        if (is_array($contentType)) {
-            $contentType = end($contentType);
-        }
-        if (is_array($contentLength)) {
-            $contentLength = end($contentLength);
-        }
-
-        // Check file size
-        $canUpload = \Common\Files\Telegram\TelegramFileManager::canUpload((int) $contentLength);
-
-        return $this->success([
-            'valid' => true,
-            'content_type' => $contentType,
-            'content_length' => (int) $contentLength,
-            'content_length_formatted' => $this->formatBytes((int) $contentLength),
-            'can_upload' => $canUpload['can_upload'],
-            'upload_method' => $canUpload['method'],
-            'reason' => $canUpload['reason'],
+        Log::info('Validating URL', [
+            'url' => $url,
+            'worker_enabled' => $useWorker,
+            'worker_url' => $workerUrl,
         ]);
 
-    } catch (\Exception $e) {
-        return $this->error('Failed to validate URL: ' . $e->getMessage(), [], 500);
+        try {
+            $headers = null;
+            $method = 'direct';
+
+            // مرحله 1: اگر Worker فعال است، ابتدا از آن استفاده کنیم
+            if ($useWorker) {
+                try {
+                    $workerTestUrl = $workerUrl . '?url=' . urlencode($url);
+                    Log::info('Trying Worker validation', ['worker_url' => $workerTestUrl]);
+                    
+                    // استفاده از Http facade برای control بهتر
+                    $response = Http::timeout(10)
+                        ->withOptions(['verify' => false]) // برای SSL issues
+                        ->head($workerTestUrl);
+
+                    if ($response->successful()) {
+                        $headers = $response->headers();
+                        $method = 'worker';
+                        Log::info('Worker validation successful');
+                    } else {
+                        Log::warning('Worker returned non-200', ['status' => $response->status()]);
+                    }
+                } catch (\Exception $workerError) {
+                    Log::warning('Worker validation failed, falling back to direct', [
+                        'error' => $workerError->getMessage()
+                    ]);
+                }
+            }
+
+            // مرحله 2: اگر Worker کار نکرد یا فعال نبود، مستقیم امتحان کنیم
+            if (!$headers) {
+                Log::info('Using direct validation');
+                $headers = @get_headers($url, 1);
+                
+                if (!$headers || !str_contains($headers[0], '200')) {
+                    return $this->error(
+                        'File is not accessible. URL may be blocked, require authentication, or the file does not exist.',
+                        [
+                            'url' => $url,
+                            'method_tried' => $useWorker ? 'worker+direct' : 'direct',
+                            'worker_enabled' => $useWorker,
+                        ],
+                        400
+                    );
+                }
+                $method = 'direct';
+            }
+
+            // استخراج اطلاعات
+            if (is_array($headers) && isset($headers[0])) {
+                // از get_headers
+                $contentType = $headers['Content-Type'] ?? 'unknown';
+                $contentLength = $headers['Content-Length'] ?? 0;
+            } else {
+                // از Http response
+                $contentType = $headers['content-type'][0] ?? $headers['Content-Type'][0] ?? 'unknown';
+                $contentLength = $headers['content-length'][0] ?? $headers['Content-Length'][0] ?? 0;
+            }
+
+            if (is_array($contentType)) {
+                $contentType = end($contentType);
+            }
+            if (is_array($contentLength)) {
+                $contentLength = end($contentLength);
+            }
+
+            // Check file size
+            $canUpload = \Common\Files\Telegram\TelegramFileManager::canUpload((int) $contentLength);
+
+            Log::info('URL validation successful', [
+                'method' => $method,
+                'content_type' => $contentType,
+                'content_length' => $contentLength,
+            ]);
+
+            return $this->success([
+                'valid' => true,
+                'content_type' => $contentType,
+                'content_length' => (int) $contentLength,
+                'content_length_formatted' => $this->formatBytes((int) $contentLength),
+                'can_upload' => $canUpload['can_upload'],
+                'upload_method' => $canUpload['method'],
+                'reason' => $canUpload['reason'],
+                'validation_method' => $method, // نشان می‌دهد از کجا validate شد
+                'worker_available' => $useWorker,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('URL validation exception', [
+                'error' => $e->getMessage(),
+                'url' => $url,
+            ]);
+            return $this->error(
+                'Failed to validate URL: ' . $e->getMessage(),
+                ['worker_enabled' => $useWorker],
+                500
+            );
+        }
     }
-}
 
     /**
      * Format bytes to human readable
