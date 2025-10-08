@@ -73,12 +73,26 @@ export function TelegramUrlUploadDialog({
     }
 
     // Validate first if not already validated
-    if (!validation) {
-      await handleValidate();
-      return;
+    let currentValidation = validation;
+    if (!currentValidation) {
+      setValidating(true);
+      try {
+        currentValidation = await validateUrl(url);
+        setValidation(currentValidation);
+        
+        if (!currentValidation.valid || !currentValidation.can_upload) {
+          toast.danger(currentValidation.reason || 'URL validation failed');
+          return;
+        }
+      } catch (error: any) {
+        toast.danger(error.message || 'Failed to validate URL');
+        return;
+      } finally {
+        setValidating(false);
+      }
     }
 
-    if (!validation.can_upload) {
+    if (!currentValidation.can_upload) {
       toast.danger('This file cannot be uploaded');
       return;
     }
