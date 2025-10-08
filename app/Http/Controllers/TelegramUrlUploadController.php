@@ -41,7 +41,15 @@ class TelegramUrlUploadController extends BaseController
      */
     public function uploadSingle(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $rawUrl = $request->input('url');
+        
+        // Sanitize URL قبل از validation
+        $sanitizedUrl = $this->sanitizeUrl($rawUrl);
+        if (!$sanitizedUrl) {
+            return $this->error('The provided URL is not structurally valid.', [], 422);
+        }
+        
+        $validator = Validator::make(['url' => $sanitizedUrl], [
             'url' => 'required|url|max:2048',
             'name' => 'nullable|string|max:255',
             'caption' => 'nullable|string|max:1024',
@@ -52,10 +60,15 @@ class TelegramUrlUploadController extends BaseController
             return $this->error($validator->errors()->first(),[], 422);
         }
 
+        Log::info('Upload single file from URL', [
+            'original_url' => $rawUrl,
+            'sanitized_url' => $sanitizedUrl,
+        ]);
+
         try {
-            // استفاده از uploadWithProgress برای tracking
+            // استفاده از uploadWithProgress برای tracking با URL sanitized
             $result = $this->uploadWithProgress->uploadFromUrl(
-                $request->input('url'),
+                $sanitizedUrl, // استفاده از URL sanitized شده
                 [
                     'name' => $request->input('name'),
                     'user_id' => auth()->id(),
@@ -92,7 +105,18 @@ class TelegramUrlUploadController extends BaseController
      */
     public function uploadBulk(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $rawUrls = $request->input('urls', []);
+        
+        // Sanitize all URLs
+        $sanitizedUrls = [];
+        foreach ($rawUrls as $rawUrl) {
+            $sanitized = $this->sanitizeUrl($rawUrl);
+            if ($sanitized) {
+                $sanitizedUrls[] = $sanitized;
+            }
+        }
+        
+        $validator = Validator::make(['urls' => $sanitizedUrls], [
             'urls' => 'required|array|min:1|max:100',
             'urls.*' => 'required|url|max:2048',
             'caption' => 'nullable|string|max:1024',
@@ -102,8 +126,13 @@ class TelegramUrlUploadController extends BaseController
             return $this->error($validator->errors()->first(),[], 422);
         }
 
+        Log::info('Bulk upload from URLs', [
+            'original_count' => count($rawUrls),
+            'sanitized_count' => count($sanitizedUrls),
+        ]);
+
         try {
-            $urls = $request->input('urls');
+            $urls = $sanitizedUrls;
             
             $result = $this->uploadService->uploadBulkUrls(
                 $urls,
@@ -133,70 +162,38 @@ class TelegramUrlUploadController extends BaseController
     }
 
     /**
- * Validate URL before upload (optional check)
- *
- * POST /api/v1/telegram/validate-url
- *
- * @param Request $request
- * @return JsonResponse
- */
-public function validateUrl(Request $request): JsonResponse
-{
-    $rawUrl = $request->input('url');
+     * Validate URL before upload with Worker fallback support
+     *
+     * POST /api/v1/telegram/validate-url
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function validateUrl(Request $request): JsonResponse
+    {
+        $rawUrl = $request->input('url');
 
-    // --- مرحله جدید: پاک‌سازی URL ---
-    // ابتدا URL را به اجزای اصلی آن تجزیه می‌کنیم
-    $urlParts = parse_url($rawUrl);
+        // Sanitize URL
+        $sanitizedUrl = $this->sanitizeUrl($rawUrl);
+        if (!$sanitizedUrl) {
+            return $this->error('The provided URL is not structurally valid.', [], 422);
+        }
 
-    // اگر URL تجزیه نشد، یعنی از ابتدا ساختار اشتباهی داشته است
-    if (!$urlParts || !isset($urlParts['scheme'], $urlParts['host'])) {
-        return $this->error('The provided URL is not structurally valid.', [], 422);
-    }
-
-    // مسیر (path)، کوئری (query) و فرگمنت (fragment) را Encode می‌کنیم
-    // تا کاراکترهای غیرمجاز به فرمت استاندارد درآیند
-    if (isset($urlParts['path'])) {
-        $urlParts['path'] = rawurlencode($urlParts['path']);
-    }
-    if (isset($urlParts['query'])) {
-        $urlParts['query'] = rawurlencode($urlParts['query']);
-    }
-    if (isset($urlParts['fragment'])) {
-        $urlParts['fragment'] = rawurlencode($urlParts['fragment']);
-    }
-    
-    // URL را دوباره از اجزای پاک‌سازی شده می‌سازیم
-    $sanitizedUrl = (isset($urlParts['scheme']) ? $urlParts['scheme'] . '://' : '') .
-                    (isset($urlParts['user']) ? $urlParts['user'] : '') .
-                    (isset($urlParts['pass']) ? ':' . $urlParts['pass'] : '') .
-                    (isset($urlParts['user']) ? '@' : '') .
-                    (isset($urlParts['host']) ? $urlParts['host'] : '') .
-                    (isset($urlParts['port']) ? ':' . $urlParts['port'] : '') .
-                    (isset($urlParts['path']) ? str_replace('%2F', '/', $urlParts['path']) : '') .
-                    (isset($urlParts['query']) ? '?' . str_replace('%3D', '=', $urlParts['query']) : '') .
-                    (isset($urlParts['fragment']) ? '#' . $urlParts['fragment'] : '');
-
-    // --- ادامه منطق قبلی با URL پاک‌سازی شده ---
-    Log::info('Validating URL', [
-        'original_url' => $rawUrl,
-        'sanitized_url' => $sanitizedUrl,
-    ]);
-
-    // حالا URL پاک‌سازی شده را با قانون استاندارد 'url' اعتبارسنجی می‌کنیم
-    $validator = Validator::make(['url' => $sanitizedUrl], [
-        'url' => 'required|url|max:2048',
-    ]);
+        $validator = Validator::make(['url' => $sanitizedUrl], [
+            'url' => 'required|url|max:2048',
+        ]);
 
         if ($validator->fails()) {
             return $this->error($validator->errors()->first(), [], 422);
         }
 
-        $url = $request->input('url');
+        $url = $sanitizedUrl;
         $workerUrl = config('services.telegram.worker_url');
         $useWorker = !empty($workerUrl);
 
         Log::info('Validating URL', [
-            'url' => $url,
+            'original_url' => $rawUrl,
+            'sanitized_url' => $sanitizedUrl,
             'worker_enabled' => $useWorker,
             'worker_url' => $workerUrl,
         ]);
@@ -299,6 +296,47 @@ public function validateUrl(Request $request): JsonResponse
                 500
             );
         }
+    }
+
+    /**
+     * Sanitize URL to handle special characters
+     * 
+     * @param string $rawUrl
+     * @return string|null
+     */
+    protected function sanitizeUrl(string $rawUrl): ?string
+    {
+        $urlParts = parse_url($rawUrl);
+        
+        // Check if parsing failed
+        if (!$urlParts || !isset($urlParts['scheme'], $urlParts['host'])) {
+            return null;
+        }
+        
+        // Encode URL components
+        if (isset($urlParts['path'])) {
+            $urlParts['path'] = implode('/', array_map('rawurlencode', explode('/', $urlParts['path'])));
+        }
+        if (isset($urlParts['query'])) {
+            parse_str($urlParts['query'], $queryParams);
+            $urlParts['query'] = http_build_query($queryParams);
+        }
+        if (isset($urlParts['fragment'])) {
+            $urlParts['fragment'] = rawurlencode($urlParts['fragment']);
+        }
+        
+        // Reconstruct URL
+        $sanitizedUrl = (isset($urlParts['scheme']) ? $urlParts['scheme'] . '://' : '') .
+                        (isset($urlParts['user']) ? $urlParts['user'] : '') .
+                        (isset($urlParts['pass']) ? ':' . $urlParts['pass'] : '') .
+                        (isset($urlParts['user']) ? '@' : '') .
+                        (isset($urlParts['host']) ? $urlParts['host'] : '') .
+                        (isset($urlParts['port']) ? ':' . $urlParts['port'] : '') .
+                        (isset($urlParts['path']) ? $urlParts['path'] : '') .
+                        (isset($urlParts['query']) ? '?' . $urlParts['query'] : '') .
+                        (isset($urlParts['fragment']) ? '#' . $urlParts['fragment'] : '');
+        
+        return $sanitizedUrl;
     }
 
     /**
