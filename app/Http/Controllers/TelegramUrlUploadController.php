@@ -255,17 +255,30 @@ class TelegramUrlUploadController extends BaseController
                         'curl_errno' => $curlErrno,
                     ]);
                     
-                    return $this->error(
-                        'File is not accessible. URL may be blocked, require authentication, or the file does not exist.',
-                        [
-                            'url' => $url,
-                            'http_code' => $httpCode,
-                            'curl_error' => $curlError,
-                            'method_tried' => $useWorker ? 'worker+direct' : 'direct',
-                            'worker_enabled' => $useWorker,
-                        ],
-                        400
-                    );
+                    $errorMessage = 'File is not accessible';
+                    if ($httpCode === 404) {
+                        $errorMessage = 'File not found (404)';
+                    } elseif ($httpCode === 403) {
+                        $errorMessage = 'Access forbidden (403)';
+                    } elseif ($httpCode === 0) {
+                        $errorMessage = $curlError ?: 'Unable to connect to server';
+                    } elseif ($httpCode >= 500) {
+                        $errorMessage = 'Server error (' . $httpCode . ')';
+                    }
+                    
+                    return $this->success([
+                        'url' => $url,
+                        'filename' => null,
+                        'size' => null,
+                        'mime_type' => null,
+                        'is_accessible' => false,
+                        'can_upload' => false,
+                        'upload_method' => null,
+                        'error' => $errorMessage,
+                        'http_code' => $httpCode,
+                        'validation_method' => $useWorker ? 'worker+direct' : 'direct',
+                        'worker_available' => $useWorker,
+                    ]);
                 }
                 
                 // ساخت array headers برای سازگاری با کد بعدی
@@ -320,15 +333,26 @@ class TelegramUrlUploadController extends BaseController
                 'content_length' => $contentLength,
             ]);
 
+            // استخراج filename از URL
+            $filename = basename(parse_url($url, PHP_URL_PATH)) ?: null;
+            if ($filename) {
+                $filename = urldecode($filename);
+            }
+
             return $this->success([
-                'valid' => true,
-                'content_type' => $contentType,
-                'content_length' => $contentLength,
-                'content_length_formatted' => $this->formatBytes($contentLength),
+                // ساختار جدید برای سازگاری با Frontend
+                'url' => $url,
+                'filename' => $filename,
+                'size' => $contentLength,
+                'mime_type' => $contentType,
+                'is_accessible' => true,
                 'can_upload' => $canUpload['can_upload'],
                 'upload_method' => $canUpload['method'],
-                'reason' => $canUpload['reason'],
-                'validation_method' => $method, // نشان می‌دهد از کجا validate شد
+                
+                // فیلدهای اضافی برای اطلاعات بیشتر
+                'error' => null,
+                'content_length_formatted' => $this->formatBytes($contentLength),
+                'validation_method' => $method,
                 'worker_available' => $useWorker,
             ]);
 
@@ -337,11 +361,20 @@ class TelegramUrlUploadController extends BaseController
                 'error' => $e->getMessage(),
                 'url' => $url,
             ]);
-            return $this->error(
-                'Failed to validate URL: ' . $e->getMessage(),
-                ['worker_enabled' => $useWorker],
-                500
-            );
+            
+            // Return error در ساختار سازگار با frontend
+            return $this->success([
+                'url' => $url,
+                'filename' => null,
+                'size' => null,
+                'mime_type' => null,
+                'is_accessible' => false,
+                'can_upload' => false,
+                'upload_method' => null,
+                'error' => 'Failed to validate URL: ' . $e->getMessage(),
+                'validation_method' => null,
+                'worker_available' => $useWorker,
+            ]);
         }
     }
 
