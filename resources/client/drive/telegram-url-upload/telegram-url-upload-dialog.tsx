@@ -17,7 +17,7 @@ import {TelegramUploadProgress} from './telegram-upload-progress';
 import {TelegramUploadTab} from './telegram-types';
 import {uploadFromUrl, uploadBulkFromUrls} from './telegram-url-upload-api';
 import {toast} from '@ui/toast/toast';
-import {queryClient} from '@common/http/query-client';
+import {invalidateEntryQueries} from '../drive-query-keys';
 
 export function TelegramUrlUploadDialog() {
   const {close} = useDialogContext();
@@ -53,17 +53,17 @@ export function TelegramUrlUploadDialog() {
       `فایل ${filename || 'فایل'} با موفقیت به تلگرام آپلود شد`,
     );
 
-    // Refresh drive list
-    await queryClient.invalidateQueries({queryKey: ['drive']});
+    // Refresh drive list - استفاده از invalidateEntryQueries برای به‌روزرسانی تمام query های drive
+    await invalidateEntryQueries();
 
     // Reset state
     setIsSubmitting(false);
     setUploadSessionId(null);
 
-    // بستن dialog بعد از 1 ثانیه
+    // بستن dialog بعد از 1.5 ثانیه (زمان بیشتر برای نمایش toast)
     setTimeout(() => {
       close();
-    }, 1000);
+    }, 1500);
   };
 
   const handleUploadError = (error: string) => {
@@ -95,15 +95,18 @@ export function TelegramUrlUploadDialog() {
         );
       }
 
-      // Refresh drive list
-      await queryClient.invalidateQueries({queryKey: ['drive']});
+      // Refresh drive list - استفاده از invalidateEntryQueries
+      await invalidateEntryQueries();
 
       // Show detailed results
       if (response.failed.length > 0) {
         console.log('Failed uploads:', response.failed);
       }
 
-      close();
+      // بستن dialog بعد از 1 ثانیه
+      setTimeout(() => {
+        close();
+      }, 1000);
     } catch (error: any) {
       toast.danger(
         error.message || <Trans message="خطا در آپلود فایل‌ها به تلگرام" />,

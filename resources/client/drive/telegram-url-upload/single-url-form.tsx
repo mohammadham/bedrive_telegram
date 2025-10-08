@@ -12,6 +12,7 @@ import {LinkIcon} from '@ui/icons/material/Link';
 import {CloudUploadIcon} from '@ui/icons/material/CloudUpload';
 import {ErrorIcon} from '@ui/icons/material/Error';
 import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
+import {VerifiedIcon} from '@ui/icons/material/Verified';
 import {
   validateUrl,
   previewUrl,
@@ -31,15 +32,22 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
   const [urlError, setUrlError] = useState('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [preview, setPreview] = useState<TelegramUrlPreview | null>(null);
+  const [isValidated, setIsValidated] = useState(false);
 
   // Reset preview وقتی URL تغییر می‌کند
   useEffect(() => {
     setPreview(null);
     setUrlError('');
+    setIsValidated(false);
   }, [url]);
 
-  const handleUrlBlur = () => {
-    if (!url.trim()) return;
+  const handleValidateClick = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!url.trim()) {
+      setUrlError('لطفاً URL را وارد کنید');
+      return;
+    }
 
     const validation = validateUrl(url);
     if (!validation.isValid) {
@@ -53,26 +61,30 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
     }
 
     // Load preview
-    loadPreview();
+    await loadPreview();
   };
 
   const loadPreview = async () => {
     setIsLoadingPreview(true);
+    setIsValidated(false);
     try {
       const previewData = await previewUrl(url);
       setPreview(previewData);
       
       if (!previewData.is_accessible) {
-        setUrlError(previewData.error || 'File is not accessible1');
+        setUrlError(previewData.error || 'فایل قابل دسترسی نیست');
+        setIsValidated(false);
       } else {
         setUrlError('');
+        setIsValidated(true);
         // Update filename if available
         if (previewData.filename && !filename) {
           setFilename(previewData.filename);
         }
       }
     } catch (error: any) {
-      setUrlError(error.message || 'Error loading URL information');
+      setUrlError(error.message || 'خطا در بارگذاری اطلاعات URL');
+      setIsValidated(false);
     } finally {
       setIsLoadingPreview(false);
     }
@@ -94,7 +106,8 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
     onSubmit(url.trim(), filename.trim() || extractFilenameFromUrl(url));
   };
 
-  const isValid = url.trim() && !urlError;
+  const canValidate = url.trim() && !isLoadingPreview && !isValidated;
+  const canUpload = isValidated && !urlError && !isSubmitting;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-24">
@@ -104,8 +117,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
         placeholder="https://example.com/file.pdf"
         value={url}
         onChange={e => setUrl(e.target.value)}
-        onBlur={handleUrlBlur}
-        disabled={isSubmitting}
+        disabled={isSubmitting || isLoadingPreview}
         required
         autoFocus
         startAdornment={<LinkIcon className="text-muted" />}
@@ -130,7 +142,7 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
           <div className="mb-6 flex items-center gap-8">
             <CheckCircleIcon size="sm" className="text-positive" />
             <span className="text-sm font-medium text-positive">
-              <Trans message="File is accessible" />
+              <Trans message="✓ فایل معتبر است و آماده آپلود" />
             </span>
           </div>
           <div className="space-y-4 text-xs text-muted">
@@ -142,6 +154,11 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
             {preview.mime_type && (
               <div>
                 <Trans message="Type" />: {preview.mime_type}
+              </div>
+            )}
+            {preview.upload_method && (
+              <div>
+                <Trans message="Upload Method" />: {preview.upload_method === 'bot' ? 'Bot API (< 50MB)' : 'User Account (50MB-2GB)'}
               </div>
             )}
           </div>
@@ -165,27 +182,51 @@ export function SingleUrlForm({onSubmit, isSubmitting}: SingleUrlFormProps) {
         placeholder="document.pdf"
         value={filename}
         onChange={e => setFilename(e.target.value)}
-        disabled={isSubmitting}
+        disabled={isSubmitting || isLoadingPreview}
         description={
           <Trans message="File name in your system. If empty, the original file name will be used" />
         }
       />
 
-      {/* Submit Button */}
-      <Button
-        type="submit"
-        variant="flat"
-        color="primary"
-        disabled={!isValid || isSubmitting}
-        className="w-full"
-        startIcon={<CloudUploadIcon />}
-      >
-        {isSubmitting ? (
-          <Trans message="Uploading..." />
-        ) : (
-          <Trans message="Upload to Telegram" />
+      {/* Action Buttons */}
+      <div className="flex gap-12">
+        {/* Validate Button */}
+        {!isValidated && (
+          <Button
+            type="button"
+            variant="outline"
+            color="primary"
+            disabled={!canValidate}
+            className="flex-1"
+            onClick={handleValidateClick}
+            startIcon={<VerifiedIcon />}
+          >
+            {isLoadingPreview ? (
+              <Trans message="در حال بررسی..." />
+            ) : (
+              <Trans message="بررسی اعتبار" />
+            )}
+          </Button>
         )}
-      </Button>
+
+        {/* Upload Button */}
+        {isValidated && (
+          <Button
+            type="submit"
+            variant="flat"
+            color="primary"
+            disabled={!canUpload}
+            className="flex-1"
+            startIcon={<CloudUploadIcon />}
+          >
+            {isSubmitting ? (
+              <Trans message="در حال آپلود..." />
+            ) : (
+              <Trans message="آپلود به تلگرام" />
+            )}
+          </Button>
+        )}
+      </div>
 
       {/* Help Text */}
       <div className="rounded bg-alt p-12 text-xs text-muted">
