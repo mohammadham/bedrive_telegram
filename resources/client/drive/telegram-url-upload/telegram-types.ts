@@ -53,6 +53,7 @@ export interface TelegramUrlPreview {
   size: number | null;
   mime_type: string | null;
   is_accessible: boolean;
+  upload_method?: 'bot' | 'user';
   error?: string;
 }
 
