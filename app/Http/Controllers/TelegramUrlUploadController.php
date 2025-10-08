@@ -130,61 +130,100 @@ class TelegramUrlUploadController extends BaseController
     }
 
     /**
-     * Validate URL before upload (optional check)
-     *
-     * POST /api/v1/telegram/validate-url
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function validateUrl(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'url' => 'required|string|max:2048',
+ * Validate URL before upload (optional check)
+ *
+ * POST /api/v1/telegram/validate-url
+ *
+ * @param Request $request
+ * @return JsonResponse
+ */
+public function validateUrl(Request $request): JsonResponse
+{
+    $rawUrl = $request->input('url');
+
+    // --- مرحله جدید: پاک‌سازی URL ---
+    // ابتدا URL را به اجزای اصلی آن تجزیه می‌کنیم
+    $urlParts = parse_url($rawUrl);
+
+    // اگر URL تجزیه نشد، یعنی از ابتدا ساختار اشتباهی داشته است
+    if (!$urlParts || !isset($urlParts['scheme'], $urlParts['host'])) {
+        return $this->error('The provided URL is not structurally valid.', [], 422);
+    }
+
+    // مسیر (path)، کوئری (query) و فرگمنت (fragment) را Encode می‌کنیم
+    // تا کاراکترهای غیرمجاز به فرمت استاندارد درآیند
+    if (isset($urlParts['path'])) {
+        $urlParts['path'] = rawurlencode($urlParts['path']);
+    }
+    if (isset($urlParts['query'])) {
+        $urlParts['query'] = rawurlencode($urlParts['query']);
+    }
+    if (isset($urlParts['fragment'])) {
+        $urlParts['fragment'] = rawurlencode($urlParts['fragment']);
+    }
+    
+    // URL را دوباره از اجزای پاک‌سازی شده می‌سازیم
+    $sanitizedUrl = (isset($urlParts['scheme']) ? $urlParts['scheme'] . '://' : '') .
+                    (isset($urlParts['user']) ? $urlParts['user'] : '') .
+                    (isset($urlParts['pass']) ? ':' . $urlParts['pass'] : '') .
+                    (isset($urlParts['user']) ? '@' : '') .
+                    (isset($urlParts['host']) ? $urlParts['host'] : '') .
+                    (isset($urlParts['port']) ? ':' . $urlParts['port'] : '') .
+                    (isset($urlParts['path']) ? str_replace('%2F', '/', $urlParts['path']) : '') .
+                    (isset($urlParts['query']) ? '?' . str_replace('%3D', '=', $urlParts['query']) : '') .
+                    (isset($urlParts['fragment']) ? '#' . $urlParts['fragment'] : '');
+
+    // --- ادامه منطق قبلی با URL پاک‌سازی شده ---
+    Log::info('Validating URL', [
+        'original_url' => $rawUrl,
+        'sanitized_url' => $sanitizedUrl,
+    ]);
+
+    // حالا URL پاک‌سازی شده را با قانون استاندارد 'url' اعتبارسنجی می‌کنیم
+    $validator = Validator::make(['url' => $sanitizedUrl], [
+        'url' => 'required|url|max:2048',
+    ]);
+
+    if ($validator->fails()) {
+        return $this->error('URL format is invalid even after sanitization.', [], 422);
+    }
+
+    try {
+        // Check if URL is accessible (از URL پاک‌سازی شده استفاده می‌کنیم)
+        $headers = @get_headers($sanitizedUrl, 1);
+        
+        if (!$headers || !str_contains($headers[0], '200')) {
+            return $this->error('URL is not accessible or does not return a 200 OK status.', [], 400);
+        }
+
+        // Get content type and size
+        $contentType = $headers['Content-Type'] ?? 'unknown';
+        $contentLength = $headers['Content-Length'] ?? 0;
+
+        if (is_array($contentType)) {
+            $contentType = end($contentType);
+        }
+        if (is_array($contentLength)) {
+            $contentLength = end($contentLength);
+        }
+
+        // Check file size
+        $canUpload = \Common\Files\Telegram\TelegramFileManager::canUpload((int) $contentLength);
+
+        return $this->success([
+            'valid' => true,
+            'content_type' => $contentType,
+            'content_length' => (int) $contentLength,
+            'content_length_formatted' => $this->formatBytes((int) $contentLength),
+            'can_upload' => $canUpload['can_upload'],
+            'upload_method' => $canUpload['method'],
+            'reason' => $canUpload['reason'],
         ]);
 
-        if ($validator->fails()) {
-            return $this->error($validator->errors()->first(),[], 422);
-        }
-
-        $url = $request->input('url');
-
-        try {
-            // Check if URL is accessible
-            $headers = @get_headers($url, 1);
-            
-            if (!$headers || !str_contains($headers[0], '200')) {
-                return $this->error('URL is not accessible',[], 400);
-            }
-
-            // Get content type and size
-            $contentType = $headers['Content-Type'] ?? 'unknown';
-            $contentLength = $headers['Content-Length'] ?? 0;
-
-            if (is_array($contentType)) {
-                $contentType = end($contentType);
-            }
-            if (is_array($contentLength)) {
-                $contentLength = end($contentLength);
-            }
-
-            // Check file size
-            $canUpload = \Common\Files\Telegram\TelegramFileManager::canUpload((int) $contentLength);
-
-            return $this->success([
-                'valid' => true,
-                'content_type' => $contentType,
-                'content_length' => (int) $contentLength,
-                'content_length_formatted' => $this->formatBytes((int) $contentLength),
-                'can_upload' => $canUpload['can_upload'],
-                'upload_method' => $canUpload['method'],
-                'reason' => $canUpload['reason'],
-            ]);
-
-        } catch (\Exception $e) {
-            return $this->error('Failed to validate URL: ' . $e->getMessage(),[], 500);
-        }
+    } catch (\Exception $e) {
+        return $this->error('Failed to validate URL: ' . $e->getMessage(), [], 500);
     }
+}
 
     /**
      * Format bytes to human readable
