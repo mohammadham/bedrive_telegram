@@ -7,11 +7,7 @@ import {useState} from 'react';
 import {ContentCopyIcon} from '@ui/icons/material/ContentCopy';
 import {CheckIcon} from '@ui/icons/material/Check';
 import {toast} from '@ui/toast/toast';
-
-interface WorkerGuideDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+import {useDialogContext} from '@ui/overlays/dialog/dialog-context';
 
 const WORKER_CODE = `export default {
   /**
@@ -98,7 +94,8 @@ const WORKER_CODE = `export default {
   }
 };`;
 
-export function WorkerGuideDialog({isOpen, onClose}: WorkerGuideDialogProps) {
+export function WorkerGuideDialog() {
+  const {close} = useDialogContext();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -109,7 +106,7 @@ export function WorkerGuideDialog({isOpen, onClose}: WorkerGuideDialogProps) {
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} size="fullscreenTakeover">
+    <Dialog size="fullscreenTakeover">
       <DialogHeader>
         <Trans message="راهنمای نصب Cloudflare Worker" />
       </DialogHeader>
@@ -227,7 +224,7 @@ export function WorkerGuideDialog({isOpen, onClose}: WorkerGuideDialogProps) {
 
           {/* دکمه بستن */}
           <div className="flex justify-end">
-            <Button onClick={onClose} variant="flat">
+            <Button onClick={close} variant="flat">
               <Trans message="بستن" />
             </Button>
           </div>

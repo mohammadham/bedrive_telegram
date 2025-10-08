@@ -1,6 +1,6 @@
 import {Trans} from '@ui/i18n/trans';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
-import {Fragment, useState} from 'react';
+import {Fragment} from 'react';
 import {SectionHelper} from '@common/ui/other/section-helper';
 import {Link} from 'react-router';
 import {TelegramStats} from './telegram-stats';
@@ -10,6 +10,7 @@ import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
 import {WorkerGuideDialog} from './worker-guide-dialog';
 import {Button} from '@ui/buttons/button';
 import {HelpOutlineIcon} from '@ui/icons/material/HelpOutline';
+import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
 
 export interface TelegramFormProps {
   isInvalid: boolean;
@@ -18,14 +19,9 @@ export interface TelegramFormProps {
 export function TelegramForm({isInvalid}: TelegramFormProps) {
   const settings = useSettings();
   const isTelegramActive = settings.uploads?.disk === 'telegram';
-  const [showWorkerGuide, setShowWorkerGuide] = useState(false);
 
   return (
     <Fragment>
-      <WorkerGuideDialog 
-        isOpen={showWorkerGuide} 
-        onClose={() => setShowWorkerGuide(false)} 
-      />
       {isTelegramActive && (
         <SectionHelper
           className="mb-30"
@@ -163,15 +159,17 @@ export function TelegramForm({isInvalid}: TelegramFormProps) {
             }
           />
         </div>
-        <Button
-          variant="outline"
-          color="primary"
-          startIcon={<HelpOutlineIcon />}
-          onClick={() => setShowWorkerGuide(true)}
-          className="mb-6"
-        >
-          <Trans message="راهنمای نصب Worker" />
-        </Button>
+        <DialogTrigger type="modal">
+          <Button
+            variant="outline"
+            color="primary"
+            startIcon={<HelpOutlineIcon />}
+            className="mb-6"
+          >
+            <Trans message="راهنمای نصب Worker" />
+          </Button>
+          <WorkerGuideDialog />
+        </DialogTrigger>
       </div>
 
       <SectionHelper
