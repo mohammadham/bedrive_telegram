@@ -182,21 +182,24 @@ class TelegramUrlUploadService
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_MAXREDIRS => 5,
                 CURLOPT_TIMEOUT => 300, // 5 minutes timeout
-                CURLOPT_USERAGENT => 'BeDrive-TelegramUpload/1.0',
-                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_CONNECTTIMEOUT => 30,
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                CURLOPT_SSL_VERIFYPEER => false, // برای سازگاری بهتر
+                CURLOPT_SSL_VERIFYHOST => false,
                 CURLOPT_BUFFERSIZE => $this->chunkSize,
             ]);
 
             $success = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
+            $curlErrno = curl_errno($ch);
 
             curl_close($ch);
             fclose($fp);
 
-            if (!$success || $httpCode !== 200) {
+            if (!$success || ($httpCode < 200 || $httpCode >= 300)) {
                 @unlink($tempPath);
-                throw new \Exception("Failed to download file. HTTP Code: {$httpCode}. Error: {$error}");
+                throw new \Exception("Failed to download file. HTTP Code: {$httpCode}. cURL Error: {$error} (errno: {$curlErrno})");
             }
 
             // Verify file was downloaded

@@ -121,49 +121,96 @@ class TelegramUrlUploadWithProgress
     protected function downloadWithProgress(string $url, string $sessionId): ?string
     {
         try {
-            $tempPath = sys_get_temp_dir() . '/' . uniqid('telegram_') . '_' . basename(parse_url($url, PHP_URL_PATH));
+            // استخراج نام فایل برای temp path (بدون استفاده از URL که ممکن است special chars داشته باشد)
+            $urlPath = parse_url($url, PHP_URL_PATH);
+            $safeBasename = $urlPath ? preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($urlPath)) : 'file';
+            $tempPath = sys_get_temp_dir() . '/' . uniqid('telegram_') . '_' . $safeBasename;
             $fp = fopen($tempPath, 'w+');
 
             $startTime = microtime(true);
             $lastUpdate = $startTime;
             $lastBytes = 0;
 
-            $response = Http::timeout(300)
-                ->withOptions([
-                    'sink' => $fp,
-                    'progress' => function ($totalBytes, $downloadedBytes) use ($sessionId, &$lastUpdate, &$lastBytes, $startTime) {
-                        if ($downloadedBytes == 0) return;
+            Log::info('Downloading file with progress', [
+                'url' => $url,
+                'temp_path' => $tempPath,
+            ]);
 
-                        $now = microtime(true);
-                        
-                        // Update هر 0.5 ثانیه
-                        if ($now - $lastUpdate >= 0.5) {
-                            $elapsed = $now - $startTime;
-                            $speed = $elapsed > 0 ? $downloadedBytes / $elapsed : 0;
-                            $eta = $speed > 0 && $totalBytes > 0 
-                                ? ($totalBytes - $downloadedBytes) / $speed 
-                                : null;
+            // استفاده از cURL برای کنترل بیشتر و سازگاری بهتر
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_FILE => $fp,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 5,
+                CURLOPT_TIMEOUT => 300,
+                CURLOPT_CONNECTTIMEOUT => 30,
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                CURLOPT_SSL_VERIFYPEER => false, // برای سرورهای با SSL مشکل‌دار
+                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_BUFFERSIZE => 8192,
+                CURLOPT_NOPROGRESS => false,
+                CURLOPT_PROGRESSFUNCTION => function($resource, $downloadSize, $downloaded, $uploadSize, $uploaded) use ($sessionId, &$lastUpdate, $startTime) {
+                    if ($downloaded == 0) return 0;
 
+                    $now = microtime(true);
+                    
+                    // Update هر 0.5 ثانیه
+                    if ($now - $lastUpdate >= 0.5) {
+                        $elapsed = $now - $startTime;
+                        $speed = $elapsed > 0 ? $downloaded / $elapsed : 0;
+                        $eta = $speed > 0 && $downloadSize > 0 
+                            ? ($downloadSize - $downloaded) / $speed 
+                            : null;
+
+                        try {
                             $this->progressService->updateDownloadProgress(
                                 $sessionId,
-                                $downloadedBytes,
+                                (int)$downloaded,
                                 $speed,
                                 $eta ? (int)$eta : null
                             );
-
-                            $lastUpdate = $now;
-                            $lastBytes = $downloadedBytes;
+                        } catch (\Exception $e) {
+                            Log::warning('Progress update failed', ['error' => $e->getMessage()]);
                         }
-                    },
-                ])
-                ->get($url);
 
+                        $lastUpdate = $now;
+                    }
+                    
+                    return 0; // Continue download
+                },
+            ]);
+
+            $success = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            $curlErrno = curl_errno($ch);
+            
+            curl_close($ch);
             fclose($fp);
 
-            if (!$response->successful()) {
+            if (!$success || ($httpCode < 200 || $httpCode >= 300)) {
+                Log::error('Download failed', [
+                    'url' => $url,
+                    'http_code' => $httpCode,
+                    'curl_error' => $error,
+                    'curl_errno' => $curlErrno,
+                ]);
                 @unlink($tempPath);
                 return null;
             }
+
+            // Verify file was downloaded
+            if (!file_exists($tempPath) || filesize($tempPath) === 0) {
+                Log::error('Downloaded file is empty', ['temp_path' => $tempPath]);
+                @unlink($tempPath);
+                return null;
+            }
+
+            Log::info('Download completed successfully', [
+                'temp_path' => $tempPath,
+                'file_size' => filesize($tempPath),
+            ]);
 
             return $tempPath;
 
@@ -171,7 +218,12 @@ class TelegramUrlUploadWithProgress
             Log::error('Download with progress failed', [
                 'url' => $url,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
+            
+            if (isset($ch)) {
+                curl_close($ch);
+            }
             
             if (isset($fp) && is_resource($fp)) {
                 fclose($fp);

@@ -43,14 +43,9 @@ class TelegramUrlUploadController extends BaseController
     {
         $rawUrl = $request->input('url');
         
-        // Sanitize URL قبل از validation
-        $sanitizedUrl = $this->sanitizeUrl($rawUrl);
-        if (!$sanitizedUrl) {
-            return $this->error('The provided URL is not structurally valid.', [], 422);
-        }
-        
-        $validator = Validator::make(['url' => $sanitizedUrl], [
-            'url' => 'required|url|max:2048',
+        // Basic validation برای URL خام
+        $validator = Validator::make(['url' => $rawUrl], [
+            'url' => 'required|string|max:2048',
             'name' => 'nullable|string|max:255',
             'caption' => 'nullable|string|max:1024',
             'parent_id' => 'nullable|integer|exists:file_entries,id',
@@ -62,13 +57,12 @@ class TelegramUrlUploadController extends BaseController
 
         Log::info('Upload single file from URL', [
             'original_url' => $rawUrl,
-            'sanitized_url' => $sanitizedUrl,
         ]);
 
         try {
-            // استفاده از uploadWithProgress برای tracking با URL sanitized
+            // استفاده از uploadWithProgress - خود سرویس باید URL را مدیریت کند
             $result = $this->uploadWithProgress->uploadFromUrl(
-                $sanitizedUrl, // استفاده از URL sanitized شده
+                $rawUrl, // استفاده از URL اصلی
                 [
                     'name' => $request->input('name'),
                     'user_id' => auth()->id(),
@@ -229,43 +223,96 @@ class TelegramUrlUploadController extends BaseController
 
             // مرحله 2: اگر Worker کار نکرد یا فعال نبود، مستقیم امتحان کنیم
             if (!$headers) {
-                Log::info('Using direct validation');
-                $headers = @get_headers($url, 1);
+                Log::info('Using direct validation with cURL');
                 
-                if (!$headers || !str_contains($headers[0], '200')) {
+                // استفاده از cURL برای سازگاری بهتر
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_NOBODY => true, // HEAD request
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_MAXREDIRS => 5,
+                    CURLOPT_TIMEOUT => 10,
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                    CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => false,
+                ]);
+                
+                curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+                $contentLength = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
+                $curlError = curl_error($ch);
+                $curlErrno = curl_errno($ch);
+                curl_close($ch);
+                
+                if ($curlErrno !== 0 || ($httpCode < 200 || $httpCode >= 300)) {
+                    Log::warning('Direct validation failed', [
+                        'url' => $url,
+                        'http_code' => $httpCode,
+                        'curl_error' => $curlError,
+                        'curl_errno' => $curlErrno,
+                    ]);
+                    
                     return $this->error(
                         'File is not accessible. URL may be blocked, require authentication, or the file does not exist.',
                         [
                             'url' => $url,
+                            'http_code' => $httpCode,
+                            'curl_error' => $curlError,
                             'method_tried' => $useWorker ? 'worker+direct' : 'direct',
                             'worker_enabled' => $useWorker,
                         ],
                         400
                     );
                 }
+                
+                // ساخت array headers برای سازگاری با کد بعدی
+                $headers = [
+                    'Content-Type' => $contentType ?: 'unknown',
+                    'Content-Length' => $contentLength > 0 ? $contentLength : 0,
+                ];
                 $method = 'direct';
             }
 
             // استخراج اطلاعات
-            if (is_array($headers) && isset($headers[0])) {
-                // از get_headers
-                $contentType = $headers['Content-Type'] ?? 'unknown';
-                $contentLength = $headers['Content-Length'] ?? 0;
+            if (is_array($headers)) {
+                // از cURL یا get_headers
+                $contentType = $headers['Content-Type'] 
+                    ?? $headers['content-type'] 
+                    ?? ($headers['content-type'][0] ?? null)
+                    ?? ($headers['Content-Type'][0] ?? null)
+                    ?? 'unknown';
+                    
+                $contentLength = $headers['Content-Length'] 
+                    ?? $headers['content-length']
+                    ?? ($headers['content-length'][0] ?? null)
+                    ?? ($headers['Content-Length'][0] ?? null)
+                    ?? 0;
             } else {
-                // از Http response
+                // از Http response object
                 $contentType = $headers['content-type'][0] ?? $headers['Content-Type'][0] ?? 'unknown';
                 $contentLength = $headers['content-length'][0] ?? $headers['Content-Length'][0] ?? 0;
             }
 
+            // پاکسازی اطلاعات
             if (is_array($contentType)) {
                 $contentType = end($contentType);
             }
             if (is_array($contentLength)) {
                 $contentLength = end($contentLength);
             }
+            
+            // حذف charset از content-type اگر وجود داشت
+            if (is_string($contentType) && strpos($contentType, ';') !== false) {
+                $contentType = trim(explode(';', $contentType)[0]);
+            }
+            
+            $contentLength = (int)$contentLength;
 
             // Check file size
-            $canUpload = \Common\Files\Telegram\TelegramFileManager::canUpload((int) $contentLength);
+            $canUpload = \Common\Files\Telegram\TelegramFileManager::canUpload($contentLength);
 
             Log::info('URL validation successful', [
                 'method' => $method,
@@ -276,8 +323,8 @@ class TelegramUrlUploadController extends BaseController
             return $this->success([
                 'valid' => true,
                 'content_type' => $contentType,
-                'content_length' => (int) $contentLength,
-                'content_length_formatted' => $this->formatBytes((int) $contentLength),
+                'content_length' => $contentLength,
+                'content_length_formatted' => $this->formatBytes($contentLength),
                 'can_upload' => $canUpload['can_upload'],
                 'upload_method' => $canUpload['method'],
                 'reason' => $canUpload['reason'],
