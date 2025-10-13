@@ -132,10 +132,12 @@ class TelegramUrlUploadWithProgress
     protected function downloadWithProgress(string $url, string $sessionId): ?string
     {
         try {
-            // استخراج نام فایل برای temp path (بدون استفاده از URL که ممکن است special chars داشته باشد)
+            // استخراج نام فایل برای temp path
+            // از hash استفاده می‌کنیم تا مشکل کاراکترهای خاص نداشته باشیم
             $urlPath = parse_url($url, PHP_URL_PATH);
-            $safeBasename = $urlPath ? preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($urlPath)) : 'file';
-            $tempPath = sys_get_temp_dir() . '/' . uniqid('telegram_') . '_' . $safeBasename;
+            $extension = pathinfo($urlPath, PATHINFO_EXTENSION);
+            $extension = $extension ? '.' . preg_replace('/[^a-zA-Z0-9]/', '', $extension) : '';
+            $tempPath = sys_get_temp_dir() . '/' . uniqid('telegram_') . $extension;
             $fp = fopen($tempPath, 'w+');
 
             $startTime = microtime(true);
@@ -249,12 +251,17 @@ class TelegramUrlUploadWithProgress
     }
 
     /**
-     * استخراج نام فایل از URL
+     * استخراج نام فایل از URL با حفظ کاراکترهای اصلی
      */
     protected function extractFilename(string $url): string
     {
         $path = parse_url($url, PHP_URL_PATH);
         $filename = basename($path);
+        
+        // Decode برای نمایش صحیح نام فایل
+        if ($filename) {
+            $filename = urldecode($filename);
+        }
         
         if (empty($filename) || strpos($filename, '.') === false) {
             return 'file_' . time();
@@ -264,7 +271,7 @@ class TelegramUrlUploadWithProgress
     }
 
     /**
-     * ایجاد FileEntry
+     * ایجاد FileEntry با sanitize کردن نام فایل
      */
     protected function createFileEntry(
         array $uploadResult,
@@ -273,10 +280,24 @@ class TelegramUrlUploadWithProgress
         int $fileSize,
         string $mimeType
     ): FileEntry {
+        // Sanitize filename برای جلوگیری از مشکلات encoding
+        // حفظ extension ولی پاکسازی کاراکترهای مشکل‌ساز
+        $pathInfo = pathinfo($fileName);
+        $baseName = $pathInfo['filename'] ?? 'file';
+        $extension = isset($pathInfo['extension']) ? '.' . $pathInfo['extension'] : '';
+        
+        // پاکسازی نام بدون تغییر کاراکترهای معمولی
+        // فقط کاراکترهایی که در filesystem مشکل ایجاد می‌کنند را حذف می‌کنیم
+        $safeName = preg_replace('/[<>:"\/\\\\|?*\x00-\x1F]/', '_', $baseName);
+        $safeFileName = $safeName . $extension;
+        
+        // برای path در database، از ASCII safe استفاده می‌کنیم
+        $pathSafeName = preg_replace('/[^a-zA-Z0-9_.-]/', '_', $baseName) . $extension;
+        
         // Create FileEntry
         $fileEntry = FileEntry::create([
-            'name' => $metadata['name'] ?? $fileName,
-            'file_name' => $fileName,
+            'name' => $metadata['name'] ?? $safeFileName, // نام نمایشی
+            'file_name' => $safeFileName, // نام فایل واقعی
             'mime' => $mimeType,
             'file_size' => $fileSize,
             'user_id' => $metadata['user_id'] ?? null,
@@ -284,7 +305,7 @@ class TelegramUrlUploadWithProgress
             'parent_id' => $metadata['parent_id'] ?? null,
             'disk_prefix' => 'telegram',
             'type' => $this->determineFileType($mimeType),
-            'path' => 'telegram/' . $fileName,
+            'path' => 'telegram/' . $pathSafeName, // path با کاراکترهای safe
         ]);
 
         // Create Telegram metadata
