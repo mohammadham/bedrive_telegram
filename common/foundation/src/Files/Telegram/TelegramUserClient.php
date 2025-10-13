@@ -169,6 +169,16 @@ class TelegramUserClient implements TelegramClientInterface
 
             // Upload file
             $file = new LocalFile($filePath);
+            
+            // Sanitize filename - فقط کاراکترهای مجاز ASCII
+            $originalFilename = $options['filename'] ?? basename($filePath);
+            $pathInfo = pathinfo($originalFilename);
+            $baseName = $pathInfo['filename'] ?? 'file';
+            $extension = isset($pathInfo['extension']) ? '.' . $pathInfo['extension'] : '';
+            
+            // پاکسازی کامل نام فایل برای تلگرام - فقط ASCII letters, numbers, dots, dashes, underscores
+            $cleanBaseName = preg_replace('/[^a-zA-Z0-9_.-]/', '_', $baseName);
+            $cleanFilename = $cleanBaseName . $extension;
 
             // Send to channel
             $result = $this->MadelineProto->messages->sendMedia([
@@ -180,29 +190,44 @@ class TelegramUserClient implements TelegramClientInterface
                     'attributes' => [
                         [
                             '_' => 'documentAttributeFilename',
-                            'file_name' =>
-                                $options['filename'] ?? basename($filePath),
+                            'file_name' => $cleanFilename, // استفاده از نام پاک شده
                         ],
                     ],
                 ],
                 'message' => $options['caption'] ?? '',
             ]);
 
-            // Extract message info
-            $message = $result['updates'][0]['message'] ?? $result;
+            // Extract message info - بررسی دقیق‌تر ساختار response
+            $message = null;
+            if (isset($result['updates'])) {
+                foreach ($result['updates'] as $update) {
+                    if (isset($update['message'])) {
+                        $message = $update['message'];
+                        break;
+                    }
+                }
+            } elseif (isset($result['_']) && $result['_'] === 'message') {
+                $message = $result;
+            }
+            
+            $messageId = $message['id'] ?? null;
             $document = $message['media']['document'] ?? null;
+            $fileId = $document['id'] ?? null;
 
             Log::info('File uploaded via User Account', [
                 'file_path' => $filePath,
                 'channel_id' => $channelId,
-                'message_id' => $message['id'] ?? null,
+                'message_id' => $messageId,
+                'file_id' => $fileId,
+                'clean_filename' => $cleanFilename,
+                'original_filename' => $originalFilename,
             ]);
 
             return [
                 'success' => true,
-                'file_id' => $document['id'] ?? null,
+                'file_id' => $fileId,
                 'file_unique_id' => null, // MTProto doesn't use unique_id like Bot API
-                'message_id' => $message['id'] ?? null,
+                'message_id' => $messageId,
                 'file_size' => $fileSize,
                 'mime_type' => $document['mime_type'] ?? mime_content_type($filePath),
                 'uploaded_at' => now()->toDateTimeString(),

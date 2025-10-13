@@ -288,7 +288,7 @@ class TelegramUrlUploadWithProgress
         
         // پاکسازی نام بدون تغییر کاراکترهای معمولی
         // فقط کاراکترهایی که در filesystem مشکل ایجاد می‌کنند را حذف می‌کنیم
-        $safeName = preg_replace('/[<>:"\/\\\\|?*\x00-\x1F]/', '_', $baseName);
+        $safeName = preg_replace('/[<>:"\/\\\\|?*\x00\x00\x00\x00-\x1F]/', '_', $baseName);
         $safeFileName = $safeName . $extension;
         
         // برای path در database، از ASCII safe استفاده می‌کنیم
