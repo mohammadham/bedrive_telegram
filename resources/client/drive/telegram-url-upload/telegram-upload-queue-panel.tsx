@@ -1,6 +1,7 @@
 import {useQuery} from '@tanstack/react-query';
 import {getUserProgressList} from './telegram-progress-api';
 import {TelegramUploadProgress} from './telegram-upload-progress';
+import {TelegramUploadProgressData} from './telegram-progress-types';
 import {IconButton} from '@ui/buttons/icon-button';
 import {CloseIcon} from '@ui/icons/material/Close';
 import {Trans} from '@ui/i18n/trans';
@@ -25,7 +26,7 @@ export function TelegramUploadQueuePanel() {
     enabled: isTelegramQueueOpen,
   });
 
-  const activeUploads = data?.data || [];
+  const activeUploads: TelegramUploadProgressData[] = data?.progress || [];
   const hasActiveUploads = activeUploads.length > 0;
 
   // Auto-close وقتی دیگر آپلودی نیست
@@ -83,7 +84,7 @@ export function TelegramUploadQueuePanel() {
               </div>
             )}
 
-            {activeUploads.map(progress => (
+            {activeUploads.map((progress: TelegramUploadProgressData) => (
               <TelegramUploadProgress
                 key={progress.session_id}
                 sessionId={progress.session_id}
