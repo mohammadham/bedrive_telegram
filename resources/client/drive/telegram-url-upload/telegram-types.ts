@@ -10,40 +10,46 @@ export interface TelegramUrlUploadRequest {
 }
 
 export interface TelegramBulkUrlUploadRequest {
-  urls: string[];
+  urls: Array<{url: string; filename: string}>;
   parent_id?: number | null;
 }
 
 export interface TelegramUrlUploadResponse {
-  session_id?: string; // Phase 8.2: session_id برای progress tracking
-  file_entry: {
-    id: number;
-    name: string;
-    file_size: number;
-    mime: string;
-    url: string;
-  };
-  metadata: {
-    telegram_file_id: string;
-    message_id: number;
-    upload_method: 'bot' | 'user';
-    upload_status: 'completed' | 'failed';
+  success: boolean;
+  message?: string;
+  data?: {
+    session_id: string;
+    file_entry?: {
+      id: number;
+      name: string;
+      file_size: number;
+      mime: string;
+      url: string;
+    };
+    metadata?: {
+      telegram_file_id: string;
+      message_id: number;
+      upload_method: 'bot' | 'user';
+      upload_status: 'completed' | 'failed';
+    };
   };
 }
 
 export interface TelegramBulkUrlUploadResponse {
-  success: Array<{
-    url: string;
-    file_entry: TelegramUrlUploadResponse['file_entry'];
-  }>;
-  failed: Array<{
-    url: string;
-    error: string;
-  }>;
-  summary: {
-    total: number;
-    successful: number;
-    failed: number;
+  success: boolean;
+  message?: string;
+  data?: {
+    results: Array<{
+      success: boolean;
+      url: string;
+      session_id?: string;
+      error?: string;
+    }>;
+    summary: {
+      total: number;
+      successful: number;
+      failed: number;
+    };
   };
 }
 

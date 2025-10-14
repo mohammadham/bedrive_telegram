@@ -29,7 +29,7 @@ export function TelegramUrlUploadDialog({
   const handleSingleSubmit = async (url: string, filename: string) => {
     setIsSubmitting(true);
     try {
-      const response = await uploadFromUrl(url, filename);
+      const response = await uploadFromUrl({url, name: filename});
 
       if (response.success && response.data?.session_id) {
         toast.positive(
@@ -60,7 +60,7 @@ export function TelegramUrlUploadDialog({
   const handleBulkSubmit = async (urls: {url: string; filename: string}[]) => {
     setIsSubmitting(true);
     try {
-      const response = await uploadBulkFromUrls(urls);
+      const response = await uploadBulkFromUrls({urls});
 
       if (response.success && response.data?.results) {
         const successCount = response.data.results.filter(

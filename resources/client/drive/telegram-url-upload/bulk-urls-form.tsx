@@ -68,7 +68,7 @@ export function BulkUrlsForm({onSubmit, isSubmitting}: BulkUrlsFormProps) {
 
             // Validate URL
             const validation = validateUrl(value);
-            updated.isValid = validation.valid;
+            updated.isValid = validation.isValid;
             updated.error = validation.error;
           }
 
@@ -91,7 +91,7 @@ export function BulkUrlsForm({onSubmit, isSubmitting}: BulkUrlsFormProps) {
         id: index + 1,
         url,
         filename: extractFilenameFromUrl(url) || `file-${index + 1}`,
-        isValid: validation.valid,
+        isValid: validation.isValid,
         error: validation.error,
       };
     });
@@ -191,7 +191,7 @@ export function BulkUrlsForm({onSubmit, isSubmitting}: BulkUrlsFormProps) {
                       <CheckCircleIcon className="text-positive" size="sm" />
                     ) : field.isValid === false ? (
                       <ErrorIcon className="text-danger" size="sm" />
-                    ) : null
+                    ) : undefined
                   }
                 />
                 <TextField
