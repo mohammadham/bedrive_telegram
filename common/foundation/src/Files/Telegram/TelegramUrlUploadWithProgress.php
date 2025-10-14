@@ -294,13 +294,10 @@ class TelegramUrlUploadWithProgress
         
         // پاکسازی نام بدون تغییر کاراکترهای معمولی
         // فقط کاراکترهایی که در filesystem مشکل ایجاد می‌کنند را حذف می‌کنیم
-        $safeName = preg_replace('/[<>:"\/\\\\|?*\x00\x00\x00\x00-\x1F]/', '_', $baseName);
+        $safeName = preg_replace('/[<>:"\/\\\\|?*\x00-\x1F]/', '_', $baseName);
         $safeFileName = $safeName . $extension;
         
-        // برای path در database، از ASCII safe استفاده می‌کنیم
-        $pathSafeName = preg_replace('/[^a-zA-Z0-9_.-]/', '_', $baseName) . $extension;
-        
-        // Create FileEntry
+        // Create FileEntry WITHOUT path (برای تلگرام نیازی به path نیست)
         $fileEntry = FileEntry::create([
             'name' => $metadata['name'] ?? $safeFileName, // نام نمایشی
             'file_name' => $safeFileName, // نام فایل واقعی
@@ -311,7 +308,7 @@ class TelegramUrlUploadWithProgress
             'parent_id' => $metadata['parent_id'] ?? null,
             'disk_prefix' => 'telegram',
             'type' => $this->determineFileType($mimeType),
-            'path' => 'telegram/' . $pathSafeName, // path با کاراکترهای safe
+            // path را اصلاً set نمی‌کنیم - تلگرام از message_id استفاده می‌کند
         ]);
 
         // Create Telegram metadata

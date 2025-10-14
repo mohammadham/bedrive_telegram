@@ -3,6 +3,7 @@ import {Link, useLocation, useParams} from 'react-router';
 import {Sidebar} from './sidebar/sidebar';
 import {FileView} from '../file-view/file-view';
 import {UploadQueue} from '../uploading/upload-queue';
+import {TelegramUploadQueuePanel} from '../telegram-url-upload/telegram-upload-queue-panel';
 import {driveState, useDriveStore} from '../drive-store';
 import {
   DRIVE_PAGES,
@@ -99,6 +100,7 @@ export function DriveLayout() {
               <FileView />
             </DashboardContent>
             <UploadQueue />
+            <TelegramUploadQueuePanel />
             <DriveDialogsContainer />
             <DashboardSidenav position="right" size="lg">
               <DetailsSidebar />

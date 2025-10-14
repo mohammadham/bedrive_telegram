@@ -36,14 +36,11 @@ export function TelegramUrlUploadDialog({
           `تلگرام: آپلود در پس‌زمینه شروع شد (${response.data.session_id.substring(0, 8)}...)`,
         );
 
-        // Open upload queue to show progress
-        driveState().setUploadQueueIsOpen(true);
+        // Open Telegram upload queue to show progress
+        driveState().setTelegramUploadQueueIsOpen(true);
 
-        // Invalidate queries to refresh file list
-        await invalidateEntryQueries();
-        queryClient.invalidateQueries({
-          queryKey: DriveQueryKeys.fetchStorageSummary,
-        });
+        // Invalidate queries to refresh file list after completion
+        // (این در TelegramUploadProgress خودکار انجام می‌شود)
 
         // Close dialog
         setIsOpen(false);
@@ -70,14 +67,8 @@ export function TelegramUrlUploadDialog({
           `${successCount} فایل در پس‌زمینه در حال آپلود هستند`,
         );
 
-        // Open upload queue
-        driveState().setUploadQueueIsOpen(true);
-
-        // Invalidate queries
-        await invalidateEntryQueries();
-        queryClient.invalidateQueries({
-          queryKey: DriveQueryKeys.fetchStorageSummary,
-        });
+        // Open Telegram upload queue
+        driveState().setTelegramUploadQueueIsOpen(true);
 
         // Close dialog
         setIsOpen(false);

@@ -36,6 +36,7 @@ export interface DriveSortDescriptor {
 
 interface State {
   uploadQueueIsOpen: boolean;
+  telegramUploadQueueIsOpen: boolean;
   selectedEntries: Set<number>;
   sidebarExpandedKeys: Key[];
   activePage?: DrivePage;
@@ -51,6 +52,7 @@ interface State {
 
 interface Actions {
   setUploadQueueIsOpen: (isOpen: boolean) => void;
+  setTelegramUploadQueueIsOpen: (isOpen: boolean) => void;
   setSidebarExpandedKeys: (keys: Key[]) => void;
   expandSidebarItem: (key: Key) => void;
   collapseSidebarItem: (key: Key) => void;
@@ -76,6 +78,7 @@ interface Actions {
 
 const initialState: State = {
   uploadQueueIsOpen: false,
+  telegramUploadQueueIsOpen: false,
   contextMenuData: null,
   selectedEntries: new Set(),
   entriesBeingDragged: [],
@@ -97,6 +100,11 @@ export const useDriveStore = create<State & Actions>()(
     setUploadQueueIsOpen: isOpen => {
       set(state => {
         state.uploadQueueIsOpen = isOpen;
+      });
+    },
+    setTelegramUploadQueueIsOpen: isOpen => {
+      set(state => {
+        state.telegramUploadQueueIsOpen = isOpen;
       });
     },
     setContextMenuData: data => {

@@ -25,6 +25,8 @@ import {CloudUploadIcon} from '@ui/icons/material/CloudUpload';
 import {RefreshIcon} from '@ui/icons/material/Refresh';
 import {Skeleton} from '@ui/skeleton/skeleton';
 import {toast} from '@ui/toast/toast';
+import {useQueryClient} from '@tanstack/react-query';
+import {DriveQueryKeys, invalidateEntryQueries} from '../drive-query-keys';
 
 interface TelegramUploadProgressProps {
   sessionId: string;
@@ -41,16 +43,25 @@ export function TelegramUploadProgress({
   showDetails = true,
   compact = false,
 }: TelegramUploadProgressProps) {
+  const queryClient = useQueryClient();
   const {progress, isLoading, isCompleted, isFailed} = useUploadProgress({
     sessionId,
   });
 
   // Callbacks
   React.useEffect(() => {
-    if (isCompleted && onComplete) {
-      onComplete();
+    if (isCompleted) {
+      // Refresh file list
+      invalidateEntryQueries();
+      queryClient.invalidateQueries({
+        queryKey: DriveQueryKeys.fetchStorageSummary,
+      });
+      
+      if (onComplete) {
+        onComplete();
+      }
     }
-  }, [isCompleted, onComplete]);
+  }, [isCompleted, onComplete, queryClient]);
 
   React.useEffect(() => {
     if (isFailed && progress?.error_message && onError) {
