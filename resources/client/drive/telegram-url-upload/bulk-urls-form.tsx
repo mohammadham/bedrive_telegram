@@ -1,256 +1,264 @@
 /**
  * Phase 8.1: Telegram URL Upload - Bulk URLs Form
- * فرم آپلود چندتایی از URL
+ * فرم آپلود دسته‌ای از URL
  */
 
 import React, {useState} from 'react';
 import {Trans} from '@ui/i18n/trans';
+import {TextField} from '@ui/forms/input-field/text-field/text-field';
 import {Button} from '@ui/buttons/button';
+import {ProgressCircle} from '@ui/progress/progress-circle';
 import {CloudUploadIcon} from '@ui/icons/material/CloudUpload';
-import {DeleteIcon} from '@ui/icons/material/Delete';
 import {AddIcon} from '@ui/icons/material/Add';
-import {validateUrl} from './telegram-url-upload-api';
+import {RemoveIcon} from '@ui/icons/material/Remove';
+import {IconButton} from '@ui/buttons/icon-button';
+import {validateUrl, extractFilenameFromUrl} from './telegram-url-upload-api';
+import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
+import {ErrorIcon} from '@ui/icons/material/Error';
+
+interface UrlField {
+  id: number;
+  url: string;
+  filename: string;
+  isValid?: boolean;
+  error?: string;
+}
 
 interface BulkUrlsFormProps {
-  onSubmit: (urls: string[]) => void;
+  onSubmit: (urls: {url: string; filename: string}[]) => void;
   isSubmitting: boolean;
 }
 
 export function BulkUrlsForm({onSubmit, isSubmitting}: BulkUrlsFormProps) {
-  const [urls, setUrls] = useState(['', '', '']);
-  const [errors, setErrors] = useState<{[key: number]: string}>({});
+  const [fields, setFields] = useState<UrlField[]>([
+    {id: 1, url: '', filename: ''},
+    {id: 2, url: '', filename: ''},
+    {id: 3, url: '', filename: ''},
+  ]);
+  const [textareaMode, setTextareaMode] = useState(false);
+  const [bulkText, setBulkText] = useState('');
 
-  const addUrlField = () => {
-    setUrls([...urls, '']);
+  const addField = () => {
+    const newId = Math.max(...fields.map(f => f.id)) + 1;
+    setFields([...fields, {id: newId, url: '', filename: ''}]);
   };
 
-  const removeUrlField = (index: number) => {
-    if (urls.length <= 1) return;
-    const newUrls = urls.filter((_, i) => i !== index);
-    setUrls(newUrls);
-    
-    // Remove error for this index
-    const newErrors = {...errors};
-    delete newErrors[index];
-    setErrors(newErrors);
-  };
-
-  const updateUrl = (index: number, value: string) => {
-    const newUrls = [...urls];
-    newUrls[index] = value;
-    setUrls(newUrls);
-
-    // Clear error when typing
-    if (errors[index]) {
-      const newErrors = {...errors};
-      delete newErrors[index];
-      setErrors(newErrors);
+  const removeField = (id: number) => {
+    if (fields.length > 1) {
+      setFields(fields.filter(f => f.id !== id));
     }
   };
 
-  const validateUrlField = (index: number) => {
-    const url = urls[index].trim();
-    if (!url) {
-      // Empty is OK, just skip
-      return;
-    }
+  const updateField = (
+    id: number,
+    key: keyof UrlField,
+    value: string | boolean,
+  ) => {
+    setFields(
+      fields.map(f => {
+        if (f.id === id) {
+          const updated = {...f, [key]: value};
 
-    const validation = validateUrl(url);
-    if (!validation.isValid) {
-      setErrors({
-        ...errors,
-        [index]: validation.error || 'URL نامعتبر است',
-      });
-    }
+          // Auto-fill filename from URL
+          if (key === 'url' && typeof value === 'string' && value) {
+            const extracted = extractFilenameFromUrl(value);
+            if (extracted && !f.filename) {
+              updated.filename = extracted;
+            }
+
+            // Validate URL
+            const validation = validateUrl(value);
+            updated.isValid = validation.valid;
+            updated.error = validation.error;
+          }
+
+          return updated;
+        }
+        return f;
+      }),
+    );
+  };
+
+  const handleBulkPaste = () => {
+    const lines = bulkText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    const newFields: UrlField[] = lines.map((url, index) => {
+      const validation = validateUrl(url);
+      return {
+        id: index + 1,
+        url,
+        filename: extractFilenameFromUrl(url) || `file-${index + 1}`,
+        isValid: validation.valid,
+        error: validation.error,
+      };
+    });
+
+    setFields(newFields);
+    setTextareaMode(false);
+    setBulkText('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // فیلتر URL‌های خالی
-    const validUrls = urls
-      .map(u => u.trim())
-      .filter(u => u.length > 0);
+    const validFields = fields.filter(
+      f => f.url && f.filename && f.isValid !== false,
+    );
 
-    if (validUrls.length === 0) {
-      setErrors({0: 'حداقل یک URL وارد کنید'});
+    if (validFields.length === 0) {
       return;
     }
 
-    // اعتبارسنجی همه URL‌ها
-    const newErrors: {[key: number]: string} = {};
-    urls.forEach((url, index) => {
-      if (url.trim()) {
-        const validation = validateUrl(url);
-        if (!validation.isValid) {
-          newErrors[index] = validation.error || 'URL نامعتبر است';
-        }
-      }
-    });
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    onSubmit(validUrls);
+    onSubmit(validFields.map(f => ({url: f.url, filename: f.filename})));
   };
 
-  const validUrlsCount = urls.filter(u => u.trim()).length;
-  const hasErrors = Object.keys(errors).length > 0;
+  const validCount = fields.filter(f => f.isValid === true).length;
+  const invalidCount = fields.filter(f => f.isValid === false).length;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-24">
-      {/* Info Banner */}
-      <div className="rounded border border-primary-light bg-primary-light/10 p-12">
-        <div className="mb-4 text-sm font-medium text-primary">
-          <Trans message="آپلود دسته‌ای" />
-        </div>
-        <p className="text-xs text-muted">
-          <Trans message="می‌توانید چندین URL را به صورت همزمان آپلود کنید. فایل‌هایی که خطا دارند، نادیده گرفته می‌شوند." />
-        </p>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-16">
+      {/* Switch Mode */}
+      <div className="flex items-center justify-between">
+        <Button
+          type="button"
+          variant="text"
+          size="xs"
+          onClick={() => setTextareaMode(!textareaMode)}
+        >
+          <Trans
+            message={textareaMode ? 'فیلدهای جداگانه' : 'حالت Paste چندتایی'}
+          />
+        </Button>
 
-      {/* URL Fields */}
-      <div className="space-y-12">
-        <div className="mb-8 flex items-center justify-between">
-          <span className="text-sm font-medium">
-            <Trans message="لیست URL‌ها" />
-            {validUrlsCount > 0 && (
-              <span className="ml-8 text-xs text-muted">
-                ({validUrlsCount} <Trans message="مورد" />)
+        {!textareaMode && (
+          <div className="flex items-center gap-8 text-xs text-muted">
+            {validCount > 0 && (
+              <span className="flex items-center gap-4 text-positive">
+                <CheckCircleIcon className="text-positive" size="xs" />
+                {validCount} معتبر
               </span>
             )}
-          </span>
+            {invalidCount > 0 && (
+              <span className="flex items-center gap-4 text-danger">
+                <ErrorIcon className="text-danger" size="xs" />
+                {invalidCount} نامعتبر
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Textarea Mode */}
+      {textareaMode ? (
+        <div className="space-y-12">
+          <TextField
+            label={<Trans message="لینک‌ها (هر خط یک لینک)" />}
+            inputElementType="textarea"
+            value={bulkText}
+            onChange={e => setBulkText(e.target.value)}
+            rows={10}
+            placeholder="https://example.com/file1.pdf\nhttps://example.com/file2.zip\nhttps://example.com/file3.mp4"
+            description={
+              <Trans message="هر لینک را در یک خط جداگانه وارد کنید" />
+            }
+          />
           <Button
             type="button"
-            size="xs"
-            variant="outline"
-            startIcon={<AddIcon />}
-            onClick={addUrlField}
-            disabled={isSubmitting}
+            onClick={handleBulkPaste}
+            disabled={!bulkText.trim()}
           >
-            <Trans message="افزودن URL" />
+            <Trans message="تبدیل به فیلدها" />
           </Button>
         </div>
-
-        {urls.map((url, index) => (
-          <div key={index} className="flex items-start gap-8">
-            <div className="flex-1">
-              <input
-                type="url"
-                value={url}
-                onChange={e => updateUrl(index, e.target.value)}
-                onBlur={() => validateUrlField(index)}
-                placeholder={`URL ${index + 1}`}
-                disabled={isSubmitting}
-                className={`w-full rounded border px-12 py-8 text-sm transition-colors ${
-                  errors[index]
-                    ? 'border-danger focus:border-danger'
-                    : 'border-divider focus:border-primary'
-                } disabled:opacity-50`}
-              />
-              {errors[index] && (
-                <div className="mt-4 text-xs text-danger">{errors[index]}</div>
-              )}
-            </div>
-            {urls.length > 1 && (
-              <button
-                type="button"
-                onClick={() => removeUrlField(index)}
-                disabled={isSubmitting}
-                className="mt-6 rounded p-6 text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
-                title="حذف"
-              >
-                <DeleteIcon size="sm" />
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Textarea Alternative */}
-      <div className="rounded border border-dashed border-divider p-12">
-        <div className="mb-6 text-xs font-medium text-muted">
-          <Trans message="یا هر URL را در یک خط جداگانه وارد کنید:" />
-        </div>
-        <textarea
-          placeholder="https://example.com/file1.pdf&#10;https://example.com/file2.zip&#10;https://example.com/file3.mp4"
-          rows={5}
-          disabled={isSubmitting}
-          className="w-full rounded border border-divider px-12 py-8 text-sm transition-colors focus:border-primary disabled:opacity-50"
-          onBlur={e => {
-            const lines = e.target.value
-              .split('\n')
-              .map(l => l.trim())
-              .filter(l => l.length > 0);
-            if (lines.length > 0) {
-              setUrls(lines);
-              e.target.value = '';
-            }
-          }}
-        />
-      </div>
-
-      {/* Submit Button */}
-      <Button
-        type="submit"
-        variant="flat"
-        color="primary"
-        disabled={validUrlsCount === 0 || hasErrors || isSubmitting}
-        className="w-full"
-        startIcon={<CloudUploadIcon />}
-      >
-        {isSubmitting ? (
-          <Trans message="در حال آپلود..." />
-        ) : (
-          <>
-            <Trans message="آپلود" /> {validUrlsCount}{' '}
-            <Trans message="فایل به تلگرام" />
-          </>
-        )}
-      </Button>
-
-      {/* Statistics */}
-      {(validUrlsCount > 0 || hasErrors) && (
-        <div className="flex items-center justify-between rounded bg-alt p-12 text-xs">
-          <div className="flex gap-16">
-            <div>
-              <span className="text-muted">
-                <Trans message="معتبر:" />
-              </span>{' '}
-              <span className="font-medium text-positive">{validUrlsCount}</span>
-            </div>
-            {hasErrors && (
-              <div>
-                <span className="text-muted">
-                  <Trans message="خطا:" />
-                </span>{' '}
-                <span className="font-medium text-danger">
-                  {Object.keys(errors).length}
-                </span>
+      ) : (
+        /* Individual Fields */
+        <div className="space-y-12">
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex items-start gap-8">
+              <div className="flex-1 space-y-8">
+                <TextField
+                  label={`لینک ${index + 1}`}
+                  value={field.url}
+                  onChange={e => updateField(field.id, 'url', e.target.value)}
+                  placeholder="https://example.com/file.pdf"
+                  required
+                  error={field.error}
+                  endAppend={
+                    field.isValid === true ? (
+                      <CheckCircleIcon className="text-positive" size="sm" />
+                    ) : field.isValid === false ? (
+                      <ErrorIcon className="text-danger" size="sm" />
+                    ) : null
+                  }
+                />
+                <TextField
+                  label="نام فایل"
+                  value={field.filename}
+                  onChange={e =>
+                    updateField(field.id, 'filename', e.target.value)
+                  }
+                  placeholder="my-file.pdf"
+                  required
+                />
               </div>
-            )}
-          </div>
+
+              <div className="pt-28">
+                <IconButton
+                  size="sm"
+                  color="danger"
+                  onClick={() => removeField(field.id)}
+                  disabled={fields.length === 1}
+                >
+                  <RemoveIcon />
+                </IconButton>
+              </div>
+            </div>
+          ))}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="xs"
+            onClick={addField}
+            startIcon={<AddIcon />}
+          >
+            <Trans message="افزودن لینک" />
+          </Button>
         </div>
       )}
 
-      {/* Help Text */}
-      <div className="rounded bg-alt p-12 text-xs text-muted">
-        <div className="mb-6 font-medium">
-          <Trans message="💡 نکته‌های آپلود دسته‌ای:" />
+      {/* Submit */}
+      <div className="flex items-center justify-between pt-8">
+        <div className="text-xs text-muted">
+          <Trans
+            message=":count لینک آماده آپلود"
+            values={{count: validCount}}
+          />
         </div>
-        <ul className="list-inside list-disc space-y-2">
-          <li>
-            <Trans message="فایل‌ها به صورت موازی آپلود می‌شوند" />
-          </li>
-          <li>
-            <Trans message="URL‌های نامعتبر یا غیرقابل دسترسی نادیده گرفته می‌شوند" />
-          </li>
-          <li>
-            <Trans message="پس از آپلود، گزارش کامل موفقیت/خطاها نمایش داده می‌شود" />
-          </li>
-        </ul>
+        <Button
+          type="submit"
+          variant="flat"
+          color="primary"
+          disabled={
+            isSubmitting || validCount === 0 || textareaMode || fields.length === 0
+          }
+          startIcon={
+            isSubmitting ? (
+              <ProgressCircle size="sm" isIndeterminate />
+            ) : (
+              <CloudUploadIcon />
+            )
+          }
+        >
+          {isSubmitting ? (
+            <Trans message="در حال آپلود..." />
+          ) : (
+            <Trans message="شروع آپلود" />
+          )}
+        </Button>
       </div>
     </form>
   );

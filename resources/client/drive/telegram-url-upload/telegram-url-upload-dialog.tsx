@@ -1,3 +1,4 @@
+import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
 import {Dialog} from '@ui/overlays/dialog/dialog';
 import {DialogHeader} from '@ui/overlays/dialog/dialog-header';
 import {DialogBody} from '@ui/overlays/dialog/dialog-body';
@@ -8,57 +9,127 @@ import {Tab} from '@ui/tabs/tab';
 import {TabPanel, TabPanels} from '@ui/tabs/tab-panels';
 import {SingleUrlForm} from './single-url-form';
 import {BulkUrlsForm} from './bulk-urls-form';
-import {DialogProps} from '@ui/overlays/dialog/dialog';
 import {toast} from '@ui/toast/toast';
-import {message} from '@ui/i18n/message';
 import {queryClient} from '@common/http/query-client';
-import {DriveQueryKeys} from '../drive-query-keys';
+import {DriveQueryKeys, invalidateEntryQueries} from '../drive-query-keys';
 import {driveState} from '../drive-store';
+import {useState} from 'react';
+import {uploadFromUrl, uploadBulkFromUrls} from './telegram-url-upload-api';
 
-export function TelegramUrlUploadDialog({...dialogProps}: DialogProps) {
-  const handleSuccess = (sessionId: string) => {
-    // Show background upload notification
-    toast(
-      message('تلگرام: آپلود در پس‌زمینه شروع شد (Session: {sessionId})'),
-      {values: {sessionId: sessionId.substring(0, 8)}},
-    );
+interface TelegramUrlUploadDialogProps {
+  trigger?: React.ReactElement;
+}
 
-    // Open upload queue to show progress
-    driveState().setUploadQueueIsOpen(true);
+export function TelegramUrlUploadDialog({
+  trigger,
+}: TelegramUrlUploadDialogProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Invalidate queries to refresh file list
-    queryClient.invalidateQueries({queryKey: DriveQueryKeys.fetchFolder});
-    queryClient.invalidateQueries({queryKey: DriveQueryKeys.fetchStorageSummary});
+  const handleSingleSubmit = async (url: string, filename: string) => {
+    setIsSubmitting(true);
+    try {
+      const response = await uploadFromUrl(url, filename);
 
-    // Close dialog immediately
-    dialogProps.onClose?.();
+      if (response.success && response.data?.session_id) {
+        toast.positive(
+          `تلگرام: آپلود در پس‌زمینه شروع شد (${response.data.session_id.substring(0, 8)}...)`,
+        );
+
+        // Open upload queue to show progress
+        driveState().setUploadQueueIsOpen(true);
+
+        // Invalidate queries to refresh file list
+        await invalidateEntryQueries();
+        queryClient.invalidateQueries({
+          queryKey: DriveQueryKeys.fetchStorageSummary,
+        });
+
+        // Close dialog
+        setIsOpen(false);
+      } else {
+        toast.danger(response.message || 'خطا در شروع آپلود');
+      }
+    } catch (error: any) {
+      toast.danger(error.message || 'خطا در ارسال درخواست');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBulkSubmit = async (urls: {url: string; filename: string}[]) => {
+    setIsSubmitting(true);
+    try {
+      const response = await uploadBulkFromUrls(urls);
+
+      if (response.success && response.data?.results) {
+        const successCount = response.data.results.filter(
+          (r: any) => r.success,
+        ).length;
+        toast.positive(
+          `${successCount} فایل در پس‌زمینه در حال آپلود هستند`,
+        );
+
+        // Open upload queue
+        driveState().setUploadQueueIsOpen(true);
+
+        // Invalidate queries
+        await invalidateEntryQueries();
+        queryClient.invalidateQueries({
+          queryKey: DriveQueryKeys.fetchStorageSummary,
+        });
+
+        // Close dialog
+        setIsOpen(false);
+      } else {
+        toast.danger(response.message || 'خطا در شروع آپلود');
+      }
+    } catch (error: any) {
+      toast.danger(error.message || 'خطا در ارسال درخواست');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Dialog size="lg" {...dialogProps}>
-      <DialogHeader>
-        <Trans message="آپلود از URL به تلگرام" />
-      </DialogHeader>
-      <DialogBody>
-        <Tabs>
-          <TabList>
-            <Tab>
-              <Trans message="آپلود تکی" />
-            </Tab>
-            <Tab>
-              <Trans message="آپلود دسته‌ای" />
-            </Tab>
-          </TabList>
-          <TabPanels className="pt-20">
-            <TabPanel>
-              <SingleUrlForm onSuccess={handleSuccess} />
-            </TabPanel>
-            <TabPanel>
-              <BulkUrlsForm onSuccess={handleSuccess} />
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
-      </DialogBody>
-    </Dialog>
+    <DialogTrigger
+      type="modal"
+      isOpen={isOpen}
+      onOpenChange={setIsOpen}
+      triggerOnContextMenu={false}
+    >
+      {trigger}
+      <Dialog size="lg">
+        <DialogHeader>
+          <Trans message="آپلود از URL به تلگرام" />
+        </DialogHeader>
+        <DialogBody>
+          <Tabs>
+            <TabList>
+              <Tab>
+                <Trans message="آپلود تکی" />
+              </Tab>
+              <Tab>
+                <Trans message="آپلود دسته‌ای" />
+              </Tab>
+            </TabList>
+            <TabPanels className="pt-20">
+              <TabPanel>
+                <SingleUrlForm
+                  onSubmit={handleSingleSubmit}
+                  isSubmitting={isSubmitting}
+                />
+              </TabPanel>
+              <TabPanel>
+                <BulkUrlsForm
+                  onSubmit={handleBulkSubmit}
+                  isSubmitting={isSubmitting}
+                />
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </DialogBody>
+      </Dialog>
+    </DialogTrigger>
   );
 }
