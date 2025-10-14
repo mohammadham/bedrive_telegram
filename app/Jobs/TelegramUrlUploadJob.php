@@ -21,10 +21,10 @@ class TelegramUrlUploadJob implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(
-        public string $sessionId,
         public string $url,
-        public string $filename,
-        public int $userId
+        public array $fileOptions,
+        public array $uploadOptions,
+        public string $sessionId
     ) {
         // Queue را مشخص می‌کنیم
         $this->onQueue('telegram-uploads');
@@ -38,16 +38,18 @@ class TelegramUrlUploadJob implements ShouldQueue
         Log::info('TelegramUrlUploadJob started', [
             'session_id' => $this->sessionId,
             'url' => $this->url,
-            'user_id' => $this->userId,
+            'user_id' => $this->fileOptions['user_id'] ?? null,
         ]);
 
         try {
-            $service = new TelegramUrlUploadWithProgress();
+            // استفاده از سرویس با progress tracking
+            $uploadService = new TelegramUrlUploadWithProgress();
             
-            $result = $service->uploadFromUrl(
+            // آپلود فایل با session موجود
+            $result = $uploadService->uploadFromUrl(
                 $this->url,
-                $this->filename,
-                $this->userId,
+                $this->fileOptions,
+                $this->uploadOptions,
                 $this->sessionId
             );
 

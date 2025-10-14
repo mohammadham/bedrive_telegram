@@ -28,20 +28,26 @@ class TelegramUrlUploadWithProgress
     public function uploadFromUrl(
         string $url,
         array $fileData = [],
-        array $telegramOptions = []
+        array $telegramOptions = [],
+        ?string $existingSessionId = null
     ): array {
         $userId = $fileData['user_id'] ?? auth()->id();
         $filename = $fileData['name'] ?? $this->extractFilename($url);
 
-        // ایجاد session برای tracking
-        $progress = $this->progressService->createSession(
-            $userId,
-            $url,
-            $filename,
-            null // size بعداً update می‌شود
-        );
-
-        $sessionId = $progress->session_id;
+        // استفاده از session موجود یا ایجاد جدید
+        if ($existingSessionId) {
+            $sessionId = $existingSessionId;
+            $progress = \App\Models\TelegramUploadProgress::where('session_id', $sessionId)->firstOrFail();
+        } else {
+            // ایجاد session برای tracking
+            $progress = $this->progressService->createSession(
+                $userId,
+                $url,
+                $filename,
+                null // size بعداً update می‌شود
+            );
+            $sessionId = $progress->session_id;
+        }
 
         try {
             // شروع download
