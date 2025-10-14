@@ -185,7 +185,8 @@ export function BulkUrlsForm({onSubmit, isSubmitting}: BulkUrlsFormProps) {
                   onChange={e => updateField(field.id, 'url', e.target.value)}
                   placeholder="https://example.com/file.pdf"
                   required
-                  error={field.error}
+                  invalid={field.isValid === false}
+                  errorMessage={field.error}
                   endAppend={
                     field.isValid === true ? (
                       <CheckCircleIcon className="text-positive" size="sm" />
