@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\TelegramUrlUploadJob;
 use Common\Files\Telegram\TelegramUrlUploadService;
 use Common\Files\Telegram\TelegramUrlUploadWithProgress;
 use Common\Core\BaseController;
@@ -75,7 +76,7 @@ class TelegramUrlUploadController extends BaseController
             $sessionId = $progress->session_id;
             
             // Dispatch job برای آپلود در background
-            \App\Jobs\TelegramUrlUploadJob::dispatch(
+            TelegramUrlUploadJob::dispatch(
                 $rawUrl,
                 [
                     'name' => $filename,
