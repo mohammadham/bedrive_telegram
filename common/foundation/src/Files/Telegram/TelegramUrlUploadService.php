@@ -302,17 +302,26 @@ class TelegramUrlUploadService
         int $fileSize,
         string $mimeType
     ): FileEntry {
-        // Create FileEntry
+        // Sanitize filename برای جلوگیری از مشکلات encoding
+        $pathInfo = pathinfo($fileName);
+        $baseName = $pathInfo['filename'] ?? 'file';
+        $extension = isset($pathInfo['extension']) ? '.' . $pathInfo['extension'] : '';
+        
+        // پاکسازی نام - فقط کاراکترهای مشکل‌ساز filesystem را حذف می‌کنیم
+        $safeName = preg_replace('/[<>:"\/\\\\|?*\x00-\x1F]/', '_', $baseName);
+        $safeFileName = $safeName . $extension;
+        
+        // Create FileEntry WITHOUT path (تلگرام نیازی به path ندارد - از message_id استفاده می‌کند)
         $fileEntry = FileEntry::create([
-            'name' => $metadata['name'] ?? $fileName,
-            'file_name' => $fileName,
+            'name' => $metadata['name'] ?? $safeFileName,
+            'file_name' => $safeFileName,
             'mime' => $mimeType,
             'file_size' => $fileSize,
             'user_id' => $metadata['user_id'] ?? null,
             'owner_id' => $metadata['owner_id'] ?? $metadata['user_id'] ?? null,
             'disk_prefix' => 'telegram',
             'type' => $this->determineFileType($mimeType),
-            'path' => 'telegram/' . $fileName,
+            // path را اصلاً set نمی‌کنیم - تلگرام از message_id استفاده می‌کند
         ]);
 
         // Create Telegram metadata
