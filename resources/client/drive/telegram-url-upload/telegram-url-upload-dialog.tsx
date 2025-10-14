@@ -33,16 +33,25 @@ export function TelegramUrlUploadDialog() {
         name: filename,
       });
 
-      // Phase 8.2: ذخیره session_id برای نمایش progress
+      // Phase 8.2: دریافت session_id برای tracking
       if (response.session_id) {
-        setUploadSessionId(response.session_id);
-      } else {
-        // اگر session_id نداشت، یعنی بدون progress تکمیل شده
+        // نمایش toast موفقیت
+        toast.positive(
+          `آپلود فایل "${filename}" در حال انجام است و در پس‌زمینه ادامه می‌یابد`,
+        );
+        
+        // Refresh drive list
+        await invalidateEntryQueries();
+        
+        // بستن فوری dialog
+        close();
+      } else if (response.file_entry) {
+        // اگر بدون session_id تکمیل شده (sync mode)
         handleUploadComplete(response.file_entry.name);
       }
     } catch (error: any) {
       toast.danger(
-        error.message || 'خطا در آپلود فایل به تلگرام',
+        error.message || 'خطا در شروع آپلود فایل به تلگرام',
       );
       setIsSubmitting(false);
     }

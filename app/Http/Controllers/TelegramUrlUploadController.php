@@ -32,7 +32,7 @@ class TelegramUrlUploadController extends BaseController
     }
 
     /**
-     * Upload single file from URL
+     * Upload single file from URL (با background processing)
      *
      * POST /api/v1/telegram/upload-url
      *
@@ -60,33 +60,77 @@ class TelegramUrlUploadController extends BaseController
         ]);
 
         try {
-            // استفاده از uploadWithProgress - خود سرویس باید URL را مدیریت کند
-            $result = $this->uploadWithProgress->uploadFromUrl(
-                $rawUrl, // استفاده از URL اصلی
+            $userId = auth()->id();
+            $filename = $request->input('name') ?? $this->extractFilenameFromUrl($rawUrl);
+            
+            // ایجاد session فوری برای tracking
+            $progressService = $this->uploadWithProgress->getProgressService();
+            $progress = $progressService->createSession(
+                $userId,
+                $rawUrl,
+                $filename,
+                null
+            );
+            
+            $sessionId = $progress->session_id;
+            
+            // Dispatch job برای آپلود در background
+            \App\Jobs\TelegramUrlUploadJob::dispatch(
+                $rawUrl,
                 [
-                    'name' => $request->input('name'),
-                    'user_id' => auth()->id(),
-                    'owner_id' => auth()->id(),
+                    'name' => $filename,
+                    'user_id' => $userId,
+                    'owner_id' => $userId,
                     'parent_id' => $request->input('parent_id'),
                 ],
                 [
                     'caption' => $request->input('caption', ''),
-                ]
-            );
+                ],
+                $sessionId
+            )->onQueue('telegram-uploads');
 
+            Log::info('Upload job dispatched', [
+                'session_id' => $sessionId,
+                'url' => $rawUrl,
+            ]);
+
+            // بازگرداندن فوری session_id به frontend
             return $this->success([
-                'message' => 'File uploaded successfully from URL',
-                'session_id' => $result['session_id'], // Phase 8.2: session_id برای tracking
-                'file_entry' => $result['file_entry'],
-                'metadata' => $result['metadata'],
+                'message' => 'Upload started in background',
+                'session_id' => $sessionId,
+                'status' => 'processing',
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Failed to start upload', [
+                'url' => $rawUrl,
+                'error' => $e->getMessage(),
+            ]);
+            
             return $this->error(
-                'Failed to upload file from URL: ' . $e->getMessage(),[],
+                'Failed to start upload: ' . $e->getMessage(),[],
                 500
             );
         }
+    }
+
+    /**
+     * استخراج نام فایل از URL
+     */
+    protected function extractFilenameFromUrl(string $url): string
+    {
+        $path = parse_url(urldecode($url), PHP_URL_PATH);
+        $filename = basename($path);
+        
+        if ($filename) {
+            $filename = urldecode($filename);
+        }
+        
+        if (empty($filename) || strpos($filename, '.') === false) {
+            return 'file_' . time();
+        }
+
+        return $filename;
     }
 
     /**
