@@ -64,7 +64,7 @@ class TelegramUrlUploadController extends BaseController
             $filename = $request->input('name') ?? $this->extractFilenameFromUrl($rawUrl);
             
             // ایجاد session فوری برای tracking
-            $progressService = $this->uploadWithProgress->getProgressService();
+            $progressService = new \Common\Files\Telegram\TelegramUploadProgressService();
             $progress = $progressService->createSession(
                 $userId,
                 $rawUrl,
