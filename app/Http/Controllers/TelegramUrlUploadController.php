@@ -147,17 +147,30 @@ class TelegramUrlUploadController extends BaseController
         $rawUrls = $request->input('urls', []);
         
         // Sanitize all URLs
+        // Frontend ارسال می‌کند: [{url: '...', filename: '...'}, ...]
         $sanitizedUrls = [];
-        foreach ($rawUrls as $rawUrl) {
+        foreach ($rawUrls as $urlData) {
+            // اگر object است، url را استخراج کن
+            $rawUrl = is_array($urlData) ? ($urlData['url'] ?? $urlData) : $urlData;
+            
             $sanitized = $this->sanitizeUrl($rawUrl);
             if ($sanitized) {
-                $sanitizedUrls[] = $sanitized;
+                // حفظ ساختار با filename
+                if (is_array($urlData) && isset($urlData['filename'])) {
+                    $sanitizedUrls[] = [
+                        'url' => $sanitized,
+                        'filename' => $urlData['filename'],
+                    ];
+                } else {
+                    $sanitizedUrls[] = ['url' => $sanitized];
+                }
             }
         }
         
         $validator = Validator::make(['urls' => $sanitizedUrls], [
             'urls' => 'required|array|min:1|max:100',
-            'urls.*' => 'required|url|max:2048',
+            'urls.*.url' => 'required|url|max:2048',
+            'urls.*.filename' => 'nullable|string|max:255',
             'caption' => 'nullable|string|max:1024',
         ]);
 

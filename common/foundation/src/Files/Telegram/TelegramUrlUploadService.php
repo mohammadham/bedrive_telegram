@@ -123,9 +123,19 @@ class TelegramUrlUploadService
     ): array {
         $results = [];
         
-        foreach ($urls as $index => $url) {
+        foreach ($urls as $index => $urlData) {
+            // پشتیبانی از دو فرمت: string یا array
+            $url = is_array($urlData) ? $urlData['url'] : $urlData;
+            $filename = is_array($urlData) ? ($urlData['filename'] ?? null) : null;
+            
             try {
-                $result = $this->uploadFromUrl($url, $metadata, $options);
+                // اضافه کردن filename به metadata اگر وجود دارد
+                $fileMetadata = $metadata;
+                if ($filename) {
+                    $fileMetadata['name'] = $filename;
+                }
+                
+                $result = $this->uploadFromUrl($url, $fileMetadata, $options);
                 $results[] = [
                     'url' => $url,
                     'success' => true,
