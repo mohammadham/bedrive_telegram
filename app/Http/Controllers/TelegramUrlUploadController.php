@@ -99,9 +99,13 @@ class TelegramUrlUploadController extends BaseController
 
             // بازگرداندن فوری session_id به frontend
             return $this->success([
+                'success' => true,
                 'message' => 'Upload started in background',
-                'session_id' => $sessionId,
-                'status' => 'processing',
+                'data' => [
+                    'session_id' => $sessionId,
+                    'status' => 'processing',
+                    'url' => $rawUrl,
+                ],
             ]);
 
         } catch (\Exception $e) {
@@ -200,11 +204,14 @@ class TelegramUrlUploadController extends BaseController
             );
 
             return $this->success([
+                'success' => true,
                 'message' => "Processed {$result['total']} URLs",
-                'total' => $result['total'],
-                'successful' => $result['successful'],
-                'failed' => $result['failed'],
-                'results' => $result['results'],
+                'data' => [
+                    'total' => $result['total'],
+                    'successful' => $result['successful'],
+                    'failed' => $result['failed'],
+                    'results' => $result['results'],
+                ],
             ]);
 
         } catch (\Exception $e) {
