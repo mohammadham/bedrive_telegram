@@ -44,6 +44,10 @@ export function TelegramUrlUploadDialog({
 
         // Close dialog
         setIsOpen(false);
+        // Refresh file list after delay
+      setTimeout(() => {
+        invalidateEntryQueries();
+      }, 2000);
       } else {
         toast.danger(response.message || 'خطا در شروع آپلود');
       }

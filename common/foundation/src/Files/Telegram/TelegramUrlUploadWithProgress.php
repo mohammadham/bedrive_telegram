@@ -171,7 +171,7 @@ class TelegramUrlUploadWithProgress
                 CURLOPT_NOPROGRESS => false,
                 CURLOPT_PROGRESSFUNCTION => function($resource, $downloadSize, $downloaded, $uploadSize, $uploaded) use ($sessionId, &$lastUpdate, $startTime) {
                     if ($downloaded == 0) return 0;
-
+                    if ($downloadSize > 0 && $downloaded > 0) {
                     $now = microtime(true);
                     
                     // Update هر 0.5 ثانیه
@@ -183,18 +183,23 @@ class TelegramUrlUploadWithProgress
                             : null;
 
                         try {
-                            $this->progressService->updateDownloadProgress(
+                            $progressService = new TelegramUploadProgressService();
+                            $progressService->updateDownloadProgress(
                                 $sessionId,
                                 (int)$downloaded,
                                 $speed,
                                 $eta ? (int)$eta : null
                             );
                         } catch (\Exception $e) {
-                            Log::warning('Progress update failed', ['error' => $e->getMessage()]);
+                            Log::warning('Progress update failed', [
+                                'session_id' => $sessionId,
+                                'error' => $e->getMessage()
+                            ]);
                         }
 
                         $lastUpdate = $now;
                     }
+                }
                     
                     return 0; // Continue download
                 },
