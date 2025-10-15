@@ -16,10 +16,7 @@ class TelegramUrlUploadJob implements ShouldQueue
 
     public $timeout = 600; // 10 minutes
     public $tries = 1; // Retry handled by TelegramRetryService
-    public string $url;
-    public array $fileOptions;
-    public array $uploadOptions;
-    public string $sessionId;
+
 
     /**
      * Create a new job instance.
@@ -30,10 +27,7 @@ class TelegramUrlUploadJob implements ShouldQueue
         public array $uploadOptions,
         public string $sessionId
     ) {
-        $this->url=$url;
-        $this->fileOptions=$fileOptions;
-        $this->uploadOptions=$uploadOptions;
-        $this->sessionId=$sessionId;
+
         // Queue را مشخص می‌کنیم
         $this->onQueue('telegram-uploads');
     }
