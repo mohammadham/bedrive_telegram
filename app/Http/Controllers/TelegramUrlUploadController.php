@@ -76,7 +76,7 @@ class TelegramUrlUploadController extends BaseController
             $sessionId = $progress->session_id;
             
             // Dispatch job برای آپلود در background
-            TelegramUrlUploadJob::dispatch(
+            $job =TelegramUrlUploadJob::dispatch(
                 $rawUrl,
                 [
                     'name' => $filename,
@@ -93,6 +93,8 @@ class TelegramUrlUploadController extends BaseController
             Log::info('Upload job dispatched', [
                 'session_id' => $sessionId,
                 'url' => $rawUrl,
+                'job_class' => get_class($job),
+                'queue_driver' => config('queue.default'),
             ]);
 
             // بازگرداندن فوری session_id به frontend

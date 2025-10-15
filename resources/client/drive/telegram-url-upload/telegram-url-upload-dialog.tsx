@@ -32,16 +32,23 @@ export function TelegramUrlUploadDialog({
       const response = await uploadFromUrl({url, name: filename});
 
       if (response.success && response.data?.session_id) {
+        // ✅ دیباگ: لاگ session ID
+        console.log('✅ Upload started:', response.data.session_id);
         toast.positive(
           `تلگرام: آپلود در پس‌زمینه شروع شد (${response.data.session_id.substring(0, 8)}...)`,
         );
 
         // Open Telegram upload queue to show progress
+        // ✅ فوراً queue panel را باز کن
+        console.log('📂 Opening Telegram upload queue panel');
         driveState().setTelegramUploadQueueIsOpen(true);
 
         // Invalidate queries to refresh file list after completion
         // (این در TelegramUploadProgress خودکار انجام می‌شود)
-
+        // ✅ چک کردن state بعد از set
+        setTimeout(() => {
+          console.log('📊 Queue panel state:', driveState().telegramUploadQueueIsOpen);
+        }, 100);
         // Close dialog
         setIsOpen(false);
         // Refresh file list after delay
@@ -67,11 +74,15 @@ export function TelegramUrlUploadDialog({
         const successCount = response.data.results.filter(
           (r: any) => r.success,
         ).length;
+        // ✅ دیباگ
+        console.log('✅ Bulk upload started:', successCount, 'files');
         toast.positive(
           `${successCount} فایل در پس‌زمینه در حال آپلود هستند`,
         );
 
         // Open Telegram upload queue
+        // ✅ فوراً queue panel را باز کن
+        console.log('📂 Opening Telegram upload queue panel');
         driveState().setTelegramUploadQueueIsOpen(true);
 
         // Close dialog

@@ -17,15 +17,34 @@ export function TelegramUploadQueuePanel() {
   const isTelegramQueueOpen = useDriveStore(
     s => s.telegramUploadQueueIsOpen,
   );
+  // ✅ دیباگ: لاگ state
+  useEffect(() => {
+    console.log('📊 TelegramUploadQueuePanel state:', {
+      isTelegramQueueOpen,
+      timestamp: new Date().toISOString(),
+    });
+  }, [isTelegramQueueOpen]);
 
   // Fetch active progress list
-  const {data, isLoading} = useQuery({
+    const {data, isLoading, error} = useQuery({
     queryKey: ['telegram-active-uploads'],
     queryFn: () => getUserProgressList(true, 10),
     refetchInterval: 2000, // هر 2 ثانیه refresh
     enabled: isTelegramQueueOpen,
   });
 
+  // ✅ دیباگ: لاگ data
+  useEffect(() => {
+    if (isTelegramQueueOpen) {
+      console.log('📊 Query result:', {
+        isLoading,
+        hasData: !!data,
+        progressCount: data?.progress?.length || 0,
+        error: error?.message,
+      });
+    }
+  }, [data, isLoading, error, isTelegramQueueOpen]);
+  
   const activeUploads: TelegramUploadProgressData[] = data?.progress || [];
   const hasActiveUploads = activeUploads.length > 0;
 
