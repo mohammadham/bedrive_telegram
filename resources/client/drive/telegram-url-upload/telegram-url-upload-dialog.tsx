@@ -30,10 +30,10 @@ export function TelegramUrlUploadDialog({
     setIsSubmitting(true);
     try {
       const response = await uploadFromUrl({url, name: filename});
-
-      if (response.success && response.data?.session_id) {
         // ✅ دیباگ: لاگ session ID
-        console.log('✅ Upload started:', response.data.session_id);
+        console.log('✅ Upload started:', response);
+      if (response.success && response.data?.session_id) {
+
         toast.positive(
           `تلگرام: آپلود در پس‌زمینه شروع شد (${response.data.session_id.substring(0, 8)}...)`,
         );
