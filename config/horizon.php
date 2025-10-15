@@ -167,10 +167,10 @@ return [
     'defaults' => [
         'supervisor-1' => [
             'connection' => 'redis',
-            'queue' => ['default'],
+            'queue' => ['telegram-uploads', 'default'],
             'balance' => 'auto',
-            'maxProcesses' => 1,
-            'memory' => 128,
+            'maxProcesses' => 3,
+            'memory' => 256,
             'tries' => 1,
             'nice' => 0,
         ],

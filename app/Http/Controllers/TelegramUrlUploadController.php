@@ -93,8 +93,9 @@ class TelegramUrlUploadController extends BaseController
             Log::info('Upload job dispatched', [
                 'session_id' => $sessionId,
                 'url' => $rawUrl,
-                'job_class' => get_class($job),
+                'queue' => 'telegram-uploads',
                 'queue_driver' => config('queue.default'),
+                'job_dispatched' => true,
             ]);
 
             // بازگرداندن فوری session_id به frontend

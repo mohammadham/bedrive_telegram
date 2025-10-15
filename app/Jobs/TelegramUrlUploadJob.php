@@ -17,17 +17,32 @@ class TelegramUrlUploadJob implements ShouldQueue
     public $timeout = 600; // 10 minutes
     public $tries = 1; // Retry handled by TelegramRetryService
 
+    /**
+     * The number of seconds to wait before retrying.
+     */
+    public $backoff = 10;
+
+    /**
+     * Job properties
+     */
+    public string $url;
+    public array $fileOptions;
+    public array $uploadOptions;
+    public string $sessionId;
 
     /**
      * Create a new job instance.
      */
     public function __construct(
-        public string $url,
-        public array $fileOptions,
-        public array $uploadOptions,
-        public string $sessionId
+        string $url,
+        array $fileOptions,
+        array $uploadOptions,
+        string $sessionId
     ) {
-
+        $this->url = $url;
+        $this->fileOptions = $fileOptions;
+        $this->uploadOptions = $uploadOptions;
+        $this->sessionId = $sessionId;
         // ⚠️ نکته: onQueue() باید در dispatch فراخوانی شود نه constructor
         // در TelegramUrlUploadController این کار انجام شده است
         // // Queue را مشخص می‌کنیم

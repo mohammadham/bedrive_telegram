@@ -54,7 +54,7 @@ class TelegramUploadProgressController extends BaseController
     {
         $validator = Validator::make($request->all(), [
             'limit' => 'nullable|integer|min:1|max:50',
-            'active_only' => 'nullable|boolean',
+            'active_only' => 'nullable|in:true,false,1,0',
         ]);
 
         if ($validator->fails()) {
@@ -62,7 +62,9 @@ class TelegramUploadProgressController extends BaseController
         }
 
         $limit = $request->input('limit', 10);
-        $activeOnly = $request->input('active_only', false);
+        // ✅ تبدیل string به boolean
+        $activeOnlyParam = $request->input('active_only', 'false');
+        $activeOnly = filter_var($activeOnlyParam, FILTER_VALIDATE_BOOLEAN);
 
         if ($activeOnly) {
             $progressList = $this->progressService->getActiveProgress(auth()->id());
