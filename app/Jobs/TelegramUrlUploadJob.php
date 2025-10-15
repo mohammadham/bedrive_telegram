@@ -28,8 +28,10 @@ class TelegramUrlUploadJob implements ShouldQueue
         public string $sessionId
     ) {
 
-        // Queue را مشخص می‌کنیم
-        $this->onQueue('telegram-uploads');
+        // ⚠️ نکته: onQueue() باید در dispatch فراخوانی شود نه constructor
+        // در TelegramUrlUploadController این کار انجام شده است
+        // // Queue را مشخص می‌کنیم
+        // $this->onQueue('telegram-uploads');
     }
 
     /**
