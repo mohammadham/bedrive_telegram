@@ -304,18 +304,14 @@ export function TelegramUploadProgress({
           </div>
         </div>
       )}
-            </div>
-          )}
 
-          {/* Phase 8.4: Next retry time */}
-          {progress.next_retry_at && progress.status === 'pending' && (
-            <div className="rounded bg-warning/10 p-8 text-warning flex items-center gap-8 text-xs">
-              <RefreshIcon size="sm" />
-              <span>
-                <Trans message="تلاش مجدد در" />: {new Date(progress.next_retry_at).toLocaleTimeString('fa-IR')}
-              </span>
-            </div>
-          )}
+      {/* Phase 8.4: Next retry time - این بخش باید خارج از error message باشد */}
+      {progress.next_retry_at && progress.status === 'pending' && (
+        <div className="rounded bg-warning/10 p-8 text-warning flex items-center gap-8 text-xs">
+          <RefreshIcon size="sm" />
+          <span>
+            <Trans message="تلاش مجدد در" />: {new Date(progress.next_retry_at).toLocaleTimeString('fa-IR')}
+          </span>
         </div>
       )}
     </div>
