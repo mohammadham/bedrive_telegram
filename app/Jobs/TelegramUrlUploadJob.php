@@ -14,13 +14,29 @@ class TelegramUrlUploadJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 600; // 10 minutes
-    public $tries = 1; // Retry handled by TelegramRetryService
+    /**
+     * 🔧 Timeout برای فایل‌های بزرگ (2 ساعت)
+     * برای فایل 2GB با سرعت 1MB/s نیاز به ~35 دقیقه
+     */
+    public $timeout = 7200; // 2 hours for large files
 
     /**
-     * The number of seconds to wait before retrying.
+     * 🔄 تعداد تلاش: 3 بار (برای مشکلات شبکه)
+     * Retry اضافی توسط TelegramRetryService هم مدیریت می‌شود
      */
-    public $backoff = 10;
+    public $tries = 3;
+
+    /**
+     * ⏱️ زمان انتظار بین تلاش‌های مجدد (Exponential backoff)
+     * [30s, 2min, 5min]
+     */
+    public $backoff = [30, 120, 300];
+
+    /**
+     * ❌ عدم fail کردن خودکار در timeout
+     * (برای اینکه failed() فراخوانی شود و cleanup انجام شود)
+     */
+    public $failOnTimeout = false;
 
     /**
      * Job properties
@@ -29,6 +45,15 @@ class TelegramUrlUploadJob implements ShouldQueue
     public array $fileOptions;
     public array $uploadOptions;
     public string $sessionId;
+
+    /**
+     * 🆔 تعریف Unique ID برای Job (برای جلوگیری از duplicate UUID error)
+     * این ID برای failed_jobs table استفاده می‌شود
+     */
+    public function uniqueId(): string
+    {
+        return 'telegram-upload-' . $this->sessionId;
+    }
 
     /**
      * Create a new job instance.
@@ -105,6 +130,8 @@ class TelegramUrlUploadJob implements ShouldQueue
 
     /**
      * Handle a job failure.
+     * 
+     * این متد وقتی فراخوانی می‌شود که Job پس از تمام تلاش‌ها fail شود
      */
     public function failed(\Throwable $exception): void
     {
@@ -112,6 +139,21 @@ class TelegramUrlUploadJob implements ShouldQueue
             'session_id' => $this->sessionId,
             'url' => $this->url,
             'error' => $exception->getMessage(),
+            'exception_class' => get_class($exception),
         ]);
+
+        // 🔄 به‌روزرسانی وضعیت progress به failed
+        try {
+            $progressService = new \Common\Files\Telegram\TelegramUploadProgressService();
+            $progressService->markAsFailed(
+                $this->sessionId, 
+                "Job permanently failed after {$this->tries} attempts: " . $exception->getMessage()
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to mark progress as failed', [
+                'session_id' => $this->sessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

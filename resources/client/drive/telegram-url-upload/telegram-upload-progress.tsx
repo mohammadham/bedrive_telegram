@@ -130,65 +130,122 @@ export function TelegramUploadProgress({
     );
   }
 
-  // Full mode
+  // Full mode - بهبود یافته با UI زیباتر
   return (
-    <div className="rounded border border-divider bg-alt p-16 space-y-12">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="truncate font-medium text-sm">{progress.filename}</div>
-          <div className="mt-4 flex items-center gap-8 text-xs text-muted">
-            <StatusBadge status={progress.status} />
-            {progress.formatted_size !== 'N/A' && (
-              <span>{progress.formatted_size}</span>
+    <div className="rounded-lg border-2 border-divider bg-gradient-to-br from-paper via-alt to-paper p-4 space-y-3 shadow-md hover:shadow-lg transition-shadow">
+      {/* Header با آیکون وضعیت */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0 flex items-start gap-3">
+          {/* آیکون وضعیت بزرگ */}
+          <div className={`
+            w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0
+            ${progress.status === 'completed' ? 'bg-positive/20' : ''}
+            ${progress.status === 'failed' ? 'bg-danger/20' : ''}
+            ${['downloading', 'uploading', 'pending'].includes(progress.status) ? 'bg-primary/20 animate-pulse' : ''}
+          `}>
+            {progress.status === 'completed' && (
+              <CheckCircleIcon className="text-positive" size="md" />
             )}
+            {progress.status === 'failed' && (
+              <ErrorIcon className="text-danger" size="md" />
+            )}
+            {progress.status === 'downloading' && (
+              <CloudDownloadIcon className="text-primary" size="md" />
+            )}
+            {progress.status === 'uploading' && (
+              <CloudUploadIcon className="text-primary" size="md" />
+            )}
+            {progress.status === 'pending' && (
+              <div className="w-5 h-5 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+            )}
+          </div>
+
+          {/* اطلاعات فایل */}
+          <div className="flex-1 min-w-0">
+            <div className="truncate font-semibold text-sm text-main">
+              {progress.filename}
+            </div>
+            <div className="mt-1 flex items-center gap-2 text-xs">
+              <StatusBadge status={progress.status} />
+              {progress.formatted_size !== 'N/A' && (
+                <span className="text-muted">• {progress.formatted_size}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Cancel button */}
-        {['pending', 'downloading', 'uploading'].includes(progress.status) && (
-          <Button
-            size="xs"
-            variant="outline"
-            color="danger"
-            startIcon={<CancelIcon />}
-            onClick={handleCancel}
-          >
-            <Trans message="لغو" />
-          </Button>
-        )}
+        {/* دکمه لغو/تلاش مجدد */}
+        <div className="flex-shrink-0">
+          {['pending', 'downloading', 'uploading'].includes(progress.status) && (
+            <Button
+              size="xs"
+              variant="flat"
+              color="danger"
+              startIcon={<CancelIcon />}
+              onClick={handleCancel}
+              className="hover:bg-danger hover:text-on-primary transition-colors"
+            >
+              لغو
+            </Button>
+          )}
+          {progress.is_retryable && progress.status === 'failed' && (
+            <Button
+              size="xs"
+              variant="flat"
+              color="primary"
+              startIcon={<RefreshIcon />}
+              onClick={handleRetry}
+              disabled={progress.retry_count >= progress.max_retries}
+              className="hover:bg-primary hover:text-on-primary transition-colors"
+            >
+              تلاش ({progress.retry_count || 0}/{progress.max_retries || 3})
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Progress Bar */}
-      <div>
+      {/* Progress Bar بزرگتر و واضح‌تر */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-muted">
+            {progress.status === 'downloading' && 'در حال دانلود...'}
+            {progress.status === 'uploading' && 'در حال آپلود به تلگرام...'}
+            {progress.status === 'pending' && 'در انتظار...'}
+            {progress.status === 'completed' && 'تکمیل شد ✓'}
+            {progress.status === 'failed' && 'خطا در آپلود'}
+          </span>
+          <span className="font-bold text-sm text-primary">
+            {Math.round(progress.overall_percentage)}%
+          </span>
+        </div>
         <ProgressBar
           value={progress.overall_percentage}
           size="md"
-          showValueLabel
+          className="h-2"
         />
       </div>
 
-      {/* Details */}
-      {showDetails && (
-        <div className="space-y-8 text-xs">
+      {/* Details - فقط برای وضعیت‌های فعال */}
+      {showDetails && ['downloading', 'uploading'].includes(progress.status) && (
+        <div className="space-y-2 text-xs bg-paper/50 rounded-md p-3 border border-divider/50">
           {/* Download Phase */}
-          {(progress.status === 'downloading' ||
-            progress.download_percentage > 0) && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-8">
+          {(progress.status === 'downloading' || progress.download_percentage > 0) && (
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-2">
                 <CloudDownloadIcon size="sm" className="text-primary" />
-                <span>
-                  <Trans message="دانلود" />:{' '}
-                  {Math.round(progress.download_percentage)}%
+                <span className="font-medium">
+                  دانلود: {Math.round(progress.download_percentage)}%
                 </span>
               </div>
-              <div className="flex items-center gap-12 text-muted">
+              <div className="flex items-center gap-3 text-muted">
                 {progress.formatted_download_speed !== 'N/A' && (
-                  <span>{progress.formatted_download_speed}</span>
+                  <span className="font-mono font-bold text-primary">
+                    {progress.formatted_download_speed}
+                  </span>
                 )}
                 {progress.download_eta && (
-                  <span>
-                    ETA: {formatETA(progress.download_eta)}
+                  <span className="flex items-center gap-1">
+                    ⏱ {formatETA(progress.download_eta)}
                   </span>
                 )}
               </div>
@@ -196,58 +253,57 @@ export function TelegramUploadProgress({
           )}
 
           {/* Upload Phase */}
-          {(progress.status === 'uploading' ||
-            progress.upload_percentage > 0) && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-8">
+          {(progress.status === 'uploading' || progress.upload_percentage > 0) && (
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-2">
                 <CloudUploadIcon size="sm" className="text-primary" />
-                <span>
-                  <Trans message="آپلود به تلگرام" />:{' '}
-                  {Math.round(progress.upload_percentage)}%
+                <span className="font-medium">
+                  آپلود: {Math.round(progress.upload_percentage)}%
                 </span>
               </div>
-              <div className="flex items-center gap-12 text-muted">
+              <div className="flex items-center gap-3 text-muted">
                 {progress.formatted_upload_speed !== 'N/A' && (
-                  <span>{progress.formatted_upload_speed}</span>
+                  <span className="font-mono font-bold text-primary">
+                    {progress.formatted_upload_speed}
+                  </span>
                 )}
                 {progress.upload_eta && (
-                  <span>
-                    ETA: {formatETA(progress.upload_eta)}
+                  <span className="flex items-center gap-1">
+                    ⏱ {formatETA(progress.upload_eta)}
                   </span>
                 )}
               </div>
             </div>
           )}
+        </div>
+      )}
 
-          {/* Error Message */}
-          {progress.error_message && (
-            <div className="rounded bg-danger/10 p-8 text-danger flex items-start gap-8">
-              <ErrorIcon size="sm" className="mt-2 flex-shrink-0" />
-              <div className="flex-1">
-                <span>{progress.error_message}</span>
-                
-                {/* Phase 8.4: Retry info and button */}
-                {progress.retry_count > 0 && (
-                  <div className="mt-4 text-xs text-muted">
-                    {progress.retry_info}
-                  </div>
-                )}
-                {progress.is_retryable && progress.status === 'failed' && (
-                  <div className="mt-8">
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      color="primary"
-                      startIcon={<RefreshIcon />}
-                      onClick={handleRetry}
-                      disabled={progress.retry_count >= progress.max_retries}
-                    >
-                      <Trans message="تلاش مجدد" />
-                      {progress.retry_count > 0 && ` (${progress.retry_count}/${progress.max_retries})`}
-                    </Button>
-                  </div>
-                )}
+      {/* Error Message با UI بهتر */}
+      {progress.error_message && (
+        <div className="rounded-lg bg-danger/10 border border-danger/30 p-3 text-danger flex items-start gap-2">
+          <ErrorIcon size="sm" className="mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium break-words">
+              {progress.error_message}
+            </div>
+            
+            {/* Phase 8.4: Retry info */}
+            {progress.retry_count > 0 && (
+              <div className="mt-2 text-xs text-danger/70 flex items-center gap-1">
+                <RefreshIcon size="xs" />
+                {progress.retry_info}
               </div>
+            )}
+            
+            {/* Next retry time */}
+            {progress.next_retry_at && (
+              <div className="mt-2 text-xs text-muted">
+                ⏱ تلاش مجدد در: {new Date(progress.next_retry_at).toLocaleTimeString('fa-IR')}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
             </div>
           )}
 

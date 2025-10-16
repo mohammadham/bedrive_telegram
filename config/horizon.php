@@ -85,6 +85,7 @@ return [
 
     'waits' => [
         'redis:default' => 60,
+        'redis:telegram-uploads' => 300, // 5 دقیقه برای Telegram uploads
     ],
 
     /*
@@ -167,12 +168,25 @@ return [
     'defaults' => [
         'supervisor-1' => [
             'connection' => 'redis',
-            'queue' => ['telegram-uploads', 'default'],
+            'queue' => ['default'],
             'balance' => 'auto',
-            'maxProcesses' => 3,
-            'memory' => 256,
+            'maxProcesses' => 1,
+            'memory' => 128,
             'tries' => 1,
             'nice' => 0,
+            'timeout' => 300, // 5 دقیقه برای default jobs
+        ],
+        // 🔥 Supervisor مخصوص Telegram uploads
+        'telegram-supervisor' => [
+            'connection' => 'redis',
+            'queue' => ['telegram-uploads'],
+            'balance' => 'auto',
+            'maxProcesses' => 3, // حداکثر 3 آپلود همزمان
+            'minProcesses' => 1, // حداقل 1 worker همیشه آماده
+            'memory' => 512,     // 512MB RAM برای هر worker (فایل‌های بزرگ)
+            'tries' => 3,        // 3 تلاش (همخوان با Job)
+            'nice' => 0,
+            'timeout' => 7200,   // 2 ساعت timeout (همخوان با Job)
         ],
     ],
 
@@ -183,11 +197,21 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'telegram-supervisor' => [
+                'maxProcesses' => 5,  // Production: حداکثر 5 آپلود همزمان
+                'minProcesses' => 2,  // حداقل 2 worker
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 5,
+            ],
         ],
 
         'local' => [
             'supervisor-1' => [
                 'maxProcesses' => 3,
+            ],
+            'telegram-supervisor' => [
+                'maxProcesses' => 2,  // Local: فقط 2 آپلود همزمان
+                'minProcesses' => 1,
             ],
         ],
     ],
