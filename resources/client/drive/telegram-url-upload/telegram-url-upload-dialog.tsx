@@ -9,6 +9,7 @@ import {Tab} from '@ui/tabs/tab';
 import {TabPanel, TabPanels} from '@ui/tabs/tab-panels';
 import {SingleUrlForm} from './single-url-form';
 import {BulkUrlsForm} from './bulk-urls-form';
+import {TelegramUploadProgress} from './telegram-upload-progress';
 import {toast} from '@ui/toast/toast';
 import {queryClient} from '@common/http/query-client';
 import {DriveQueryKeys, invalidateEntryQueries} from '../drive-query-keys';
@@ -25,6 +26,15 @@ export function TelegramUrlUploadDialog({
 }: TelegramUrlUploadDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [showProgress, setShowProgress] = useState(false);
+
+  const handleProgressComplete = () => {
+    setShowProgress(false);
+    setActiveSessionId(null);
+    // Refresh file list
+    invalidateEntryQueries();
+  };
 
   const handleSingleSubmit = async (url: string, filename: string) => {
     setIsSubmitting(true);
@@ -33,29 +43,23 @@ export function TelegramUrlUploadDialog({
         // ✅ دیباگ: لاگ session ID
         console.log('✅ Upload started:', response);
       if (response.success && response.data?.session_id) {
-        // ✅ دیباگ: لاگ session ID
-        console.log('✅ Upload started:', response.data.session_id);
-        toast.positive(
-          `تلگرام: آپلود در پس‌زمینه شروع شد (${response.data.session_id.substring(0, 8)}...)`,
-        );
-
-        // Open Telegram upload queue to show progress
-        // ✅ فوراً queue panel را باز کن
-        console.log('📂 Opening Telegram upload queue panel');
-        driveState().setTelegramUploadQueueIsOpen(true);
-
-        // Invalidate queries to refresh file list after completion
-        // (این در TelegramUploadProgress خودکار انجام می‌شود)
-        // ✅ چک کردن state بعد از set
-        setTimeout(() => {
-          console.log('📊 Queue panel state:', driveState().telegramUploadQueueIsOpen);
-        }, 100);
-        // Close dialog
+        // ✅ ذخیره session_id برای نمایش progress
+        setActiveSessionId(response.data.session_id);
+        setShowProgress(true);
+        
+        // ✅ بستن دیالوگ فوری
         setIsOpen(false);
-        // Refresh file list after delay
-      setTimeout(() => {
+        
+        // Open Telegram upload queue to show progress
+        driveState().setTelegramUploadQueueIsOpen(true);
+        
+        // Show success message
+        toast.positive(
+          'File upload started in background. You\'ll see it in the list when complete.'
+        );
+        
+        // Invalidate queries to refresh file list
         invalidateEntryQueries();
-      }, 2000);
       } else {
         toast.danger(response.message || 'خطا در شروع آپلود');
       }
@@ -75,19 +79,20 @@ export function TelegramUrlUploadDialog({
         const successCount = response.data.results.filter(
           (r: any) => r.success,
         ).length;
-        // ✅ دیباگ
-        console.log('✅ Bulk upload started:', successCount, 'files');
-        toast.positive(
-          `${successCount} فایل در پس‌زمینه در حال آپلود هستند`,
-        );
-
-        // Open Telegram upload queue
-        // ✅ فوراً queue panel را باز کن
-        console.log('📂 Opening Telegram upload queue panel');
-        driveState().setTelegramUploadQueueIsOpen(true);
-
-        // Close dialog
+        
+        // ✅ بستن دیالوگ فوری
         setIsOpen(false);
+        
+        // Open Telegram upload queue
+        driveState().setTelegramUploadQueueIsOpen(true);
+        
+        // Show success message
+        toast.positive(
+          `${successCount} files upload started in background. You'll see them in the list when complete.`
+        );
+        
+        // Invalidate queries to refresh file list
+        invalidateEntryQueries();
       } else {
         toast.danger(response.message || 'خطا در شروع آپلود');
       }
@@ -99,44 +104,53 @@ export function TelegramUrlUploadDialog({
   };
 
   return (
-    <DialogTrigger
-      type="modal"
-      isOpen={isOpen}
-      onOpenChange={setIsOpen}
-      triggerOnContextMenu={false}
-    >
-      {trigger}
-      <Dialog size="lg">
-        <DialogHeader>
-          <Trans message="آپلود از URL به تلگرام" />
-        </DialogHeader>
-        <DialogBody>
-          <Tabs>
-            <TabList>
-              <Tab>
-                <Trans message="آپلود تکی" />
-              </Tab>
-              <Tab>
-                <Trans message="آپلود دسته‌ای" />
-              </Tab>
-            </TabList>
-            <TabPanels className="pt-20">
-              <TabPanel>
-                <SingleUrlForm
-                  onSubmit={handleSingleSubmit}
-                  isSubmitting={isSubmitting}
-                />
-              </TabPanel>
-              <TabPanel>
-                <BulkUrlsForm
-                  onSubmit={handleBulkSubmit}
-                  isSubmitting={isSubmitting}
-                />
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
-        </DialogBody>
-      </Dialog>
-    </DialogTrigger>
+    <>
+      <DialogTrigger
+        type="modal"
+        isOpen={isOpen}
+        onOpenChange={setIsOpen}
+        triggerOnContextMenu={false}
+      >
+        {trigger}
+        <Dialog size="lg">
+          <DialogHeader>
+            <Trans message="آپلود از URL به تلگرام" />
+          </DialogHeader>
+          <DialogBody>
+            <Tabs>
+              <TabList>
+                <Tab>
+                  <Trans message="آپلود تکی" />
+                </Tab>
+                <Tab>
+                  <Trans message="آپلود دسته‌ای" />
+                </Tab>
+              </TabList>
+              <TabPanels className="pt-20">
+                <TabPanel>
+                  <SingleUrlForm
+                    onSubmit={handleSingleSubmit}
+                    isSubmitting={isSubmitting}
+                  />
+                </TabPanel>
+                <TabPanel>
+                  <BulkUrlsForm
+                    onSubmit={handleBulkSubmit}
+                    isSubmitting={isSubmitting}
+                  />
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
+          </DialogBody>
+        </Dialog>
+      </DialogTrigger>
+      
+      {showProgress && activeSessionId && (
+        <TelegramUploadProgress
+          sessionId={activeSessionId}
+          onComplete={handleProgressComplete}
+        />
+      )}
+    </>
   );
 }

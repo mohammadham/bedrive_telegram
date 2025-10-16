@@ -33,6 +33,7 @@ class TelegramUrlUploadWithProgress
     ): array {
         $userId = $fileData['user_id'] ?? auth()->id();
         $filename = $fileData['name'] ?? $this->extractFilename($url);
+        $tempPath = null; // برای cleanup در finally block
 
         // استفاده از session موجود یا ایجاد جدید
         if ($existingSessionId) {
@@ -89,9 +90,6 @@ class TelegramUrlUploadWithProgress
                 $fileEntry->id
             );
 
-            // پاک کردن فایل موقت
-            @unlink($tempPath);
-
             return [
                 'session_id' => $sessionId,
                 'file_entry' => $fileEntry,
@@ -129,6 +127,12 @@ class TelegramUrlUploadWithProgress
             ]);
 
             throw $e;
+        } finally {
+            // ✅ FIX 1: حذف فایل موقت در هر صورت
+            if ($tempPath && file_exists($tempPath)) {
+                Log::info('Cleaning up temporary file', ['temp_path' => $tempPath]);
+                @unlink($tempPath);
+            }
         }
     }
 
@@ -143,7 +147,13 @@ class TelegramUrlUploadWithProgress
             $urlPath = parse_url($url, PHP_URL_PATH);
             $extension = pathinfo($urlPath, PATHINFO_EXTENSION);
             $extension = $extension ? '.' . preg_replace('/[^a-zA-Z0-9]/', '', $extension) : '';
-            $tempPath = sys_get_temp_dir() . '/' . uniqid('telegram_') . $extension;
+            
+            // استفاده از مسیر مناسب برای temp files
+            $tempDir = storage_path('app/telegram/temp');
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+            $tempPath = $tempDir . '/url_upload_' . uniqid() . $extension;
             $fp = fopen($tempPath, 'w+');
 
             $startTime = microtime(true);
@@ -162,7 +172,7 @@ class TelegramUrlUploadWithProgress
                 CURLOPT_FILE => $fp,
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_MAXREDIRS => 5,
-                CURLOPT_TIMEOUT => 300,
+                CURLOPT_TIMEOUT => 3600, // 1 ساعت برای دانلود
                 CURLOPT_CONNECTTIMEOUT => 30,
                 CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                 CURLOPT_SSL_VERIFYPEER => false, // برای سرورهای با SSL مشکل‌دار
@@ -248,115 +258,89 @@ class TelegramUrlUploadWithProgress
             if (isset($ch)) {
                 curl_close($ch);
             }
-            
             if (isset($fp) && is_resource($fp)) {
                 fclose($fp);
             }
-            
             if (isset($tempPath) && file_exists($tempPath)) {
                 @unlink($tempPath);
             }
-
+            
             return null;
         }
     }
 
     /**
-     * استخراج نام فایل از URL با حفظ کاراکترهای اصلی
+     * استخراج نام فایل از URL
      */
     protected function extractFilename(string $url): string
     {
-        $path = parse_url($url, PHP_URL_PATH);
+        // دکد کردن URL برای مدیریت درست کاراکترهای خاص
+        $decodedUrl = urldecode($url);
+        
+        $path = parse_url($decodedUrl, PHP_URL_PATH);
         $filename = basename($path);
         
-        // Decode برای نمایش صحیح نام فایل
-        if ($filename) {
-            $filename = urldecode($filename);
+        // اگر filename خالی بود، از timestamp استفاده کن
+        if (empty($filename) || $filename === '/') {
+            $filename = 'file_' . time();
         }
         
-        if (empty($filename) || strpos($filename, '.') === false) {
-            return 'file_' . time();
+        // Sanitize filename برای استفاده در filesystem
+        $filename = preg_replace('/[^\w\s\.\-_()\[\]]+/u', '_', $filename);
+        $filename = preg_replace('/[\s]+/', '_', $filename);
+        $filename = trim($filename, '_');
+        
+        // محدود کردن طول
+        if (strlen($filename) > 200) {
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            $name = pathinfo($filename, PATHINFO_FILENAME);
+            $filename = substr($name, 0, 190) . '.' . $extension;
         }
-
-        return $filename;
+        
+        return $filename ?: 'unnamed_file';
     }
 
     /**
-     * ایجاد FileEntry با sanitize کردن نام فایل
+     * ایجاد FileEntry از نتیجه آپلود
      */
     protected function createFileEntry(
         array $uploadResult,
-        array $metadata,
-        string $fileName,
+        array $fileData,
+        string $filename,
         int $fileSize,
         string $mimeType
     ): FileEntry {
-        // Sanitize filename برای جلوگیری از مشکلات encoding
-        // حفظ extension ولی پاکسازی کاراکترهای مشکل‌ساز
-        $pathInfo = pathinfo($fileName);
-        $baseName = $pathInfo['filename'] ?? 'file';
-        $extension = isset($pathInfo['extension']) ? '.' . $pathInfo['extension'] : '';
+        $userId = $fileData['user_id'] ?? auth()->id();
+        $parentId = $fileData['parent_id'] ?? null;
         
-        // پاکسازی نام بدون تغییر کاراکترهای معمولی
-        // فقط کاراکترهایی که در filesystem مشکل ایجاد می‌کنند را حذف می‌کنیم
-        $safeName = preg_replace('/[<>:"\/\\\\|?*\x00-\x1F]/', '_', $baseName);
-        $safeFileName = $safeName . $extension;
-        
-        // Create FileEntry WITHOUT path (برای تلگرام نیازی به path نیست)
-        $fileEntry = FileEntry::create([
-            'name' => $metadata['name'] ?? $safeFileName, // نام نمایشی
-            'file_name' => $safeFileName, // نام فایل واقعی
+        return FileEntry::create([
+            'name' => $filename,
+            'file_name' => $filename,
             'mime' => $mimeType,
-            'file_size' => $fileSize,
-            'user_id' => $metadata['user_id'] ?? null,
-            'owner_id' => $metadata['owner_id'] ?? $metadata['user_id'] ?? null,
-            'parent_id' => $metadata['parent_id'] ?? null,
-            'disk_prefix' => 'telegram',
             'type' => $this->determineFileType($mimeType),
-            // path را اصلاً set نمی‌کنیم - تلگرام از message_id استفاده می‌کند
+            'file_size' => $fileSize,
+            'user_id' => $userId,
+            'parent_id' => $parentId,
+            'workspace_id' => $fileData['workspace_id'] ?? null,
+            'disk_prefix' => null,
+            'path' => $uploadResult['message_id'] . '/' . $filename,
+            'public_path' => null,
+            'description' => $fileData['description'] ?? null,
         ]);
-
-        // Create Telegram metadata
-        $telegramMetadata = TelegramMetadataHelper::createMetadata($fileEntry, [
-            'file_id' => $uploadResult['file_id'],
-            'message_id' => $uploadResult['message_id'],
-            'channel_id' => $uploadResult['channel_id'],
-            'upload_method' => $uploadResult['upload_method'],
-            'upload_status' => 'completed',
-            'uploaded_at' => now(),
-        ]);
-
-        return $fileEntry->load('telegramMetadata');
     }
 
     /**
-     * تعیین نوع فایل از MIME type
+     * تشخیص نوع فایل بر اساس MIME type
      */
     protected function determineFileType(string $mimeType): string
     {
-        if (str_starts_with($mimeType, 'image/')) {
-            return 'image';
-        }
-        if (str_starts_with($mimeType, 'video/')) {
-            return 'video';
-        }
-        if (str_starts_with($mimeType, 'audio/')) {
-            return 'audio';
-        }
-        if ($mimeType === 'application/pdf') {
-            return 'pdf';
-        }
-        if (str_contains($mimeType, 'text/')) {
-            return 'text';
-        }
+        if (str_starts_with($mimeType, 'image/')) return 'image';
+        if (str_starts_with($mimeType, 'video/')) return 'video';
+        if (str_starts_with($mimeType, 'audio/')) return 'audio';
+        if (str_starts_with($mimeType, 'text/')) return 'text';
+        if (str_contains($mimeType, 'pdf')) return 'pdf';
+        if (str_contains($mimeType, 'archive') || str_contains($mimeType, 'zip')) return 'archive';
+        
         return 'file';
-    }
-
-    /**
-     * دریافت progress service (برای استفاده خارجی)
-     */
-    public function getProgressService(): TelegramUploadProgressService
-    {
-        return $this->progressService;
     }
 }
