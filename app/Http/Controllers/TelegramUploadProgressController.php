@@ -7,6 +7,8 @@ use Common\Core\BaseController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 
 /**
  * Phase 8.2: Telegram Upload Progress Controller
@@ -101,7 +103,43 @@ class TelegramUploadProgressController extends BaseController
             return $this->error('Cannot cancel - upload is not in progress',[], 400);
         }
 
+        // ✅ علامت‌گذاری به عنوان cancelled
         $this->progressService->cancel($sessionId);
+
+        // ✅ تلاش برای حذف Job از Queue (اگر هنوز pending است)
+        try {
+            // پیدا کردن Job در jobs table
+            $jobs = \DB::table('jobs')
+                ->where('queue', 'telegram-uploads')
+                ->get();
+
+            foreach ($jobs as $job) {
+                $payload = json_decode($job->payload, true);
+                
+                // چک کردن اگر این job مربوط به session_id ما است
+                if (isset($payload['data']['commandName'])) {
+                    $command = unserialize($payload['data']['command']);
+                    if (isset($command->sessionId) && $command->sessionId === $sessionId) {
+                        // حذف Job از queue
+                        \DB::table('jobs')->where('id', $job->id)->delete();
+                        Log::info('Deleted job from queue', [
+                            'session_id' => $sessionId,
+                            'job_id' => $job->id,
+                        ]);
+                        break;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to delete job from queue', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+            // ادامه می‌دهیم حتی اگر نتوانیم job را حذف کنیم
+            // چون Job خودش cancelled را چک می‌کند
+        }
+
+        Log::info('Upload cancelled successfully', ['session_id' => $sessionId]);
 
         return $this->success([
             'message' => 'Upload cancelled successfully',

@@ -109,8 +109,14 @@ class TelegramUploadProgressService
             throw new \Exception("Progress session not found: {$sessionId}");
         }
 
-        $progress->start();
+        $progress->update(['status' => 'downloading']);
+        $progress->refresh(); // ✅ Refresh after update
         $this->cacheProgress($progress);
+        
+        Log::info('✅ Download started and cached', [
+            'session_id' => $sessionId,
+            'status' => $progress->status,
+        ]);
     }
 
     /**
@@ -129,6 +135,7 @@ class TelegramUploadProgressService
         }
 
         $progress->updateDownloadProgress($downloadedBytes, $speed, $eta);
+        $progress->refresh(); // ✅ Refresh after update
         $this->cacheProgress($progress);
     }
 
@@ -144,7 +151,13 @@ class TelegramUploadProgressService
         }
 
         $progress->startUpload();
+        $progress->refresh(); // ✅ Refresh after update
         $this->cacheProgress($progress);
+        
+        Log::info('✅ Upload started and cached', [
+            'session_id' => $sessionId,
+            'status' => $progress->status,
+        ]);
     }
 
     /**
@@ -163,6 +176,7 @@ class TelegramUploadProgressService
         }
 
         $progress->updateUploadProgress($uploadedBytes, $speed, $eta);
+        $progress->refresh(); // ✅ Refresh after update
         $this->cacheProgress($progress);
     }
 
@@ -209,16 +223,28 @@ class TelegramUploadProgressService
     /**
      * لغو آپلود
      */
-    public function cancel(string $sessionId): void
+    public function cancel(string $sessionId): array
     {
         $progress = $this->getProgress($sessionId);
         
         if (!$progress) {
-            return;
+            throw new \Exception("Progress session not found: {$sessionId}");
         }
 
         $progress->markAsCancelled();
-        $this->cacheProgress($progress);
+        $progress->refresh(); // ✅ Refresh after update
+        $this->clearCache($sessionId); // ✅ Clear cache to force fresh data
+        
+        Log::info('✅ Upload cancelled', [
+            'session_id' => $sessionId,
+            'status' => $progress->status,
+        ]);
+
+        return [
+            'session_id' => $progress->session_id,
+            'status' => $progress->status,
+            'message' => 'Upload cancelled successfully',
+        ];
     }
 
     /**

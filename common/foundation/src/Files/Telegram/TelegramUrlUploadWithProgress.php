@@ -51,6 +51,13 @@ class TelegramUrlUploadWithProgress
         }
 
         try {
+            // ✅ چک کردن وضعیت cancelled قبل از شروع
+            $progress->refresh();
+            if ($progress->isCancelled()) {
+                Log::info('Upload was cancelled before download started', ['session_id' => $sessionId]);
+                throw new \Exception('Upload cancelled by user');
+            }
+
             // شروع download
             $this->progressService->startDownload($sessionId);
 
@@ -59,6 +66,13 @@ class TelegramUrlUploadWithProgress
 
             if (!$tempPath) {
                 throw new \Exception('Failed to download file from URL');
+            }
+
+            // ✅ چک کردن وضعیت cancelled بعد از دانلود
+            $progress->refresh();
+            if ($progress->isCancelled()) {
+                Log::info('Upload was cancelled after download', ['session_id' => $sessionId]);
+                throw new \Exception('Upload cancelled by user');
             }
 
             // به‌روزرسانی total_size
@@ -73,6 +87,14 @@ class TelegramUrlUploadWithProgress
                 'filename' => $filename,
                 'caption' => $fileData['caption'] ?? '',
             ]);
+
+            // ✅ چک کردن وضعیت cancelled بعد از آپلود
+            $progress->refresh();
+            if ($progress->isCancelled()) {
+                Log::info('Upload was cancelled after telegram upload', ['session_id' => $sessionId]);
+                // حتی اگر در تلگرام آپلود شده، FileEntry نمی‌سازیم
+                throw new \Exception('Upload cancelled by user');
+            }
 
             // ایجاد FileEntry
             $mimeType = mime_content_type($tempPath) ?: 'application/octet-stream';
@@ -97,6 +119,13 @@ class TelegramUrlUploadWithProgress
             ];
 
         } catch (\Exception $e) {
+            // ✅ اگر کنسل شده، نباید failed بشود
+            $progress->refresh();
+            if ($progress->isCancelled()) {
+                Log::info('Upload cancelled, not marking as failed', ['session_id' => $sessionId]);
+                throw $e; // Re-throw برای Laravel queue handling
+            }
+
             // علامت‌گذاری به عنوان failed
             $this->progressService->markAsFailed($sessionId, $e->getMessage());
 
@@ -182,34 +211,45 @@ class TelegramUrlUploadWithProgress
                 CURLOPT_PROGRESSFUNCTION => function($resource, $downloadSize, $downloaded, $uploadSize, $uploaded) use ($sessionId, &$lastUpdate, $startTime) {
                     if ($downloaded == 0) return 0;
                     if ($downloadSize > 0 && $downloaded > 0) {
-                    $now = microtime(true);
-                    
-                    // Update هر 0.5 ثانیه
-                    if ($now - $lastUpdate >= 0.5) {
-                        $elapsed = $now - $startTime;
-                        $speed = $elapsed > 0 ? $downloaded / $elapsed : 0;
-                        $eta = $speed > 0 && $downloadSize > 0 
-                            ? ($downloadSize - $downloaded) / $speed 
-                            : null;
-
+                        $now = microtime(true);
+                        
+                        // ✅ چک کردن کنسل شدن در حین دانلود
                         try {
-                            $progressService = new TelegramUploadProgressService();
-                            $progressService->updateDownloadProgress(
-                                $sessionId,
-                                (int)$downloaded,
-                                $speed,
-                                $eta ? (int)$eta : null
-                            );
+                            $progress = \App\Models\TelegramUploadProgress::where('session_id', $sessionId)->first();
+                            if ($progress && $progress->isCancelled()) {
+                                Log::info('Download cancelled by user during download', ['session_id' => $sessionId]);
+                                return 1; // Return non-zero to abort cURL
+                            }
                         } catch (\Exception $e) {
-                            Log::warning('Progress update failed', [
-                                'session_id' => $sessionId,
-                                'error' => $e->getMessage()
-                            ]);
+                            // Ignore database errors in progress function
                         }
+                        
+                        // Update هر 0.5 ثانیه
+                        if ($now - $lastUpdate >= 0.5) {
+                            $elapsed = $now - $startTime;
+                            $speed = $elapsed > 0 ? $downloaded / $elapsed : 0;
+                            $eta = $speed > 0 && $downloadSize > 0 
+                                ? ($downloadSize - $downloaded) / $speed 
+                                : null;
 
-                        $lastUpdate = $now;
+                            try {
+                                $progressService = new TelegramUploadProgressService();
+                                $progressService->updateDownloadProgress(
+                                    $sessionId,
+                                    (int)$downloaded,
+                                    $speed,
+                                    $eta ? (int)$eta : null
+                                );
+                            } catch (\Exception $e) {
+                                Log::warning('Progress update failed', [
+                                    'session_id' => $sessionId,
+                                    'error' => $e->getMessage()
+                                ]);
+                            }
+
+                            $lastUpdate = $now;
+                        }
                     }
-                }
                     
                     return 0; // Continue download
                 },
@@ -222,6 +262,13 @@ class TelegramUrlUploadWithProgress
             
             curl_close($ch);
             fclose($fp);
+
+            // ✅ چک کردن آیا cURL به دلیل کنسل متوقف شده
+            if ($curlErrno === CURLE_ABORTED_BY_CALLBACK) {
+                Log::info('Download aborted by user', ['session_id' => $sessionId]);
+                @unlink($tempPath);
+                throw new \Exception('Download cancelled by user');
+            }
 
             if (!$success || ($httpCode < 200 || $httpCode >= 300)) {
                 Log::error('Download failed', [
@@ -274,30 +321,29 @@ class TelegramUrlUploadWithProgress
      */
     protected function extractFilename(string $url): string
     {
-        // دکد کردن URL برای مدیریت درست کاراکترهای خاص
-        $decodedUrl = urldecode($url);
+        // ✅ دکد کردن URL برای مدیریت درست کاراکترهای خاص
+        $decodedUrl = rawurldecode($url);
         
         $path = parse_url($decodedUrl, PHP_URL_PATH);
         $filename = basename($path);
-        
-        // اگر filename خالی بود، از timestamp استفاده کن
+
+        // اگر نام فایل خالی است، از یک نام پیش‌فرض استفاده کن
         if (empty($filename) || $filename === '/') {
-            $filename = 'file_' . time();
+            $filename = 'telegram_upload_' . time();
         }
-        
-        // Sanitize filename برای استفاده در filesystem
-        $filename = preg_replace('/[^\w\s\.\-_()\[\]]+/u', '_', $filename);
-        $filename = preg_replace('/[\s]+/', '_', $filename);
-        $filename = trim($filename, '_');
-        
-        // محدود کردن طول
-        if (strlen($filename) > 200) {
+
+        // Sanitize filename برای امنیت
+        $filename = preg_replace('/[^a-zA-Z0-9_\-\.\x{0600}-\x{06FF}\s]/u', '_', $filename);
+        $filename = trim($filename);
+
+        // محدود کردن طول نام فایل
+        if (mb_strlen($filename) > 200) {
             $extension = pathinfo($filename, PATHINFO_EXTENSION);
-            $name = pathinfo($filename, PATHINFO_FILENAME);
-            $filename = substr($name, 0, 190) . '.' . $extension;
+            $basename = pathinfo($filename, PATHINFO_FILENAME);
+            $filename = mb_substr($basename, 0, 190) . ($extension ? '.' . $extension : '');
         }
-        
-        return $filename ?: 'unnamed_file';
+
+        return $filename;
     }
 
     /**
@@ -310,26 +356,53 @@ class TelegramUrlUploadWithProgress
         int $fileSize,
         string $mimeType
     ): FileEntry {
-        $userId = $fileData['user_id'] ?? auth()->id();
-        $parentId = $fileData['parent_id'] ?? null;
+        // ✅ Sanitize filename قبل از ذخیره در FileEntry
+        $sanitizedFilename = $this->sanitizeFilenameForFileEntry($filename);
         
-        return FileEntry::create([
-            'name' => $filename,
-            'file_name' => $filename,
+        $fileEntry = FileEntry::create([
+            'name' => $sanitizedFilename,
+            'file_name' => $sanitizedFilename,
             'mime' => $mimeType,
-            'type' => $this->determineFileType($mimeType),
             'file_size' => $fileSize,
-            'user_id' => $userId,
-            'parent_id' => $parentId,
+            'type' => FileEntry::findType($mimeType),
+            'extension' => pathinfo($sanitizedFilename, PATHINFO_EXTENSION),
+            'user_id' => $fileData['user_id'] ?? auth()->id(),
+            'parent_id' => $fileData['parent_id'] ?? null,
             'workspace_id' => $fileData['workspace_id'] ?? null,
-            'disk_prefix' => null,
-            'path' => $uploadResult['message_id'] . '/' . $filename,
-            'public_path' => null,
-            'description' => $fileData['description'] ?? null,
+            'public' => $fileData['public'] ?? false,
+            'disk_prefix' => 'telegram',
+            'path' => 'telegram/' . ($uploadResult['message_id'] ?? 'unknown'),
         ]);
+
+        Log::info('FileEntry created', [
+            'file_entry_id' => $fileEntry->id,
+            'original_filename' => $filename,
+            'sanitized_filename' => $sanitizedFilename,
+        ]);
+
+        return $fileEntry;
     }
 
     /**
+     * ✅ Sanitize filename برای FileEntry (حذف کاراکترهای مشکل‌ساز)
+     */
+    protected function sanitizeFilenameForFileEntry(string $filename): string
+    {
+        // حذف کاراکترهای کنترلی و کاراکترهایی که باعث مشکل در base_convert می‌شوند
+        $sanitized = preg_replace('/[\x00-\x1F\x7F]/u', '', $filename); // حذف control characters
+        $sanitized = preg_replace('/[^\w\s\-\.\x{0600}-\x{06FF}]/u', '_', $sanitized); // فقط حروف، اعداد، فاصله، خط تیره، نقطه و فارسی
+        $sanitized = preg_replace('/\s+/', '_', $sanitized); // فاصله‌ها را به underscore تبدیل کن
+        $sanitized = preg_replace('/_+/', '_', $sanitized); // چند underscore متوالی را به یکی تبدیل کن
+        $sanitized = trim($sanitized, '_'); // حذف underscore از ابتدا و انتها
+        
+        // اگر بعد از sanitize خالی شد، یک نام پیش‌فرض بده
+        if (empty($sanitized)) {
+            $sanitized = 'telegram_file_' . time();
+        }
+        
+        return $sanitized;
+    }
+        /**
      * تشخیص نوع فایل بر اساس MIME type
      */
     protected function determineFileType(string $mimeType): string
