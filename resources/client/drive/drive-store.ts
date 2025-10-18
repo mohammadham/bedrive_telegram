@@ -78,7 +78,11 @@ interface Actions {
 
 const initialState: State = {
   uploadQueueIsOpen: false,
-  telegramUploadQueueIsOpen: false,
+  // ✅ بازیابی state از localStorage پس از refresh
+  telegramUploadQueueIsOpen: getFromLocalStorage<boolean>(
+    'drive.telegramUploadQueueIsOpen',
+    false,
+  ),
   contextMenuData: null,
   selectedEntries: new Set(),
   entriesBeingDragged: [],
@@ -106,6 +110,8 @@ export const useDriveStore = create<State & Actions>()(
       set(state => {
         state.telegramUploadQueueIsOpen = isOpen;
       });
+      // ✅ ذخیره state در localStorage برای persist پس از refresh
+      setInLocalStorage('drive.telegramUploadQueueIsOpen', isOpen);
     },
     setContextMenuData: data => {
       set(state => {

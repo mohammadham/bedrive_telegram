@@ -68,15 +68,32 @@ export function TelegramUploadQueuePanel() {
     {inProgress: 0, completed: 0, failed: 0},
   );
 
-  // Auto-close وقتی دیگر آپلودی نیست (بعد از 5 ثانیه)
+  // ✅ Auto-close فقط وقتی که:
+  // 1. Panel باز است
+  // 2. Loading نیست
+  // 3. آپلودی نیست یا همه کامل/فیل شده‌اند
   useEffect(() => {
-    if (isTelegramQueueOpen && !isLoading && !hasActiveUploads) {
-      const timer = setTimeout(() => {
-        driveState().setTelegramUploadQueueIsOpen(false);
-      }, 5000);
-      return () => clearTimeout(timer);
+    if (isTelegramQueueOpen && !isLoading) {
+      const hasOnlyCompletedOrFailed =
+        activeUploads.length > 0 &&
+        activeUploads.every(
+          u => u.status === 'completed' || u.status === 'failed',
+        );
+      const noUploadsAtAll = activeUploads.length === 0;
+
+      if (noUploadsAtAll || hasOnlyCompletedOrFailed) {
+        const timer = setTimeout(
+          () => {
+            console.log('🔴 Auto-closing Telegram queue panel');
+            driveState().setTelegramUploadQueueIsOpen(false);
+          },
+          hasOnlyCompletedOrFailed ? 3000 : 5000,
+        ); // 3s برای کامل شده، 5s برای خالی
+
+        return () => clearTimeout(timer);
+      }
     }
-  }, [isTelegramQueueOpen, isLoading, hasActiveUploads]);
+  }, [isTelegramQueueOpen, isLoading, activeUploads]);
 
   if (!isTelegramQueueOpen) return null;
 

@@ -230,27 +230,34 @@ class TelegramUploadProgressService
             'session_id' => $progress->session_id,
             'url' => $progress->url,
             'filename' => $progress->filename,
-            'total_size' => $progress->total_size,
-            'formatted_size' => $progress->formatted_size,
+            'total_size' => $progress->total_size ?? 0,
+            'formatted_size' => $progress->formatted_size ?? 'N/A',
             
             // Download
-            'downloaded_bytes' => $progress->downloaded_bytes,
+            'downloaded_bytes' => $progress->downloaded_bytes ?? 0,
             'download_speed' => $progress->download_speed,
             'download_eta' => $progress->download_eta,
-            'download_percentage' => round($progress->download_percentage, 2),
-            'formatted_download_speed' => $progress->formatted_download_speed,
+            'download_percentage' => round($progress->download_percentage ?? 0, 2),
+            'formatted_download_speed' => $progress->formatted_download_speed ?? 'N/A',
             
             // Upload
-            'uploaded_bytes' => $progress->uploaded_bytes,
+            'uploaded_bytes' => $progress->uploaded_bytes ?? 0,
             'upload_speed' => $progress->upload_speed,
             'upload_eta' => $progress->upload_eta,
-            'upload_percentage' => round($progress->upload_percentage, 2),
-            'formatted_upload_speed' => $progress->formatted_upload_speed,
+            'upload_percentage' => round($progress->upload_percentage ?? 0, 2),
+            'formatted_upload_speed' => $progress->formatted_upload_speed ?? 'N/A',
             
             // Overall
-            'overall_percentage' => round($progress->overall_percentage, 2),
+            'overall_percentage' => round($progress->overall_percentage ?? 0, 2),
             'status' => $progress->status,
             'error_message' => $progress->error_message,
+            
+            // Phase 8.4: Retry fields
+            'retry_count' => $progress->retry_count ?? 0,
+            'max_retries' => $progress->max_retries ?? 3,
+            'is_retryable' => $progress->is_retryable ?? false,
+            'retry_info' => $progress->retry_info ?? null,
+            'next_retry_at' => $progress->next_retry_at?->toIso8601String(),
             
             // Timestamps
             'started_at' => $progress->started_at?->toIso8601String(),

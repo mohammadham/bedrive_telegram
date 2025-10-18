@@ -113,12 +113,12 @@ export function TelegramUploadProgress({
       <div className="flex items-center gap-12">
         <div className="flex-1">
           <ProgressBar
-            value={progress.overall_percentage}
+            value={isNaN(progress.overall_percentage) ? 0 : (progress.overall_percentage || 0)}
             size="sm"
           />
         </div>
         <span className="text-xs text-muted">
-          {Math.round(progress.overall_percentage)}%
+          {Math.round(isNaN(progress.overall_percentage) ? 0 : (progress.overall_percentage || 0))}%
         </span>
         {progress.status === 'downloading' && (
           <CloudDownloadIcon size="sm" className="text-primary" />
@@ -215,11 +215,11 @@ export function TelegramUploadProgress({
             {progress.status === 'failed' && 'خطا در آپلود'}
           </span>
           <span className="font-bold text-sm text-primary">
-            {Math.round(progress.overall_percentage)}%
+            {Math.round(isNaN(progress.overall_percentage) ? 0 : (progress.overall_percentage || 0))}%
           </span>
         </div>
         <ProgressBar
-          value={progress.overall_percentage}
+          value={isNaN(progress.overall_percentage) ? 0 : (progress.overall_percentage || 0)}
           size="md"
           className="h-2"
         />
@@ -229,12 +229,12 @@ export function TelegramUploadProgress({
       {showDetails && ['downloading', 'uploading'].includes(progress.status) && (
         <div className="space-y-2 text-xs bg-paper/50 rounded-md p-3 border border-divider/50">
           {/* Download Phase */}
-          {(progress.status === 'downloading' || progress.download_percentage > 0) && (
+          {(progress.status === 'downloading' || (!isNaN(progress.download_percentage) && progress.download_percentage > 0)) && (
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-2">
                 <CloudDownloadIcon size="sm" className="text-primary" />
                 <span className="font-medium">
-                  دانلود: {Math.round(progress.download_percentage)}%
+                  دانلود: {Math.round(isNaN(progress.download_percentage) ? 0 : (progress.download_percentage || 0))}%
                 </span>
               </div>
               <div className="flex items-center gap-3 text-muted">
@@ -253,12 +253,12 @@ export function TelegramUploadProgress({
           )}
 
           {/* Upload Phase */}
-          {(progress.status === 'uploading' || progress.upload_percentage > 0) && (
+          {(progress.status === 'uploading' || (!isNaN(progress.upload_percentage) && progress.upload_percentage > 0)) && (
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-2">
                 <CloudUploadIcon size="sm" className="text-primary" />
                 <span className="font-medium">
-                  آپلود: {Math.round(progress.upload_percentage)}%
+                  آپلود: {Math.round(isNaN(progress.upload_percentage) ? 0 : (progress.upload_percentage || 0))}%
                 </span>
               </div>
               <div className="flex items-center gap-3 text-muted">
