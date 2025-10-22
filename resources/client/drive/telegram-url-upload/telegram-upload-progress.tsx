@@ -10,7 +10,6 @@ import {Trans} from '@ui/i18n/trans';
 import {ProgressBar} from '@ui/progress/progress-bar';
 import {useUploadProgress} from './use-upload-progress';
 import {
-  formatETA,
   getStatusColor,
   getStatusText,
   cancelUpload,
@@ -174,31 +173,33 @@ export function TelegramUploadProgress({
           </div>
         </div>
 
-        {/* دکمه لغو/تلاش مجدد */}
-        <div className="flex-shrink-0">
+        {/* دکمه لغو/تلاش مجدد - فقط آیکون */}
+        <div className="flex-shrink-0 flex gap-2">
+          {/* دکمه لغو - همیشه نمایش داده شود */}
           {['pending', 'downloading', 'uploading'].includes(progress.status) && (
             <Button
               size="xs"
               variant="flat"
               color="danger"
-              startIcon={<CancelIcon />}
               onClick={handleCancel}
-              className="hover:bg-danger hover:text-on-primary transition-colors"
+              className="hover:bg-danger hover:text-on-primary transition-colors !px-8 !min-w-0"
+              aria-label="لغو آپلود"
             >
-              لغو
+              <CancelIcon />
             </Button>
           )}
+          {/* دکمه تلاش مجدد */}
           {progress.is_retryable && progress.status === 'failed' && (
             <Button
               size="xs"
               variant="flat"
               color="primary"
-              startIcon={<RefreshIcon />}
               onClick={handleRetry}
               disabled={progress.retry_count >= progress.max_retries}
-              className="hover:bg-primary hover:text-on-primary transition-colors"
+              className="hover:bg-primary hover:text-on-primary transition-colors !px-8 !min-w-0"
+              aria-label={`تلاش مجدد (${progress.retry_count || 0}/${progress.max_retries || 3})`}
             >
-              تلاش ({progress.retry_count || 0}/{progress.max_retries || 3})
+              <RefreshIcon />
             </Button>
           )}
         </div>
@@ -225,7 +226,7 @@ export function TelegramUploadProgress({
         />
       </div>
 
-      {/* Details - فقط برای وضعیت‌های فعال */}
+      {/* Details - فقط برای وضعیت‌های فعال - بدون ETA */}
       {showDetails && ['downloading', 'uploading'].includes(progress.status) && (
         <div className="space-y-2 text-xs bg-paper/50 rounded-md p-3 border border-divider/50">
           {/* Download Phase */}
@@ -241,11 +242,6 @@ export function TelegramUploadProgress({
                 {progress.formatted_download_speed !== 'N/A' && (
                   <span className="font-mono font-bold text-primary">
                     {progress.formatted_download_speed}
-                  </span>
-                )}
-                {progress.download_eta && (
-                  <span className="flex items-center gap-1">
-                    ⏱ {formatETA(progress.download_eta)}
                   </span>
                 )}
               </div>
@@ -265,11 +261,6 @@ export function TelegramUploadProgress({
                 {progress.formatted_upload_speed !== 'N/A' && (
                   <span className="font-mono font-bold text-primary">
                     {progress.formatted_upload_speed}
-                  </span>
-                )}
-                {progress.upload_eta && (
-                  <span className="flex items-center gap-1">
-                    ⏱ {formatETA(progress.upload_eta)}
                   </span>
                 )}
               </div>
