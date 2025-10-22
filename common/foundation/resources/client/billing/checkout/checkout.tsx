@@ -3,6 +3,7 @@ import {Trans} from '@ui/i18n/trans';
 import {CheckoutLayout} from './checkout-layout';
 import {CheckoutProductSummary} from './checkout-product-summary';
 import {usePaypal} from './paypal/use-paypal';
+import {useZarinpal} from './zarinpal/use-zarinpal';
 import {StripeElementsForm} from './stripe/stripe-elements-form';
 import {Fragment} from 'react';
 import {useProducts} from '../pricing-table/use-products';
@@ -13,6 +14,16 @@ export function Checkout() {
   const {productId, priceId} = useParams();
   const productQuery = useProducts();
   const {paypalElementRef} = usePaypal({
+    productId,
+    priceId,
+  });
+  const {
+    zarinpalEnabled,
+    isProcessing,
+    error: zarinpalError,
+    handlePayment: handleZarinpalPayment,
+    canUseZarinpal,
+  } = useZarinpal({
     productId,
     priceId,
   });
@@ -54,6 +65,27 @@ export function Checkout() {
           </Fragment>
         ) : null}
         <div ref={paypalElementRef} />
+        {canUseZarinpal && price?.currency.toUpperCase() === 'IRR' ? (
+          <Fragment>
+            <Separator />
+            <div>
+              <button
+                onClick={handleZarinpalPayment}
+                disabled={isProcessing}
+                className="w-full rounded bg-primary px-24 py-12 text-white hover:bg-primary-dark disabled:opacity-50"
+              >
+                {isProcessing ? (
+                  <Trans message="در حال پردازش..." />
+                ) : (
+                  <Trans message="پرداخت با زرین‌پال" />
+                )}
+              </button>
+              {zarinpalError && (
+                <div className="mt-10 text-sm text-danger">{zarinpalError}</div>
+              )}
+            </div>
+          </Fragment>
+        ) : null}
         <div className="mt-30 text-xs text-muted">
           <Trans message="You’ll be charged until you cancel your subscription. Previous charges won’t be refunded when you cancel unless it’s legally required. Your payment data is encrypted and secure. By subscribing your agree to our terms of service and privacy policy." />
         </div>

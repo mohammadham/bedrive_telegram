@@ -56,8 +56,10 @@ return [
     ['name' => 'billing.enable', 'value' => false],
     ['name' => 'billing.paypal_test_mode', 'value' => true],
     ['name' => 'billing.stripe_test_mode', 'value' => true],
+    ['name' => 'billing.zarinpal_test_mode', 'value' => true],
     ['name' => 'billing.stripe.enable', 'value' => false],
     ['name' => 'billing.paypal.enable', 'value' => false],
+    ['name' => 'billing.zarinpal.enable', 'value' => false],
     [
         'name' => 'billing.accepted_cards',
         'value' => json_encode([

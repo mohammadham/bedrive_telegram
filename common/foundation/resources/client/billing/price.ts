@@ -7,4 +7,5 @@ export interface Price {
   subscriptions_count?: number;
   stripe_id?: string;
   paypal_id?: string;
+  zarinpal_id?: string;
 }

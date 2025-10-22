@@ -14,6 +14,7 @@ return [
     \Common\Settings\Validators\RecaptchaCredentialsValidator::class,
     \Common\Settings\Validators\PaypalCredentialsValidator::class,
     \Common\Settings\Validators\StripeCredentialsValidator::class,
+    \Common\Settings\Validators\ZarinpalCredentialsValidator::class,
     \Common\Settings\Validators\RealtimeCredentialsValidator::class,
     \Common\Settings\Validators\SearchConfigValidator::class,
     \Common\Settings\Validators\StaticFileDeliveryValidator::class,

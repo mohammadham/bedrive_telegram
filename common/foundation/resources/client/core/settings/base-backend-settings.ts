@@ -44,6 +44,7 @@ export interface BaseBackendSettings {
     enable: boolean;
     accepted_cards?: string | string[];
     paypal_test_mode: boolean;
+    zarinpal_test_mode: boolean;
     stripe_public_key?: string;
     invoice: {
       address?: string;
@@ -54,6 +55,10 @@ export interface BaseBackendSettings {
       enable: boolean;
     };
     stripe: {
+      enable: boolean;
+    };
+    zarinpal: {
+      merchant_id: string;
       enable: boolean;
     };
   };

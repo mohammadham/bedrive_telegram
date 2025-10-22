@@ -49,6 +49,11 @@ export const SubscriptionIndexPageFilters: BackendFilter[] = [
           value: 'paypal',
         },
         {
+          key: 'zarinpal',
+          label: message('ZarinPal'),
+          value: 'zarinpal',
+        },
+        {
           key: 'none',
           label: message('None'),
           value: 'none',

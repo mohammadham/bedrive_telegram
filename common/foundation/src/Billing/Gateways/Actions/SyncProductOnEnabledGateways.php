@@ -3,6 +3,7 @@
 namespace Common\Billing\Gateways\Actions;
 
 use Common\Billing\Gateways\Paypal\Paypal;
+use Common\Billing\Gateways\Zarinpal\Zarinpal;
 use Common\Billing\Gateways\Stripe\Stripe;
 use Common\Billing\Models\Product;
 
@@ -10,7 +11,8 @@ class SyncProductOnEnabledGateways
 {
     public function __construct(
         protected Stripe $stripe,
-        protected Paypal $paypal
+        protected Paypal $paypal,
+        protected Zarinpal $zarinpal
     ) {
     }
 
@@ -23,6 +25,9 @@ class SyncProductOnEnabledGateways
         }
         if ($this->paypal->isEnabled()) {
             $this->paypal->syncPlan($product);
+        }
+        if ($this->zarinpal->isEnabled()) {
+            $this->zarinpal->syncPlan($product);
         }
     }
 }

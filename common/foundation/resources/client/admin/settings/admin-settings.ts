@@ -13,6 +13,7 @@ export interface AdminServerSettings {
   stripe_key?: string;
   stripe_secret?: string;
   stripe_webhook_secret?: string;
+  zarinpal_merchant_id?: string;
 
   // social login
   envato_id?: string;

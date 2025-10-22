@@ -43,11 +43,15 @@ function Form({data}: FormProps) {
           enable: data.client.billing?.enable ?? false,
           accepted_cards: data.client.billing?.accepted_cards ?? [],
           paypal_test_mode: data.client.billing?.paypal_test_mode ?? false,
+          zarinpal_test_mode: data.client.billing?.zarinpal_test_mode ?? false,
           paypal: {
             enable: data.client.billing?.paypal?.enable ?? false,
           },
           stripe: {
             enable: data.client.billing?.stripe?.enable ?? false,
+          },
+          zarinpal: {
+            enable: data.client.billing?.zarinpal?.enable ?? false,
           },
           invoice: {
             address: data.client.billing?.invoice?.address ?? '',
@@ -62,6 +66,7 @@ function Form({data}: FormProps) {
         stripe_key: data.server?.stripe_key ?? '',
         stripe_secret: data.server?.stripe_secret ?? '',
         stripe_webhook_secret: data.server?.stripe_webhook_secret ?? '',
+        zarinpal_merchant_id: data.server?.zarinpal_merchant_id ?? '',
       },
     },
   });
@@ -90,6 +95,7 @@ function Form({data}: FormProps) {
             <SettingsSeparator />
             <PaypalSection />
             <StripeSection />
+            <ZarinpalSection />
             <SettingsSeparator />
             <JsonChipField
               label={<Trans message="Accepted cards" />}
@@ -232,5 +238,50 @@ function StripeSection() {
         </SettingsErrorGroup>
       ) : null}
     </Fragment>
+  );
+}
+
+function ZarinpalSection() {
+  const {watch} = useFormContext<AdminSettings>();
+  const zarinpalEnabled = watch('client.billing.zarinpal.enable');
+  return (
+    <div className="mb-30">
+      <FormSwitch
+        name="client.billing.zarinpal.enable"
+        description={
+          <div>
+            <Trans message="Enable ZarinPal payment gateway integration (IRR only)." />
+          </div>
+        }
+      >
+        <Trans message="ZarinPal gateway" />
+      </FormSwitch>
+      {zarinpalEnabled ? (
+        <SettingsErrorGroup name="zarinpal_group">
+          {isInvalid => (
+            <Fragment>
+              <FormTextField
+                name="server.zarinpal_merchant_id"
+                label={<Trans message="ZarinPal Merchant ID" />}
+                required
+                invalid={isInvalid}
+                className="mb-20"
+              />
+              <FormSwitch
+                name="client.billing.zarinpal_test_mode"
+                invalid={isInvalid}
+                description={
+                  <div>
+                    <Trans message="Allows testing ZarinPal payments with sandbox accounts." />
+                  </div>
+                }
+              >
+                <Trans message="ZarinPal test mode" />
+              </FormSwitch>
+            </Fragment>
+          )}
+        </SettingsErrorGroup>
+      ) : null}
+    </div>
   );
 }

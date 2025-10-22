@@ -143,7 +143,7 @@ function Actions() {
   const syncPlans = useSyncProducts();
   return (
     <Fragment>
-      <Tooltip label={<Trans message="Sync plans with Stripe & PayPal" />}>
+      <Tooltip label={<Trans message="Sync plans with Stripe, PayPal & ZarinPal" />}>
         <IconButton
           color="primary"
           variant="outline"

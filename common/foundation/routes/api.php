@@ -21,6 +21,7 @@ use Common\Auth\Middleware\VerifyApiAccessMiddleware;
 use Common\Auth\Roles\RolesController;
 use Common\Billing\Gateways\Paypal\PaypalController;
 use Common\Billing\Gateways\Stripe\StripeController;
+use Common\Billing\Gateways\Zarinpal\ZarinpalController;
 use Common\Billing\Gateways\SyncProductsController;
 use Common\Billing\Invoices\InvoiceController;
 use Common\Billing\Products\ProductsController;
@@ -221,6 +222,8 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('billing/stripe/change-default-payment-method', [StripeController::class, 'changeDefaultPaymentMethod']);
         Route::post('billing/stripe/store-subscription-details-locally', [StripeController::class, 'storeSubscriptionDetailsLocally']);
         Route::post('billing/paypal/store-subscription-details-locally', [PaypalController::class, 'storeSubscriptionDetailsLocally']);
+        Route::post('billing/zarinpal/create-payment-request', [ZarinpalController::class, 'createPaymentRequest']);
+        Route::post('billing/zarinpal/verify-and-store-subscription', [ZarinpalController::class, 'verifyAndStoreSubscription']);
 
         // INVOICES
         Route::get('billing/invoices', [InvoiceController::class, 'index']);

@@ -4,6 +4,7 @@ namespace Common\Billing\Listeners;
 
 use Common\Billing\Gateways\Paypal\Paypal;
 use Common\Billing\Gateways\Stripe\Stripe;
+use Common\Billing\Gateways\Zarinpal\Zarinpal;
 use Common\Billing\Models\Product;
 use Common\Settings\Events\SettingsSaved;
 use Illuminate\Support\Arr;
@@ -13,6 +14,7 @@ class SyncPlansWhenBillingSettingsChange
     public function __construct(
         protected Stripe $stripe,
         protected Paypal $paypal,
+        protected Zarinpal $zarinpal,
     ) {
     }
 
@@ -31,6 +33,12 @@ class SyncPlansWhenBillingSettingsChange
         if (Arr::get($s, 'paypal_client_id') || Arr::get($s, 'paypal_secret')) {
             $products->each(
                 fn(Product $product) => $this->paypal->syncPlan($product),
+            );
+        }
+
+        if (Arr::get($s, 'zarinpal_merchant_id')) {
+            $products->each(
+                fn(Product $product) => $this->zarinpal->syncPlan($product),
             );
         }
     }

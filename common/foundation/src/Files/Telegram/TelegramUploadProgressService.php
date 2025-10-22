@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
  */
 class TelegramUploadProgressService
 {
-    protected const CACHE_TTL = 5; // 5 seconds - برای real-time updates
+    protected const CACHE_TTL = 3600; // 1 hour
     protected const CACHE_PREFIX = 'telegram_progress:';
 
     /**
@@ -109,13 +109,8 @@ class TelegramUploadProgressService
             throw new \Exception("Progress session not found: {$sessionId}");
         }
 
-        // ✅ Clear cache before update
-        $this->clearCache($sessionId);
-        
         $progress->update(['status' => 'downloading']);
-        $progress->refresh();
-        
-        // ✅ Cache after refresh
+        $progress->refresh(); // ✅ Refresh after update
         $this->cacheProgress($progress);
         
         Log::info('✅ Download started and cached', [
@@ -133,9 +128,6 @@ class TelegramUploadProgressService
         ?float $speed = null,
         ?int $eta = null
     ): void {
-        // ✅ Clear cache برای دریافت fresh data
-        $this->clearCache($sessionId);
-        
         $progress = $this->getProgress($sessionId);
         
         if (!$progress) {
@@ -146,27 +138,6 @@ class TelegramUploadProgressService
         $progress->refresh(); // ✅ Refresh after update
         $this->cacheProgress($progress);
     }
-
-    /**
-     * ذخیره مسیر فایل موقت
-     */
-    public function setTempPath(string $sessionId, string $tempPath): void
-    {
-        $progress = $this->getProgress($sessionId);
-        
-        if (!$progress) {
-            return;
-        }
-
-        $progress->update(['temp_path' => $tempPath]);
-        $this->clearCache($sessionId); // Force fresh data
-        
-        Log::info('✅ Temp path saved', [
-            'session_id' => $sessionId,
-            'temp_path' => $tempPath,
-        ]);
-    }
-
 
     /**
      * شروع upload
@@ -353,6 +324,6 @@ class TelegramUploadProgressService
      */
     public function cleanup(): int
     {
-        return TelegramUploadProgress::cleanupOld(); 
+        return TelegramUploadProgress::cleanupOld();
     }
 }

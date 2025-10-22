@@ -4,6 +4,7 @@ use App\Models\User;
 use Common\Billing\Gateways\Contracts\CommonSubscriptionGatewayActions;
 use Common\Billing\Gateways\Paypal\Paypal;
 use Common\Billing\Gateways\Stripe\Stripe;
+use Common\Billing\Gateways\Zarinpal\Zarinpal;
 use Common\Billing\Invoices\Invoice;
 use Common\Billing\Models\Price;
 use Common\Billing\Models\Product;
@@ -254,6 +255,8 @@ class Subscription extends BaseModel
             return app(Stripe::class);
         } elseif ($this->gateway_name === 'paypal') {
             return app(Paypal::class);
+        } elseif ($this->gateway_name === 'zarinpal') {
+            return app(Zarinpal::class);
         }
 
         return null;

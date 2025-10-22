@@ -28,4 +28,9 @@ export const checkoutRoutes: RouteObject[] = [
     loader: () => notSubscribedGuard(),
     lazy: () => lazyRoute('CheckoutPaypalDone'),
   },
+  {
+    path: 'checkout/:productId/:priceId/zarinpal/done',
+    loader: () => notSubscribedGuard(),
+    lazy: () => lazyRoute('CheckoutZarinpalDone'),
+  },
 ];

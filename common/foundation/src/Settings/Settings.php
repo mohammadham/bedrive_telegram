@@ -18,6 +18,7 @@ class Settings
     protected array $configKeys = [
         'billing.stripe_public_key' => 'services.stripe.key',
         'billing.paypal.public_key' => 'services.paypal.client_id',
+        'billing.zarinpal.merchant_id' => 'services.zarinpal.merchant_id',
         'site.demo' => 'common.site.demo',
         'logging.sentry_public' => 'sentry.dsn',
         'i18n.default_localization' => 'app.locale',

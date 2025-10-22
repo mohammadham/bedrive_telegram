@@ -2,6 +2,7 @@
 
 use Common\Billing\Gateways\Paypal\Paypal;
 use Common\Billing\Gateways\Stripe\Stripe;
+use Common\Billing\Gateways\Zarinpal\Zarinpal;
 use Common\Billing\Models\Product;
 use Common\Billing\Products\Actions\CrupdateProduct;
 use Common\Core\BaseController;
@@ -16,7 +17,8 @@ class ProductsController extends BaseController
 {
     public function __construct(
         protected Stripe $stripe,
-        protected Paypal $paypal
+        protected Paypal $paypal,
+        protected Zarinpal $zarinpal
     ) {
     }
 
@@ -109,6 +111,9 @@ class ProductsController extends BaseController
             }
             if ($this->paypal->isEnabled()) {
                 $this->paypal->deletePlan($product);
+            }
+            if ($this->zarinpal->isEnabled()) {
+                $this->zarinpal->deletePlan($product);
             }
         } catch (Exception $e) {
             return $this->error($e->getMessage());
