@@ -1,10 +1,10 @@
 import {useEffect, useState} from 'react';
-import {Navigate, useParams, useSearchParams} from 'react-router-dom';
+import {Navigate, useParams, useSearchParams} from 'react-router';
 import {CheckoutLayout} from '../checkout-layout';
 import {Trans} from '@ui/i18n/trans';
 import {apiClient} from '@common/http/query-client';
 import {ProgressCircle} from '@ui/progress/progress-circle';
-import {Link} from 'react-router-dom';
+import {Link} from 'react-router';
 import {useProducts} from '@common/billing/pricing-table/use-products';
 
 export function CheckoutZarinpalDone() {
