@@ -7,6 +7,7 @@ import {LightbulbIcon} from '@ui/icons/material/Lightbulb';
 import {Trans} from '@ui/i18n/trans';
 import {useThemeSelector} from '@ui/themes/theme-selector-context';
 import {useSettings} from '@ui/settings/use-settings';
+import {EnamadFooterBadge} from './enamad-footer-badge';
 
 interface Props {
   className?: string;
@@ -25,6 +26,7 @@ export function Footer({className, padding}: Props) {
       )}
     >
       <Menus />
+      <EnamadFooterBadge />
       <div className="items-center justify-between gap-30 text-center text-muted md:flex md:text-left">
         <Trans
           message="Copyright © :year :name, All Rights Reserved"

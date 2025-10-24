@@ -5,10 +5,11 @@ import {CheckoutProductSummary} from './checkout-product-summary';
 import {usePaypal} from './paypal/use-paypal';
 import {useZarinpal} from './zarinpal/use-zarinpal';
 import {StripeElementsForm} from './stripe/stripe-elements-form';
-import {Fragment} from 'react';
+import {Fragment, useEffect, useRef} from 'react';
 import {useProducts} from '../pricing-table/use-products';
 import {FullPageLoader} from '@ui/progress/full-page-loader';
 import {useSettings} from '@ui/settings/use-settings';
+import {EnamadBadge} from './enamad-badge';
 
 export function Checkout() {
   const {productId, priceId} = useParams();
@@ -29,7 +30,7 @@ export function Checkout() {
   });
   const {
     base_url,
-    billing: {stripe},
+    billing: {stripe, enamad},
   } = useSettings();
 
   if (productQuery.isLoading) {
@@ -86,6 +87,7 @@ export function Checkout() {
             </div>
           </Fragment>
         ) : null}
+        {enamad?.enable && enamad?.code ? <EnamadBadge /> : null}
         <div className="mt-30 text-xs text-muted">
           <Trans message="You’ll be charged until you cancel your subscription. Previous charges won’t be refunded when you cancel unless it’s legally required. Your payment data is encrypted and secure. By subscribing your agree to our terms of service and privacy policy." />
         </div>

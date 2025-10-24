@@ -53,6 +53,11 @@ function Form({data}: FormProps) {
           zarinpal: {
             enable: data.client.billing?.zarinpal?.enable ?? false,
           },
+          enamad: {
+            enable: data.client.billing?.enamad?.enable ?? false,
+            code: data.client.billing?.enamad?.code ?? '',
+            show_in_footer: data.client.billing?.enamad?.show_in_footer ?? false,
+          },
           invoice: {
             address: data.client.billing?.invoice?.address ?? '',
             notes: data.client.billing?.invoice?.notes ?? '',
@@ -79,6 +84,9 @@ function Form({data}: FormProps) {
             <Trans message="General" />
           </Tab>
           <Tab>
+            <Trans message="E-namad" />
+          </Tab>
+          <Tab>
             <Trans message="Invoices" />
           </Tab>
         </TabList>
@@ -102,6 +110,9 @@ function Form({data}: FormProps) {
               name="client.billing.accepted_cards"
               placeholder={trans({message: 'Add new card...'})}
             />
+          </TabPanel>
+          <TabPanel>
+            <EnamadSection />
           </TabPanel>
           <TabPanel>
             <FormTextField
@@ -281,6 +292,50 @@ function ZarinpalSection() {
             </Fragment>
           )}
         </SettingsErrorGroup>
+      ) : null}
+    </div>
+  );
+}
+
+function EnamadSection() {
+  const {watch} = useFormContext<AdminSettings>();
+  const enamadEnabled = watch('client.billing.enamad.enable');
+  return (
+    <div>
+      <FormSwitch
+        name="client.billing.enamad.enable"
+        description={
+          <div>
+            <Trans message="Enable E-namad trust badge on checkout page." />
+          </div>
+        }
+        className="mb-20"
+      >
+        <Trans message="Enable E-namad" />
+      </FormSwitch>
+      {enamadEnabled ? (
+        <Fragment>
+          <FormTextField
+            inputElementType="textarea"
+            rows={8}
+            name="client.billing.enamad.code"
+            label={<Trans message="E-namad HTML Code" />}
+            description={
+              <Trans message="Paste the complete HTML code provided by E-namad (including script tags)." />
+            }
+            className="mb-20"
+          />
+          <FormSwitch
+            name="client.billing.enamad.show_in_footer"
+            description={
+              <div>
+                <Trans message="Also show E-namad badge in the website footer." />
+              </div>
+            }
+          >
+            <Trans message="Show in footer" />
+          </FormSwitch>
+        </Fragment>
       ) : null}
     </div>
   );

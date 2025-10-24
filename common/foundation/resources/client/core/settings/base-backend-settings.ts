@@ -61,6 +61,11 @@ export interface BaseBackendSettings {
       merchant_id: string;
       enable: boolean;
     };
+    enamad: {
+      enable: boolean;
+      code?: string;
+      show_in_footer: boolean;
+    };
   };
   notifications: {
     integrated: boolean;

@@ -60,6 +60,9 @@ return [
     ['name' => 'billing.stripe.enable', 'value' => false],
     ['name' => 'billing.paypal.enable', 'value' => false],
     ['name' => 'billing.zarinpal.enable', 'value' => false],
+    ['name' => 'billing.enamad.enable', 'value' => false],
+    ['name' => 'billing.enamad.code', 'value' => ''],
+    ['name' => 'billing.enamad.show_in_footer', 'value' => false],
     [
         'name' => 'billing.accepted_cards',
         'value' => json_encode([
