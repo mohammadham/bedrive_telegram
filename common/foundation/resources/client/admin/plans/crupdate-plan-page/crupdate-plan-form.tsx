@@ -78,6 +78,16 @@ export function CrupdatePlanForm() {
           />
         }
       />
+      <FormTextField
+        className="mb-30"
+        name="max_upload_file_size"
+        type="number"
+        min={1}
+        label={<Trans message="Maximum upload file size (MB)" />}
+        description={
+          <Trans message="Maximum size for a single file upload in megabytes. If not set, the global upload limit will be used." />
+        }
+      />
       <FormSwitch
         name="recommended"
         className="mb-20"

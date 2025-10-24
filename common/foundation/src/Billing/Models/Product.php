@@ -25,6 +25,7 @@ class Product extends BaseModel
         'position' => 'int',
         'available_space' => 'float',
         'hidden' => 'boolean',
+        'max_upload_file_size' => 'int',
     ];
 
     public const MODEL_TYPE = 'product';

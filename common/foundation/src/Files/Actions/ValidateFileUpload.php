@@ -76,7 +76,7 @@ class ValidateFileUpload
 
     protected function validateMaximumFileSize(): ?string
     {
-        $maxSize = app(Settings::class)->get('uploads.max_size');
+        $maxSize = $this->getUserMaxUploadSize();
         if (is_null($maxSize) || !isset($this->fileData['size'])) {
             return null;
         }
@@ -88,6 +88,31 @@ class ValidateFileUpload
         }
 
         return null;
+    }
+
+    /**
+     * Get maximum upload file size based on user's plan or global setting
+     *
+     * @return int|null Size in bytes
+     */
+    protected function getUserMaxUploadSize(): ?int
+    {
+        // Try to get from user's subscription plan first
+        if (Auth::check()) {
+            $user = Auth::user();
+            $subscription = $user->subscriptions()->where('gateway_status', 'active')->first();
+            
+            if ($subscription && $subscription->product) {
+                $planMaxSize = $subscription->product->max_upload_file_size;
+                if (!is_null($planMaxSize) && $planMaxSize > 0) {
+                    // Convert from MB to bytes
+                    return (int) ($planMaxSize * 1024 * 1024);
+                }
+            }
+        }
+
+        // Fall back to global setting
+        return app(Settings::class)->get('uploads.max_size');
     }
 
     protected function validateAllowedStorageSpace(): string|null

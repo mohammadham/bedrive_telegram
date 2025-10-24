@@ -9,6 +9,8 @@ export interface Product {
   hidden?: boolean;
   prices: Price[];
   recommended: boolean;
+  available_space?: number;
+  max_upload_file_size?: number;
   created_at: string;
   updated_at: string;
 }

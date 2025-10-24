@@ -32,6 +32,7 @@ class CrupdateProduct
             'recommended' => $data['recommended'] ?? false,
             'position' => $data['position'] ?? 0,
             'available_space' => $data['available_space'] ?? null,
+            'max_upload_file_size' => $data['max_upload_file_size'] ?? null,
             'feature_list' => $data['feature_list'] ?? [],
         ];
 

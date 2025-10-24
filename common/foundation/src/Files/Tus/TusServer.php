@@ -91,7 +91,7 @@ class TusServer
             'Tus-Checksum-Algorithm' => implode(',', $algorithms),
         ];
 
-        $maxUploadSize = app(Settings::class)->get('uploads.max_size');
+        $maxUploadSize = $this->getMaxUploadSize();
         if ($maxUploadSize > 0) {
             $headers['Tus-Max-Size'] = $maxUploadSize;
         }
@@ -349,6 +349,31 @@ class TusServer
     function getUploadKeyFromUrl(): string
     {
         return basename(request()->getPathInfo());
+    }
+
+    /**
+     * Get maximum upload file size based on user's plan or global setting
+     *
+     * @return int|null Size in bytes
+     */
+    protected function getMaxUploadSize(): ?int
+    {
+        // Try to get from user's subscription plan first
+        if (auth()->check()) {
+            $user = auth()->user();
+            $subscription = $user->subscriptions()->where('gateway_status', 'active')->first();
+            
+            if ($subscription && $subscription->product) {
+                $planMaxSize = $subscription->product->max_upload_file_size;
+                if (!is_null($planMaxSize) && $planMaxSize > 0) {
+                    // Convert from MB to bytes
+                    return (int) ($planMaxSize * 1024 * 1024);
+                }
+            }
+        }
+
+        // Fall back to global setting
+        return app(Settings::class)->get('uploads.max_size');
     }
 
     protected function response(
