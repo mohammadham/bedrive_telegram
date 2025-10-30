@@ -23,11 +23,11 @@ export function useUpdateAdminSettings(
       toast(message('Settings updated'), {
         position: 'bottom-right',
       });
-            
+            console.log('✅ Settings updated:', response);
       // به‌روزرسانی bootstrap data برای دسترسی فوری در سراسر اپلیکیشن
-      if (response?.settings) {
-        mergeBootstrapData({settings: response.settings});
-      }
+      // if (response?.settings) {
+      //   mergeBootstrapData({settings: response.settings});
+      // }
       return queryClient.setQueryData(['fetchAdminSettings'], response);
     },
     onError: r => onFormQueryError(r, form),
