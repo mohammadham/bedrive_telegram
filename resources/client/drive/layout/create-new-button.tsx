@@ -33,7 +33,7 @@ export function CreateNewButton({isCompact, className}: CreateNewButtonProps) {
     </IconButton>
   ) : (
     <Button
-      className="min-w-160"
+      className={isUrlUploadEnabled ? "min-w-160" : "flex-1 min-w-160"}
       color="primary"
       variant="flat"
       size="sm"
@@ -46,7 +46,8 @@ export function CreateNewButton({isCompact, className}: CreateNewButtonProps) {
 
   return (
     <div className={className}>
-      <div className="flex gap-8">
+      <div className="flex gap-8 w-full">
+        <div className={isUrlUploadEnabled ? "" : "flex-1"}>
         <MenuTrigger
           onItemSelected={async value => {
             if (value === 'uploadFiles') {
@@ -75,7 +76,8 @@ export function CreateNewButton({isCompact, className}: CreateNewButtonProps) {
             </MenuItem>
           </Menu>
         </MenuTrigger>
-        
+         </div>
+         
         {/* Telegram URL Upload Button */}
         {!isCompact && isUrlUploadEnabled && <TelegramUrlUploadButton variant="icon" size="md" />}
       </div>
