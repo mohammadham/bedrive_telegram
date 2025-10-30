@@ -23,10 +23,16 @@ export function useUpdateAdminSettings(
       toast(message('Settings updated'), {
         position: 'bottom-right',
       });
-            console.log('✅ Settings updated:', response);
+      console.log('✅ Settings updated:', response);
       // به‌روزرسانی bootstrap data برای دسترسی فوری در سراسر اپلیکیشن
-      if (response?.client) {
-        mergeBootstrapData({uploads: response.client.uploads});
+      // response شامل client و server است، نه settings
+      if (response) {
+        mergeBootstrapData({
+          settings: {
+            client: response.client,
+            server: response.server,
+          },
+        });
       }
       return queryClient.setQueryData(['fetchAdminSettings'], response);
     },
