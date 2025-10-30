@@ -25,7 +25,7 @@ export function useUpdateAdminSettings(
       });
             console.log('✅ Settings updated:', response);
       // به‌روزرسانی bootstrap data برای دسترسی فوری در سراسر اپلیکیشن
-      if (response?.settings) {
+      if (response?.client) {
         mergeBootstrapData({settings: response.client});
       }
       return queryClient.setQueryData(['fetchAdminSettings'], response);
