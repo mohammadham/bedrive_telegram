@@ -6,7 +6,7 @@ import {AdminSettings} from '@common/admin/settings/admin-settings';
 import {onFormQueryError} from '@common/errors/on-form-query-error';
 import {FetchAdminSettingsResponse} from '@common/admin/settings/requests/use-admin-settings';
 import {message} from '@ui/i18n/message';
-import {mergeBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
+import {setBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 
 export interface AdminSettingsWithFiles {
   files?: Record<string, File>;
@@ -26,13 +26,14 @@ export function useUpdateAdminSettings(
       console.log('✅ Settings updated:', response);
       // به‌روزرسانی bootstrap data برای دسترسی فوری در سراسر اپلیکیشن
       // response شامل client و server است، نه settings
-      if (response) {
-        mergeBootstrapData({
-          settings: {
-            client: response.client,
-            server: response.server,
-          },
-        });
+      if (response.bootstrapData) {
+        // mergeBootstrapData({
+        //   settings: {
+        //     client: response.client,
+        //     server: response.server,
+        //   },
+        // });
+        setBootstrapData(response.bootstrapData);
       }
       return queryClient.setQueryData(['fetchAdminSettings'], response);
     },
