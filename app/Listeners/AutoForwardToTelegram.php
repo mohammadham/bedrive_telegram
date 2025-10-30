@@ -9,6 +9,7 @@ use Common\Files\Telegram\Exceptions\TelegramException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
+use Common\Files\Telegram\TelegramCaptionParser;
 
 /**
  * Auto-forward uploaded files to Telegram if user has enabled this feature
@@ -154,11 +155,23 @@ try {
                 ? $telegramManager->getBotClient()
                 : $telegramManager->getUserClient();
 
-            // Forward message
+            // 🎨 Parse caption template از settings
+            $captionTemplate = $envSettings['telegram_forward_caption_template'] ?? null;
+            $caption = null;
+            if (!empty($captionTemplate)) {
+                $caption = TelegramCaptionParser::parse($captionTemplate, $fileEntry);
+                Log::debug('Auto-forward: Caption parsed', [
+                    'template' => $captionTemplate,
+                    'caption' => $caption,
+                ]);
+            }
+
+            // Forward message با caption
             $result = $client->forwardMessage(
                 $metadata->channel_id,
                 $metadata->message_id,
-                $targetDetection['target_normalized'] ?? $targetId
+                $targetDetection['target_normalized'] ?? $targetId,
+                $caption
             );
 
             Log::info('File auto-forwarded successfully', [
