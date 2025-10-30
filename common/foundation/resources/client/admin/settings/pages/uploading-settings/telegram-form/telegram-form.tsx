@@ -19,7 +19,7 @@ export interface TelegramFormProps {
 
 export function TelegramForm({isInvalid}: TelegramFormProps) {
   const settings = useSettings();
-  const isTelegramActive = settings.uploads?.disk === 'telegram';
+  const isTelegramActive = settings.uploads?.uploads_driver === 'telegram';
 
   return (
     <Fragment>

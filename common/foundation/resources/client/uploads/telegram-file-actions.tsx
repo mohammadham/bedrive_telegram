@@ -34,7 +34,7 @@ interface TelegramFileActionsProps {
 export function TelegramFileActions({file}: TelegramFileActionsProps) {
   const settings = useSettings();
   const isUploadedToTelegram = !!file.telegram_metadata;
-  const isTelegramDriver = settings.uploads?.disk === 'telegram';
+  const isTelegramDriver = settings.uploads?.uploads_driver === 'telegram';
 
   // Don't show if Telegram is not the active driver
   if (!isTelegramDriver) {
