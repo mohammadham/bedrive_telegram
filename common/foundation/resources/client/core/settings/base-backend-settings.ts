@@ -117,6 +117,7 @@ export interface BaseBackendSettings {
     disk?: string;
     s3_direct_upload: boolean;
     disable_tus: boolean;
+    telegram_enable_url_upload?: boolean;
   };
   require_email_confirmation: boolean;
   single_device_login: boolean;

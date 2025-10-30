@@ -36,6 +36,7 @@ class Settings
         'uploads.public_driver' => 'common.site.public_disk_driver',
         'uploads.uploads_driver' => 'common.site.uploads_disk_driver',
         'uploads.disable_tus' => 'common.site.uploads_disable_tus',
+        'uploads.telegram_enable_url_upload' => 'common.site.telegram_enable_url_upload',
     ];
 
     /**

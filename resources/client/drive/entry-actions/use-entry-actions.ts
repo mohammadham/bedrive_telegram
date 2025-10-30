@@ -25,7 +25,7 @@ import {useFileEntryUrls} from '@common/uploads/file-entry-urls';
 import {useRestoreEntries} from '../files/queries/use-restore-entries';
 import {RestoreIcon} from '@ui/icons/material/Restore';
 import {downloadFileFromUrl} from '@ui/utils/files/download-file-from-url';
-import {TelegramIcon} from '@ui/icons/social/Telegram';
+import {TelegramIcon} from '@ui/icons/social/telegram';
 
 export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
   const preview = usePreviewAction(entries);

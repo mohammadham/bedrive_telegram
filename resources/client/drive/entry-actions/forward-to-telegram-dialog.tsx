@@ -38,12 +38,13 @@ export function ForwardToTelegramDialog({
         target_id: data.targetId,
       }),
     onSuccess: () => {
-      toast.positive(
-        <Trans
-          message="File forwarded to Telegram successfully"
-          values={{name: entry.name}}
-        />,
-      );
+      // toast.positive(
+      //   <Trans
+      //     message="File forwarded to Telegram successfully"
+      //     values={{name: entry.name}}
+      //   />,
+      // );
+      toast.positive('File forwarded to Telegram successfully');
       close();
     },
     onError: err => {

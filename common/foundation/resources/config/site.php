@@ -7,6 +7,7 @@ return [
     'static_file_delivery' => env('STATIC_FILE_DELIVERY', null),
     'uploads_disk_driver' => env('UPLOADS_DISK_DRIVER', 'local'),
     'public_disk_driver' => env('PUBLIC_DISK_DRIVER', 'local'),
+    'telegram_enable_url_upload' => env('TELEGRAM_ENABLE_URL_UPLOAD', true),
     'file_preview_endpoint' => env('FILE_PREVIEW_ENDPOINT'),
     'version' => env('APP_VERSION'),
     'demo' => env('IS_DEMO_SITE', false),
