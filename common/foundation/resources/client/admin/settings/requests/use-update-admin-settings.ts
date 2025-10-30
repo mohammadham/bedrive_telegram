@@ -7,6 +7,7 @@ import {onFormQueryError} from '@common/errors/on-form-query-error';
 import {FetchAdminSettingsResponse} from '@common/admin/settings/requests/use-admin-settings';
 import {message} from '@ui/i18n/message';
 import {setBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
+import {DatatableDataQueryKey} from '@common/datatable/requests/paginated-resources';
 
 export interface AdminSettingsWithFiles {
   files?: Record<string, File>;
@@ -26,16 +27,19 @@ export function useUpdateAdminSettings(
       console.log('✅ Settings updated:', response);
       // به‌روزرسانی bootstrap data برای دسترسی فوری در سراسر اپلیکیشن
       // response شامل client و server است، نه settings
-      if (response.bootstrapData) {
+      const data = queryClient.setQueryData(['fetchAdminSettings'], response);
+      if (response) {
         // mergeBootstrapData({
         //   settings: {
         //     client: response.client,
         //     server: response.server,
         //   },
         // });
-        setBootstrapData(response.bootstrapData);
+         queryClient.invalidateQueries({
+                queryKey: DatatableDataQueryKey('settings'),
+              });
       }
-      return queryClient.setQueryData(['fetchAdminSettings'], response);
+      return data;
     },
     onError: r => onFormQueryError(r, form),
   });
