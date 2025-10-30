@@ -22,10 +22,10 @@ interface CreateNewButtonProps {
 export function CreateNewButton({isCompact, className}: CreateNewButtonProps) {
   const activePage = useDriveStore(s => s.activePage);
   const {uploadFiles} = useDriveUploadQueue();
-  const {uploads} = useSettings();
+  const {base} = useSettings();
   
   // بررسی فعال بودن URL Upload از settings
-   const isUrlUploadEnabled = uploads?.telegram_enable_url_upload !== false;
+   const isUrlUploadEnabled = base?.telegram_enable_url_upload !== false;
 
   const button = isCompact ? (
     <IconButton size="md" disabled={!activePage?.canUpload}>
