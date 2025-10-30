@@ -25,6 +25,7 @@ import {useFileEntryUrls} from '@common/uploads/file-entry-urls';
 import {useRestoreEntries} from '../files/queries/use-restore-entries';
 import {RestoreIcon} from '@ui/icons/material/Restore';
 import {downloadFileFromUrl} from '@ui/utils/files/download-file-from-url';
+import {TelegramIcon} from '@ui/icons/social/Telegram';
 
 export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
   const preview = usePreviewAction(entries);
@@ -33,6 +34,7 @@ export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
   const addStar = useAddToStarredAction(entries);
   const removeStar = useRemoveFromStarred(entries);
   const moveTo = useMoveToAction(entries);
+  const forwardToTelegram = useForwardToTelegramAction(entries);
   const rename = useRenameAction(entries);
   const makeCopy = useMakeCopyAction(entries);
   const download = useDownloadEntriesAction(entries);
@@ -47,6 +49,7 @@ export function useEntryActions(entries: DriveEntry[]): EntryAction[] {
     addStar,
     removeStar,
     moveTo,
+    forwardToTelegram,
     rename,
     makeCopy,
     download,
@@ -166,6 +169,30 @@ function useMoveToAction(entries: DriveEntry[]): EntryAction | undefined {
     key: 'moveTo',
     execute: () => {
       driveState().setActiveActionDialog('moveTo', entries);
+    },
+  };
+}
+
+function useForwardToTelegramAction(
+  entries: DriveEntry[],
+): EntryAction | undefined {
+  const activePage = useDriveStore(s => s.activePage);
+  
+  // فقط برای یک فایل (نه folder) و نه در trash
+  if (
+    entries.length !== 1 ||
+    entries[0].type === 'folder' ||
+    activePage === TrashPage
+  ) {
+    return;
+  }
+
+  return {
+    label: message('Forward to Telegram'),
+    icon: TelegramIcon,
+    key: 'forwardToTelegram',
+    execute: () => {
+      driveState().setActiveActionDialog('forwardToTelegram', entries);
     },
   };
 }

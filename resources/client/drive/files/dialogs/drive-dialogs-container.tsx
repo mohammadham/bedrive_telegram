@@ -8,6 +8,7 @@ import {MoveEntriesDialog} from './move-entries-dialog/move-entries-dialog';
 import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
 import {DeleteEntriesForeverDialog} from './delete-entries-forever-dialog';
 import {BlockTrashFolderViewDialog} from './block-trash-folder-view-dialog';
+import {ForwardToTelegramDialog} from '../../entry-actions/forward-to-telegram-dialog';
 
 export function DriveDialogsContainer() {
   const activeDialog = useDriveStore(s => s.activeActionDialog);
@@ -40,6 +41,8 @@ function getDialog(dialog?: ActiveActionDialog | null): ReactElement | null {
       return <ShareDialog entry={dialog.entries[0]} focusLinkInput />;
     case 'moveTo':
       return <MoveEntriesDialog entries={dialog.entries} />;
+    case 'forwardToTelegram':
+      return <ForwardToTelegramDialog entry={dialog.entries[0]} />;
     case 'confirmAndDeleteForever':
       return <DeleteEntriesForeverDialog entries={dialog.entries} />;
     case 'trashFolderBlock':

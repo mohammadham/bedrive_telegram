@@ -21,6 +21,7 @@ export type DriveDialog =
   | 'share'
   | 'getLink'
   | 'moveTo'
+  | 'forwardToTelegram'
   | 'confirmAndDeleteForever'
   | 'trashFolderBlock';
 

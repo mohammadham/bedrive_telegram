@@ -520,9 +520,23 @@ class TelegramBotClient implements TelegramClientInterface
     public function forwardMessage(
         string $fromChatId,
         int $messageId,
-        string $toChatId
+        string $toChatId,
+        string $uploadMethod = 'bot',
+        ?string $caption = null
     ): array {
         try {
+            // ⚠️ NOTE: Telegram's forwardMessage API does NOT support caption.
+            // If caption is provided, we use copyMessage instead.
+            if (!empty($caption)) {
+                return $this->copyMessageWithCaption(
+                    $fromChatId,
+                    $messageId,
+                    $toChatId,
+                    $caption
+                );
+            }
+
+            // Standard forward (without caption)
             $result = $this->telegram->forwardMessage([
                 'chat_id' => $toChatId,
                 'from_chat_id' => $fromChatId,
@@ -552,6 +566,66 @@ class TelegramBotClient implements TelegramClientInterface
 
             throw TelegramUploadException::uploadFailed(
                 'Failed to forward message: ' . $e->getMessage(),
+                [
+                    'from_chat' => $fromChatId,
+                    'to_chat' => $toChatId,
+                    'message_id' => $messageId,
+                ]
+            );
+        }
+    }
+
+    /**
+     * Copy message با caption جدید
+     *
+     * Telegram's forwardMessage نمی‌تواند caption داشته باشد.
+     * این متد از copyMessage استفاده می‌کند که به caption اجازه می‌دهد.
+     *
+     * @param string $fromChatId
+     * @param int $messageId
+     * @param string $toChatId
+     * @param string $caption
+     * @return array
+     * @throws TelegramUploadException
+     */
+    protected function copyMessageWithCaption(
+        string $fromChatId,
+        int $messageId,
+        string $toChatId,
+        string $caption
+    ): array {
+        try {
+            $result = $this->telegram->copyMessage([
+                'chat_id' => $toChatId,
+                'from_chat_id' => $fromChatId,
+                'message_id' => $messageId,
+                'caption' => $caption,
+            ]);
+
+            Log::info('Message copied with caption successfully', [
+                'from_chat' => $fromChatId,
+                'to_chat' => $toChatId,
+                'message_id' => $messageId,
+                'new_message_id' => $result->getMessageId(),
+                'caption_length' => strlen($caption),
+            ]);
+
+            return [
+                'success' => true,
+                'message_id' => $result->getMessageId(),
+                'chat_id' => $toChatId,
+                'caption' => $caption,
+            ];
+        } catch (TelegramSDKException $e) {
+            Log::error('Failed to copy message with caption', [
+                'from_chat' => $fromChatId,
+                'to_chat' => $toChatId,
+                'message_id' => $messageId,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw TelegramUploadException::uploadFailed(
+                'Failed to copy message with caption: ' . $e->getMessage(),
                 [
                     'from_chat' => $fromChatId,
                     'to_chat' => $toChatId,

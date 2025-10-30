@@ -105,6 +105,11 @@ function Form({data}: FormProps) {
         storage_telegram_api_id: data.server.storage_telegram_api_id ?? '',
         storage_telegram_api_hash: data.server.storage_telegram_api_hash ?? '',
         storage_telegram_phone: data.server.storage_telegram_phone ?? '',
+        
+        // telegram advanced settings
+        telegram_enable_url_upload: data.server.telegram_enable_url_upload ?? true,
+        telegram_forward_caption_template: data.server.telegram_forward_caption_template ?? 
+          '📁 File: {filename}\n📊 Size: {size}\n📅 Date: {date}',
       },
     },
   });

@@ -70,6 +70,11 @@ export interface AdminServerSettings {
   storage_telegram_api_id?: string;
   storage_telegram_api_hash?: string;
   storage_telegram_phone?: string;
+  storage_telegram_worker_url?: string;
+  
+  // telegram advanced settings
+  telegram_enable_url_upload?: boolean;
+  telegram_forward_caption_template?: string;
 
   // mail
   mail_from_address?: string;

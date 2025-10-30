@@ -553,9 +553,47 @@ class TelegramUserClient implements TelegramClientInterface
     public function forwardMessage(
         string $fromChatId,
         int $messageId,
-        string $toChatId
+        string $toChatId,
+        ?string $caption = null
     ): array {
         try {
+            // اگر caption داریم، باید sendMedia استفاده کنیم
+            if (!empty($caption)) {
+                // ابتدا message را بگیریم
+                $messages = $this->MadelineProto->messages->getMessages([
+                    'id' => [$messageId],
+                ]);
+                
+                if (!isset($messages['messages'][0])) {
+                    throw new MadelineException('Message not found');
+                }
+                
+                $message = $messages['messages'][0];
+                
+                // بررسی نوع message (document, photo, video)
+                if (isset($message['media'])) {
+                    // ارسال media با caption جدید
+                    $result = $this->MadelineProto->messages->sendMedia([
+                        'peer' => $toChatId,
+                        'media' => $message['media'],
+                        'message' => $caption,
+                    ]);
+                    
+                    Log::info('Media sent with caption (User Account)', [
+                        'to_chat' => $toChatId,
+                        'message_id' => $messageId,
+                        'caption_length' => strlen($caption),
+                    ]);
+                    
+                    return [
+                        'success' => true,
+                        'result' => $result,
+                        'with_caption' => true,
+                    ];
+                }
+            }
+
+            // Forward معمولی (بدون caption)
             $result = $this->MadelineProto->messages->forwardMessages([
                 'from_peer' => $fromChatId,
                 'id' => [$messageId],

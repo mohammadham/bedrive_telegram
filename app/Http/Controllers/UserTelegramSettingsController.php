@@ -8,6 +8,7 @@ use Common\Core\BaseController;
 use Common\Files\Telegram\TelegramFileManager;
 use Common\Files\Telegram\TelegramStorageService;
 use Common\Files\Telegram\TelegramTargetDetector;
+use Common\Files\Telegram\TelegramCaptionParser;
 use Common\Files\Telegram\Exceptions\TelegramException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -277,12 +278,24 @@ class UserTelegramSettingsController extends BaseController
                 ? $manager->getBotClient()
                 : $manager->getUserClient();
             
-            // Forward message
+            // پردازش Caption Template (اگر تنظیم شده باشد)
+            $caption = null;
+            $captionTemplate = settings('telegram_forward_caption_template');
+            if (!empty($captionTemplate)) {
+                $caption = TelegramCaptionParser::parse($captionTemplate, $fileEntry);
+                Log::info('Caption template parsed', [
+                    'template_length' => strlen($captionTemplate),
+                    'caption_length' => strlen($caption ?? ''),
+                ]);
+            }
+            
+            // Forward message با caption (اگر وجود دارد)
             $result = $client->forwardMessage(
                 $metadata->channel_id,
                 $metadata->message_id,
                 $targetDetection['target_normalized'] ?? $targetId,
-                $metadata->upload_method
+                $metadata->upload_method,
+                $caption
             );
 
             return $this->success([

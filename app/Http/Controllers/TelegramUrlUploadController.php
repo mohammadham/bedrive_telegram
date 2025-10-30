@@ -42,6 +42,11 @@ class TelegramUrlUploadController extends BaseController
      */
     public function uploadSingle(Request $request): JsonResponse
     {
+        // بررسی فعال بودن URL Upload
+        if (!$this->isUrlUploadEnabled()) {
+            return $this->error('URL upload feature is disabled by administrator.', [], 403);
+        }
+
         $rawUrl = $request->input('url');
         
         // Basic validation برای URL خام
@@ -151,6 +156,11 @@ class TelegramUrlUploadController extends BaseController
      */
     public function uploadBulk(Request $request): JsonResponse
     {
+        // بررسی فعال بودن URL Upload
+        if (!$this->isUrlUploadEnabled()) {
+            return $this->error('URL upload feature is disabled by administrator.', [], 403);
+        }
+
         $rawUrls = $request->input('urls', []);
         
         // Sanitize all URLs
@@ -501,5 +511,16 @@ class TelegramUrlUploadController extends BaseController
         $pow = min($pow, count($units) - 1);
         $bytes /= pow(1024, $pow);
         return round($bytes, 2) . ' ' . $units[$pow];
+    }
+
+    /**
+     * بررسی فعال بودن قابلیت URL Upload
+     *
+     * @return bool
+     */
+    protected function isUrlUploadEnabled(): bool
+    {
+        // اگر setting وجود نداشت، به صورت پیشفرض فعال است
+        return settings('telegram_enable_url_upload', true);
     }
 }

@@ -5,6 +5,7 @@ import {SectionHelper} from '@common/ui/other/section-helper';
 import {Link} from 'react-router';
 import {TelegramStats} from './telegram-stats';
 import {TelegramTestButtons} from './telegram-test-buttons';
+import {TelegramAdvancedSettings} from './telegram-advanced-settings';
 import {useSettings} from '@ui/settings/use-settings';
 import {CheckCircleIcon} from '@ui/icons/material/CheckCircle';
 import {WorkerGuideDialog} from './worker-guide-dialog';
@@ -202,6 +203,8 @@ export function TelegramForm({isInvalid}: TelegramFormProps) {
       />
 
       <TelegramTestButtons />
+
+      <TelegramAdvancedSettings isTelegramActive={isTelegramActive} />
 
       <TelegramStats />
     </Fragment>

@@ -13,6 +13,7 @@ import {Menu, MenuItem, MenuTrigger} from '@ui/menu/menu-trigger';
 import {openUploadWindow} from '@ui/utils/files/open-upload-window';
 import {TelegramUrlUploadButton} from '../telegram-url-upload';
 import {invalidateEntryQueries} from '../drive-query-keys';
+import {useSettings} from '@ui/settings/use-settings';
 
 interface CreateNewButtonProps {
   isCompact?: boolean;
@@ -21,6 +22,10 @@ interface CreateNewButtonProps {
 export function CreateNewButton({isCompact, className}: CreateNewButtonProps) {
   const activePage = useDriveStore(s => s.activePage);
   const {uploadFiles} = useDriveUploadQueue();
+  const settings = useSettings();
+  
+  // بررسی فعال بودن URL Upload از settings
+  const isUrlUploadEnabled = settings.server?.telegram_enable_url_upload !== false;
 
   const button = isCompact ? (
     <IconButton size="md" disabled={!activePage?.canUpload}>
@@ -72,7 +77,7 @@ export function CreateNewButton({isCompact, className}: CreateNewButtonProps) {
         </MenuTrigger>
         
         {/* Telegram URL Upload Button */}
-        {!isCompact && <TelegramUrlUploadButton variant="icon" size="md" />}
+        {!isCompact && isUrlUploadEnabled && <TelegramUrlUploadButton variant="icon" size="md" />}
       </div>
     </div>
   );
