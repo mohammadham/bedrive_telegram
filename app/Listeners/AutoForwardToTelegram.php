@@ -18,7 +18,26 @@ class AutoForwardToTelegram implements ShouldQueue
 {
     use InteractsWithQueue;
 
-    // protected TelegramFileManager $telegramManager;
+    /**
+     * The name of the queue the job should be sent to.
+     *
+     * @var string|null
+     */
+    public $queue = 'default';
+
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 3;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     *
+     * @var int
+     */
+    public $backoff = 60;
 
     /**
      * Create the event listener.
@@ -167,11 +186,13 @@ try {
             }
 
             // Forward message با caption
+            // ⚠️ CRITICAL: Must pass uploadMethod parameter before caption!
             $result = $client->forwardMessage(
                 $metadata->channel_id,
                 $metadata->message_id,
                 $targetDetection['target_normalized'] ?? $targetId,
-                $caption
+                $metadata->upload_method,  // ✅ uploadMethod parameter (bot/user)
+                $caption                   // ✅ caption parameter (for copyMessage)
             );
 
             Log::info('File auto-forwarded successfully', [
