@@ -6,8 +6,8 @@ import {AdminSettings} from '@common/admin/settings/admin-settings';
 import {onFormQueryError} from '@common/errors/on-form-query-error';
 import {FetchAdminSettingsResponse} from '@common/admin/settings/requests/use-admin-settings';
 import {message} from '@ui/i18n/message';
-import {setBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
-import {DatatableDataQueryKey} from '@common/datatable/requests/paginated-resources';
+import {mergeBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
+import {Settings} from '@ui/settings/settings';
 
 export interface AdminSettingsWithFiles {
   files?: Record<string, File>;
@@ -25,21 +25,18 @@ export function useUpdateAdminSettings(
         position: 'bottom-right',
       });
       console.log('✅ Settings updated:', response);
+      
       // به‌روزرسانی bootstrap data برای دسترسی فوری در سراسر اپلیکیشن
-      // response شامل client و server است، نه settings
-      const data = queryClient.setQueryData(['fetchAdminSettings'], response);
-      if (response) {
-        // mergeBootstrapData({
-        //   settings: {
-        //     client: response.client,
-        //     server: response.server,
-        //   },
-        // });
-         queryClient.invalidateQueries({
-                queryKey: DatatableDataQueryKey('settings'),
-              });
+      // IMPORTANT: فقط response.client merge می‌شود (که client-safe است)
+      // response.server شامل API keys و secrets است و NEVER در bootstrap data قرار نمی‌گیرد
+      if (response?.client) {
+        // response.client همان ساختار Settings است (بدون server secrets)
+        mergeBootstrapData({
+          settings: response.client as unknown as Settings,
+        });
       }
-      return data;
+      
+      return queryClient.setQueryData(['fetchAdminSettings'], response);
     },
     onError: r => onFormQueryError(r, form),
   });
