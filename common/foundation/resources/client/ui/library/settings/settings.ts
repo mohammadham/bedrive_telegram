@@ -1,6 +1,4 @@
-import {BaseBackendSettings} from '@common/core/settings/base-backend-settings';
-
-export interface Settings extends Omit<BaseBackendSettings, 'html_base_uri'> {
+export interface Settings {
   base_url: string;
   asset_url?: string;
   locale?: {
