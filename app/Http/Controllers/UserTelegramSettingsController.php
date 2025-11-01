@@ -144,10 +144,24 @@ class UserTelegramSettingsController extends BaseController
         $user = $request->user();
 
         // پیدا کردن فایل
+        $fileEntry = null;
+        try{
         $fileEntry = FileEntry::where('id', $fileId)
             ->where('user_id', $user->id)
             ->firstOrFail();
-
+        }catch($e)
+        {
+            Log::error('Failed to get file telegramMetadata', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+            $fileEntry = FileEntry::where('id', $fileId)
+            ->where('owner_id', $user->id)
+            ->firstOrFail();
+        }
+        if (!$fileEntry || $fileEntry == null) {
+            return $this->error('فایل یافت نشد یا اجازه دسترسی به آن ندارید', [], 404);
+        }
         // چک کردن اینکه آیا قبلاً در تلگرام آپلود شده یا نه
         if ($fileEntry->telegramMetadata && $fileEntry->telegramMetadata->isUploadCompleted()) {
             return $this->error('File is already uploaded to Telegram',[], 422);
@@ -237,11 +251,23 @@ class UserTelegramSettingsController extends BaseController
         $user = $request->user();
 
         // پیدا کردن فایل
+        $fileEntry = null;
+        try{
         $fileEntry = FileEntry::where('id', $fileId)
             ->where('user_id', $user->id)
             ->with('telegramMetadata')
             ->firstOrFail();
-
+        }catch($e)
+        {
+            Log::error('Failed to get file telegramMetadata', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+            $fileEntry = FileEntry::where('id', $fileId)
+            ->where('owner_id', $user->id)
+            ->with('telegramMetadata')
+            ->firstOrFail();
+        }
         // چک کردن اینکه فایل در تلگرام باشد
         if (!$fileEntry->telegramMetadata || !$fileEntry->telegramMetadata->isUploadCompleted()) {
             return $this->error('File is not uploaded to Telegram', [],422);
