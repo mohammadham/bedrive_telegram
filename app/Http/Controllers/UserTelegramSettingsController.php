@@ -315,12 +315,13 @@ class UserTelegramSettingsController extends BaseController
                 : $manager->getUserClient();
             
             // پردازش Caption Template (اگر تنظیم شده باشد)
+            $envSettings = (new DotEnvEditor())->load();
             $caption = null;
-            $captionTemplate = settings('telegram_forward_caption_template');
+            $captionTemplate = settings('telegram_forward_caption_template') ?? $envSettings['telegram_forward_caption_template'] ?? null;
             if (!empty($captionTemplate)) {
                 $caption = TelegramCaptionParser::parse($captionTemplate, $fileEntry);
-                Log::info('Caption template parsed', [
-                    'template_length' => strlen($captionTemplate),
+                Log::info('Manual forward: Caption template parsed', [
+                    'template' => $captionTemplate,
                     'caption_length' => strlen($caption ?? ''),
                 ]);
             }

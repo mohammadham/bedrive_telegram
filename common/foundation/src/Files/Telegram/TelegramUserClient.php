@@ -554,6 +554,7 @@ class TelegramUserClient implements TelegramClientInterface
         string $fromChatId,
         int $messageId,
         string $toChatId,
+        string $uploadMethod = 'user',
         ?string $caption = null
     ): array {
         try {
