@@ -24,7 +24,15 @@ class AutoForwardToTelegram implements ShouldQueue
      * @var string|null
      */
     public $queue = 'default';
-
+    /**
+     * The name of the connection the job should be sent to.
+     * 
+     * این باید با QUEUE_DRIVER در .env match شود
+     * اگر QUEUE_DRIVER=redis باشد، این listener روی redis connection قرار می‌گیرد
+     *
+     * @var string|null
+     */
+    public $connection;
     /**
      * The number of times the job may be attempted.
      *
@@ -46,6 +54,10 @@ class AutoForwardToTelegram implements ShouldQueue
     {
         // Don't initialize TelegramFileManager here!
         // It will be created lazily when needed
+                
+        // 🔧 FIX: Set connection based on queue driver
+        // اگر null باشد، Laravel از default queue connection استفاده می‌کند
+        $this->connection = config('queue.default');
     }
     /**
      * Check if Telegram driver is enabled
