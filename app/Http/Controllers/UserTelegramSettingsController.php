@@ -258,7 +258,7 @@ class UserTelegramSettingsController extends BaseController
             ->with('telegramMetadata')
             ->firstOrFail();
        } catch (Exception $e) {
-        {
+        
             Log::error('Failed to get file telegramMetadata', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
