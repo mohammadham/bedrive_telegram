@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Exception;
 use App\Models\FileEntry;
 use App\Models\User;
 use Common\Core\BaseController;
@@ -149,7 +149,7 @@ class UserTelegramSettingsController extends BaseController
         $fileEntry = FileEntry::where('id', $fileId)
             ->where('user_id', $user->id)
             ->firstOrFail();
-        }catch($e)
+        } catch (Exception $e) {
         {
             Log::error('Failed to get file telegramMetadata', [
                 'user_id' => $user->id,
@@ -257,7 +257,7 @@ class UserTelegramSettingsController extends BaseController
             ->where('user_id', $user->id)
             ->with('telegramMetadata')
             ->firstOrFail();
-        }catch($e)
+       } catch (Exception $e) {
         {
             Log::error('Failed to get file telegramMetadata', [
                 'user_id' => $user->id,
