@@ -58,6 +58,9 @@ class AutoForwardToTelegram implements ShouldQueue
         // 🔧 FIX: Set connection based on queue driver
         // اگر null باشد، Laravel از default queue connection استفاده می‌کند
         $this->connection = config('queue.default');
+        Log::debug('Auto-forward queue listener initialized: ', [
+                'queue_type' => $this->connection,
+            ]);
     }
     /**
      * Check if Telegram driver is enabled
