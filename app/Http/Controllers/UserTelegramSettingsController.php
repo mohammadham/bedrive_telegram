@@ -10,6 +10,7 @@ use Common\Files\Telegram\TelegramStorageService;
 use Common\Files\Telegram\TelegramTargetDetector;
 use Common\Files\Telegram\TelegramCaptionParser;
 use Common\Files\Telegram\Exceptions\TelegramException;
+use Common\Settings\DotEnvEditor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -35,18 +36,27 @@ class UserTelegramSettingsController extends BaseController
             // اگر channelId داده نشده، از user's forward_target استفاده کن
             // یا از channel_id اصلی admin
             $user = auth()->user();
+                        // 🔧 CRITICAL FIX: در BeDrive، تنظیمات در .env ذخیره می‌شوند
+            // باید fresh بخوانیم (مثل AutoForwardToTelegram)
+              $envSettings = (new DotEnvEditor())->load();
             
             $effectiveChannelId = $channelId 
                 ?? ($user->telegram_forward_target ?: null)
+                ?? ($envSettings['storage_telegram_channel_id'] ?? null)
                 ?? config('services.telegram.channel_id');
             
             $config = [
-                'bot_token' => config('services.telegram.bot_token'),
-                'api_id' => config('services.telegram.api_id'),
-                'api_hash' => config('services.telegram.api_hash'),
-                'phone' => config('services.telegram.phone'),
+                'bot_token' => $envSettings['storage_telegram_bot_token'] ?? config('services.telegram.bot_token') ?? null,
+                'api_id' => $envSettings['storage_telegram_api_id'] ?? config('services.telegram.api_id') ?? null,
+                'api_hash' => $envSettings['storage_telegram_api_hash'] ?? config('services.telegram.api_hash') ?? null,
+                'phone' => $envSettings['storage_telegram_phone'] ?? config('services.telegram.phone') ?? null,
             ];
-
+            Log::info('Manual forward: Loading Telegram config from .env (fresh)', [
+                'has_bot_token' => !empty($config['bot_token']),
+                'has_channel_id' => !empty($effectiveChannelId),
+                'has_api_id' => !empty($config['api_id']),
+                'has_phone' => !empty($config['phone']),
+            ]);
             $this->telegramManager = new TelegramFileManager($effectiveChannelId, $config);
         }
         return $this->telegramManager;
