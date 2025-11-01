@@ -16,7 +16,7 @@ use Common\Files\Telegram\TelegramCaptionParser;
  */
 class AutoForwardToTelegram implements ShouldQueue
 {
-    use InteractsWithQueue;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * The name of the queue the job should be sent to.
@@ -32,7 +32,7 @@ class AutoForwardToTelegram implements ShouldQueue
      *
      * @var string|null
      */
-    public $connection;
+    public $connection = config('queue.default');
     /**
      * The number of times the job may be attempted.
      *
