@@ -10,7 +10,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use Common\Files\Telegram\TelegramCaptionParser;
-
+use Illuminate\Bus\Queueable;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\SerializesModels;
 /**
  * Auto-forward uploaded files to Telegram if user has enabled this feature
  */
@@ -32,7 +34,7 @@ class AutoForwardToTelegram implements ShouldQueue
      *
      * @var string|null
      */
-    public $connection = config('queue.default');
+    public $connection = null;
     /**
      * The number of times the job may be attempted.
      *
