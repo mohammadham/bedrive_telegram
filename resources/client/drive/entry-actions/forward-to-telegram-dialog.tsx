@@ -15,7 +15,6 @@ import {toast} from '@ui/toast/toast';
 import {showHttpErrorToast} from '@common/http/show-http-error-toast';
 import {useState} from 'react';
 import {Accordion, AccordionItem} from '@ui/accordion/accordion';
-import {KeyboardArrowDownIcon} from '@ui/icons/material/KeyboardArrowDown';
 
 interface ForwardToTelegramDialogProps {
   entry: DriveEntry;
@@ -154,8 +153,7 @@ function ErrorHelpSection({errorCode}: {errorCode?: string}) {
       <Accordion variant="outline">
         <AccordionItem
           label={<Trans message="How to fix this issue" />}
-          chevronPosition="end"
-          startIcon={<KeyboardArrowDownIcon />}
+          chevronPosition="right"
         >
           <div className="text-sm space-y-12 pt-12">
             {errorHelp.solutions.map((solution, index) => (
