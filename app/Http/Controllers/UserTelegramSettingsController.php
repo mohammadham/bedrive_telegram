@@ -286,7 +286,11 @@ class UserTelegramSettingsController extends BaseController
         }
         // چک کردن اینکه فایل در تلگرام باشد
         if (!$fileEntry->telegramMetadata || !$fileEntry->telegramMetadata->isUploadCompleted()) {
-            return $this->error('File is not uploaded to Telegram', [],422);
+            return $this->error(
+                'This file is not stored on Telegram yet', 
+                ['error_code' => 'FILE_NOT_ON_TELEGRAM'],
+                422
+            );
         }
 
         $metadata = $fileEntry->telegramMetadata;
@@ -300,7 +304,11 @@ class UserTelegramSettingsController extends BaseController
             !preg_match('/^-\d{9,10}$/', $targetId) &&
             !preg_match('/^@?[a-zA-Z][a-zA-Z0-9_]{4,31}$/', $targetId) && 
             !preg_match('/^\d{5,12}$/', $targetId)) {
-            return $this->error('Invalid Telegram ID or username format. Supported: -1001234567890, @username, or user ID', [], 422);
+            return $this->error(
+                'Invalid format for Telegram ID or username', 
+                ['error_code' => 'INVALID_FORMAT'],
+                422
+            );
         }
 
         try {
@@ -358,7 +366,51 @@ class UserTelegramSettingsController extends BaseController
             ]);
 
         } catch (TelegramException $e) {
-            return $this->error('Failed to forward file: ' . $e->getMessage(),[], 500);
+            // تشخیص نوع خطا و ارائه پیام مناسب
+            $errorMessage = $e->getMessage();
+            $errorCode = 'FORWARD_FAILED';
+            
+            // Chat not found errors
+            if (stripos($errorMessage, 'chat not found') !== false || 
+                stripos($errorMessage, 'PEER_ID_INVALID') !== false ||
+                stripos($errorMessage, 'channel is private') !== false) {
+                $errorCode = 'TARGET_NOT_FOUND';
+                $errorMessage = 'Could not find the channel, group, or user';
+            }
+            // Permission errors
+            elseif (stripos($errorMessage, 'not enough rights') !== false || 
+                     stripos($errorMessage, 'CHAT_WRITE_FORBIDDEN') !== false ||
+                     stripos($errorMessage, 'need administrator rights') !== false) {
+                $errorCode = 'NO_PERMISSION';
+                $errorMessage = 'Bot does not have permission to send messages';
+            }
+            // User blocked bot
+            elseif (stripos($errorMessage, 'bot was blocked') !== false ||
+                    stripos($errorMessage, 'USER_IS_BLOCKED') !== false) {
+                $errorCode = 'USER_BLOCKED_BOT';
+                $errorMessage = 'User has blocked the bot or hasn\'t started a chat';
+            }
+            // Username not found
+            elseif (stripos($errorMessage, 'username not occupied') !== false ||
+                    stripos($errorMessage, 'USERNAME_NOT_OCCUPIED') !== false) {
+                $errorCode = 'USERNAME_NOT_FOUND';
+                $errorMessage = 'Username not found or doesn\'t exist';
+            }
+            // Bot not in channel
+            elseif (stripos($errorMessage, 'bot is not a member') !== false) {
+                $errorCode = 'BOT_NOT_MEMBER';
+                $errorMessage = 'Bot is not a member of the channel or group';
+            }
+            
+            Log::warning('Forward failed with Telegram exception', [
+                'file_id' => $fileId,
+                'target_id' => $targetId,
+                'error_code' => $errorCode,
+                'original_error' => $e->getMessage(),
+            ]);
+            
+            return $this->error($errorMessage, ['error_code' => $errorCode], 400);
+            
         } catch (\Exception $e) {
             Log::error('Failed to forward file', [
                 'file_id' => $fileId,
@@ -367,7 +419,11 @@ class UserTelegramSettingsController extends BaseController
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->error('Failed to forward file',[], 500);
+            return $this->error(
+                'Unable to forward file. Please try again later', 
+                ['error_code' => 'UNKNOWN_ERROR'],
+                500
+            );
         }
     }
 
