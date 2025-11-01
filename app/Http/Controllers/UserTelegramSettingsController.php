@@ -149,8 +149,8 @@ class UserTelegramSettingsController extends BaseController
         $fileEntry = FileEntry::where('id', $fileId)
             ->where('user_id', $user->id)
             ->firstOrFail();
-        } catch (Exception $e) {
-        {
+        } catch (\Exception $e) {
+        
             Log::error('Failed to get file telegramMetadata', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
@@ -257,7 +257,7 @@ class UserTelegramSettingsController extends BaseController
             ->where('user_id', $user->id)
             ->with('telegramMetadata')
             ->firstOrFail();
-       } catch (Exception $e) {
+       } catch (\Exception $e) {
         
             Log::error('Failed to get file telegramMetadata', [
                 'user_id' => $user->id,
