@@ -73,10 +73,10 @@ export function ForwardToTelegramDialog({
 
           <FormTextField
             name="targetId"
-            label={<Trans message="Telegram ID" />}
-            placeholder="-1001234567890"
+            label={<Trans message="Telegram ID or Username" />}
+            placeholder="-1001234567890 or @channelname"
             description={
-              <Trans message="Enter the Telegram channel ID, group ID, or user ID where you want to forward this file." />
+              <Trans message="Enter the Telegram channel ID, username, group ID, or user ID where you want to forward this file." />
             }
             required
             autoFocus
@@ -85,12 +85,14 @@ export function ForwardToTelegramDialog({
           <div className="mt-16 text-xs text-muted space-y-4">
             <div>
               <strong>
-                <Trans message="Examples:" />
+                <Trans message="Supported Formats:" />
               </strong>
             </div>
-            <div>• Channel: -1001234567890</div>
-            <div>• Group: -1009876543210</div>
-            <div>• User: 123456789</div>
+            <div>• <strong>Channel ID:</strong> -1001234567890</div>
+            <div>• <strong>Channel Username:</strong> @channelname or channelname</div>
+            <div>• <strong>Group ID:</strong> -1009876543210</div>
+            <div>• <strong>User ID:</strong> 123456789</div>
+            <div>• <strong>User Username:</strong> @username or username</div>
           </div>
         </Form>
       </DialogBody>

@@ -249,7 +249,13 @@ class UserTelegramSettingsController extends BaseController
     }
 
     /**
-     * Forward file to specific Telegram ID
+     * Forward file to specific Telegram ID or Username
+     * 
+     * Supports:
+     * - Channel/Group ID: -1001234567890
+     * - Public Channel/Group Username: @channelname or channelname
+     * - User ID: 123456789
+     * - User Username: @username or username
      */
     public function forwardFile(Request $request, int $fileId): JsonResponse
     {
@@ -286,9 +292,15 @@ class UserTelegramSettingsController extends BaseController
         $metadata = $fileEntry->telegramMetadata;
         $targetId = $validated['target_id'];
 
-        // Validate target ID format
-        if (!preg_match('/^-100\d+$/', $targetId) && !preg_match('/^@\w+$/', $targetId) && !preg_match('/^\d+$/', $targetId)) {
-            return $this->error('Invalid Telegram ID format',[], 422);
+        // Validate target ID format - supports both numeric IDs and usernames
+        // - Channel/Group ID: -100XXXXXXXXXX or -XXXXXXXXX
+        // - Username: @username or username (5-32 chars, alphanumeric + underscore)
+        // - User ID: positive integer
+        if (!preg_match('/^-100\d+$/', $targetId) && 
+            !preg_match('/^-\d{9,10}$/', $targetId) &&
+            !preg_match('/^@?[a-zA-Z][a-zA-Z0-9_]{4,31}$/', $targetId) && 
+            !preg_match('/^\d{5,12}$/', $targetId)) {
+            return $this->error('Invalid Telegram ID or username format. Supported: -1001234567890, @username, or user ID', [], 422);
         }
 
         try {

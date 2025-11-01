@@ -18,8 +18,15 @@ class TelegramTargetDetector
     /**
      * تشخیص نوع target و روش مناسب forward
      * 
-     * @param string $targetId Target ID (channel, group, or user)
-     * @return array ['type' => 'channel|user', 'method' => 'bot|user', 'reason' => string]
+     * @param string $targetId Target ID (channel, group, or user) - supports numeric IDs and usernames
+     * @return array ['type' => 'channel|user', 'method' => 'bot|user', 'reason' => string, 'target_normalized' => string]
+     * 
+     * Supported formats:
+     * - Private Channel/Group: -100XXXXXXXXXX
+     * - Public Channel/Group: @username or username
+     * - Old-style Group: -XXXXXXXXX
+     * - User ID: XXXXXXXXX (positive integer)
+     * - User Username: @username or username
      */
     public static function detectTarget(string $targetId): array
     {
@@ -40,6 +47,7 @@ class TelegramTargetDetector
                 'method' => 'bot',
                 'reason' => 'Private channel/group detected. Bot can forward to channels.',
                 'target_normalized' => $targetId,
+                'is_username' => false,
             ];
         }
         
@@ -55,6 +63,7 @@ class TelegramTargetDetector
                 'method' => 'bot',
                 'reason' => 'Public channel/group username detected. Bot can forward to public channels.',
                 'target_normalized' => $targetId,
+                'is_username' => true,
             ];
         }
         
@@ -71,6 +80,7 @@ class TelegramTargetDetector
                 'method' => 'bot',
                 'reason' => 'Old-style group ID detected. Bot can forward to groups.',
                 'target_normalized' => $targetId,
+                'is_username' => false,
             ];
         }
         
@@ -87,10 +97,12 @@ class TelegramTargetDetector
                 'method' => 'user',
                 'reason' => 'User ID detected. User Account (MTProto) must be used to forward to users.',
                 'target_normalized' => (int) $targetId,
+                'is_username' => false,
             ];
         }
         
         // 5. Username without @ (we'll add it)
+        // This can be either a channel or a user - we'll try both methods
         if (preg_match('/^[a-zA-Z][a-zA-Z0-9_]{4,31}$/', $targetId)) {
             $normalized = '@' . $targetId;
             
@@ -99,13 +111,15 @@ class TelegramTargetDetector
                 'normalized' => $normalized,
             ]);
             
-            // این می‌تواند کانال عمومی یا user باشد
-            // برای forward به username، معمولاً User Account نیاز است
+            // برای username های بدون @، ابتدا Bot را امتحان می‌کنیم (سریعتر است)
+            // اگر کار نکرد، User Account استفاده می‌شود
             return [
                 'type' => 'username',
-                'method' => 'user',
-                'reason' => 'Username detected. User Account recommended for forwarding to usernames.',
+                'method' => 'bot', // Changed from 'user' to 'bot' - bot is faster for public channels
+                'reason' => 'Username detected. Bot method will be tried first for public channels/groups.',
                 'target_normalized' => $normalized,
+                'is_username' => true,
+                'fallback_method' => 'user', // If bot fails, try user method
             ];
         }
         
@@ -119,6 +133,7 @@ class TelegramTargetDetector
             'method' => 'user',
             'reason' => 'Unknown target format. Using User Account as fallback (safer).',
             'target_normalized' => $targetId,
+            'is_username' => false,
         ];
     }
     
