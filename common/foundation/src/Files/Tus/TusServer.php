@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 use TusPhp\Exception\ConnectionException;
 use TusPhp\Exception\FileException;
 use TusPhp\Exception\OutOfRangeException;
+use Illuminate\Support\Facades\Log;
 
 class TusServer
 {
@@ -125,12 +126,23 @@ class TusServer
     protected function handlePost(): Response
     {
         $meta = $this->extractMeta();
+// LOG 1: Initial POST request
+        Log::info('[TUS-POST] Upload initiated', [
+            'metadata' => $meta,
+            'upload_length' => request()->header('Upload-Length'),
+            'content_type' => request()->header('Content-Type'),
+        ]);
+        
         $errors = app(ValidateFileUpload::class)->execute([
             'size' => $meta['clientSize'],
             'extension' => $meta['clientExtension'],
         ]);
 
         if ($errors) {
+            Log::warning('[TUS-POST] Validation failed', [
+                'errors' => $errors->toArray(),
+                'metadata' => $meta,
+            ]);
             return $this->response(
                 json_encode(['message' => $errors->first()]),
                 Response::HTTP_UNPROCESSABLE_ENTITY,
@@ -139,6 +151,14 @@ class TusServer
 
         $uploadKey = $this->getOrCreateUploadKey();
         $filePath = storage_path("tus/$uploadKey");
+        
+        Log::info('[TUS-POST] Upload session created', [
+            'upload_key' => $uploadKey,
+            'file_path' => $filePath,
+            'size' => $meta['clientSize'],
+            'mime' => $meta['clientMime'],
+            'extension' => $meta['clientExtension'],
+        ]);
 
         $checksum = $this->getClientChecksum();
         $location = url("api/v1/tus/upload/$uploadKey");
@@ -171,11 +191,26 @@ class TusServer
         $uploadKey = $this->getUploadKeyFromUrl();
 
         if (!($tusData = $this->cache->get($uploadKey))) {
+            Log::warning('[TUS-PATCH] Upload session not found', [
+                'upload_key' => $uploadKey,
+            ]);
             return $this->response(null, Response::HTTP_GONE);
         }
 
+        Log::info('[TUS-PATCH] Chunk upload started', [
+            'upload_key' => $uploadKey,
+            'current_offset' => $tusData['offset'],
+            'total_size' => $tusData['size'],
+            'file_path' => $tusData['file_path'],
+            'metadata' => $tusData['metadata'],
+        ]);
+
         $status = $this->verifyPatchRequest($tusData);
         if (Response::HTTP_OK !== $status) {
+            Log::error('[TUS-PATCH] Verification failed', [
+                'upload_key' => $uploadKey,
+                'status_code' => $status,
+            ]);
             return $this->response(null, $status);
         }
 
@@ -189,24 +224,48 @@ class TusServer
                 'file_path' => $tusData['file_path'],
                 'offset' => $tusData['offset'],
             ]))->upload();
+            
+            Log::info('[TUS-PATCH] Chunk written successfully', [
+                'upload_key' => $uploadKey,
+                'new_offset' => $newOffset,
+                'total_size' => $fileSize,
+                'percentage' => round(($newOffset / $fileSize) * 100, 2),
+            ]);
 
             if (
                 $newOffset === $fileSize &&
                 !$this->verifyChecksum($checksum, $tusData['file_path'])
-            ) {
+           ) {
+                Log::error('[TUS-PATCH] Checksum mismatch', [
+                    'upload_key' => $uploadKey,
+                    'file_path' => $tusData['file_path'],
+                ]);
                 return $this->response(null, self::HTTP_CHECKSUM_MISMATCH);
             }
         } catch (FileException $e) {
+            Log::error('[TUS-PATCH] File exception', [
+                'upload_key' => $uploadKey,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return $this->response(
                 $e->getMessage(),
                 Response::HTTP_UNPROCESSABLE_ENTITY,
             );
-        } catch (OutOfRangeException) {
+        } catch (OutOfRangeException $e) {
+            Log::error('[TUS-PATCH] Out of range exception', [
+                'upload_key' => $uploadKey,
+                'error' => $e->getMessage(),
+            ]);
             return $this->response(
                 null,
                 Response::HTTP_REQUESTED_RANGE_NOT_SATISFIABLE,
             );
-        } catch (ConnectionException) {
+        } catch (ConnectionException $e) {
+            Log::warning('[TUS-PATCH] Connection exception', [
+                'upload_key' => $uploadKey,
+                'error' => $e->getMessage(),
+            ]);
             return $this->response(null, Response::HTTP_CONTINUE);
         }
 

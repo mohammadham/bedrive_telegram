@@ -7,7 +7,7 @@ use Common\Files\Tus\Exceptions\FileException;
 use Common\Files\Tus\Exceptions\OutOfRangeException;
 use Common\Files\Tus\TusCache;
 use Illuminate\Support\Facades\File;
-
+use Illuminate\Support\Facades\Log;
 class TusFile
 {
     protected const INPUT_STREAM = 'php://input';
@@ -32,10 +32,22 @@ class TusFile
     public function upload(): int
     {
         if ($this->offset === $this->totalBytes) {
+            Log::info('[TUS-FILE] Upload already complete', [
+                'upload_key' => $this->uploadKey,
+                'offset' => $this->offset,
+            ]);
             return $this->offset;
         }
 
         $method = config('common.site.uploads_tus_method') ?: 'wait';
+        
+        Log::info('[TUS-FILE] Starting chunk write', [
+            'upload_key' => $this->uploadKey,
+            'file_path' => $this->filePath,
+            'current_offset' => $this->offset,
+            'total_bytes' => $this->totalBytes,
+            'method' => $method,
+        ]);
 
         $input = $this->open(self::INPUT_STREAM, self::READ_BINARY);
         $output = $this->open($this->filePath, self::APPEND_BINARY);

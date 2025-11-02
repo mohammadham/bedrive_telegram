@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 use Symfony\Component\Mime\MimeTypes;
-
+use Illuminate\Support\Facades\Log;
 class StoreFile
 {
     protected Filesystem $disk;
@@ -23,6 +23,15 @@ class StoreFile
         FileEntryPayload $payload,
         array $fileOptions,
     ): string|false {
+        Log::info('[STORE-FILE] Starting file storage', [
+            'filename' => $payload->filename,
+            'mime' => $payload->clientMime,
+            'size' => $payload->size,
+            'public' => $payload->public,
+            'disk_prefix' => $payload->diskPrefix,
+            'file_options_keys' => array_keys($fileOptions),
+        ]);
+        
         $this->disk = $payload->public
             ? Storage::disk('public')
             : Storage::disk('uploads');
@@ -44,27 +53,52 @@ class StoreFile
                 (Str::contains($payload->diskPrefix, '..') ||
                     $payload->diskPrefix === '/'))
         ) {
+            Log::error('[STORE-FILE] File blocked for security reasons', [
+                'filename' => $payload->filename,
+            ]);
             abort(403);
         }
 
+        $result = false;
         if (isset($fileOptions['file'])) {
-            return $this->storeUploadedFile($fileOptions['file']);
+            Log::info('[STORE-FILE] Using uploaded file method');
+            $result = $this->storeUploadedFile($fileOptions['file']);
         } elseif (isset($fileOptions['contents'])) {
-            return $this->storeStringContents($fileOptions['contents']);
+            Log::info('[STORE-FILE] Using string contents method');
+            $result = $this->storeStringContents($fileOptions['contents']);
         } elseif (isset($fileOptions['path'])) {
+            Log::info('[STORE-FILE] Using file path method', [
+                'source_path' => $fileOptions['path'],
+                'file_exists' => file_exists($fileOptions['path']),
+                'file_size' => file_exists($fileOptions['path']) ? filesize($fileOptions['path']) : 0,
+                'move_file' => Arr::get($fileOptions, 'moveFile', false),
+            ]);
+            
             // if source and destination is local (and not temp dir) move file
             // instead of copying or using streams, this will be a lot faster
             if (
                 Arr::get($fileOptions, 'moveFile') === true &&
                 $this->disk->getAdapter() instanceof LocalFilesystemAdapter
             ) {
-                return $this->storeLocalFile($fileOptions['path']);
+                Log::info('[STORE-FILE] Using local file move');
+                $result = $this->storeLocalFile($fileOptions['path']);
             } else {
-                return $this->storeUploadedFile(new File($fileOptions['path']));
+                Log::info('[STORE-FILE] Using file upload');
+                $result = $this->storeUploadedFile(new File($fileOptions['path']));
             }
         }
 
-        return false;
+        if ($result) {
+            Log::info('[STORE-FILE] File stored successfully', [
+                'stored_path' => $result,
+            ]);
+        } else {
+            Log::error('[STORE-FILE] File storage failed', [
+                'filename' => $payload->filename,
+            ]);
+        }
+
+        return $result;
     }
 
     protected function storeUploadedFile(File|UploadedFile $file): string|false
