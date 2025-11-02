@@ -11,9 +11,16 @@ class ValidateFileUpload
 {
     protected array $fileData;
 
-    public function execute(array $fileData): Collection|null
+public function execute(array $fileData): Collection|null
     {
         $this->fileData = $fileData;
+
+        // 🔍 LOG: شروع validation
+        \Log::info('[VALIDATE-FILE] Starting validation', [
+            'extension' => $fileData['extension'] ?? 'NULL',
+            'size' => $fileData['size'] ?? 0,
+            'size_mb' => isset($fileData['size']) ? round($fileData['size'] / (1024 * 1024), 2) : 0,
+        ]);
 
         $errors = collect([
             'size' => $this->validateMaximumFileSize(),
@@ -23,8 +30,15 @@ class ValidateFileUpload
         ])->filter(fn($msg) => !is_null($msg));
 
         if (!$errors->isEmpty()) {
+            // 🔍 LOG: validation failed
+            \Log::warning('[VALIDATE-FILE] Validation failed', [
+                'errors' => $errors->toArray(),
+            ]);
             return $errors;
         }
+
+        // 🔍 LOG: validation موفق
+        \Log::info('[VALIDATE-FILE] Validation passed');
 
         return null;
     }
@@ -77,14 +91,32 @@ class ValidateFileUpload
     protected function validateMaximumFileSize(): ?string
     {
         $maxSize = $this->getUserMaxUploadSize();
+        
+        // 🔍 LOG: بررسی حداکثر سایز
+        \Log::info('[VALIDATE-FILE] Checking max file size', [
+            'file_size' => $this->fileData['size'] ?? 0,
+            'file_size_mb' => isset($this->fileData['size']) ? round($this->fileData['size'] / (1024 * 1024), 2) : 0,
+            'max_size' => $maxSize,
+            'max_size_mb' => $maxSize ? round($maxSize / (1024 * 1024), 2) : 'unlimited',
+        ]);
+        
         if (is_null($maxSize) || !isset($this->fileData['size'])) {
             return null;
         }
 
         if ((int) $this->fileData['size'] > (int) $maxSize) {
-            return __('The file size may not be greater than :size', [
+            $errorMsg = __('The file size may not be greater than :size', [
                 'size' => self::formatBytes((int) $maxSize),
             ]);
+            
+            // 🔍 LOG: سایز بیش از حد
+            \Log::warning('[VALIDATE-FILE] File size exceeds limit', [
+                'file_size' => $this->fileData['size'],
+                'max_size' => $maxSize,
+                'error' => $errorMsg,
+            ]);
+            
+            return $errorMsg;
         }
 
         return null;

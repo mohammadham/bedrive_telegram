@@ -63,6 +63,15 @@ class FileEntriesController extends BaseController
 
     public function store()
     {
+        // 🔍 LOG: درخواست دریافت شد
+        \Log::info('[FILE-ENTRY-CONTROLLER] Upload request received', [
+            'request_id' => uniqid('upload_'),
+            'method' => request()->method(),
+            'url' => request()->fullUrl(),
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+
         $parentId = (int) request('parentId') ?: null;
         request()->merge(['parentId' => $parentId]);
 
@@ -71,33 +80,88 @@ class FileEntriesController extends BaseController
         $file = $this->request->file('file');
         $payload = new FileEntryPayload($this->request->all());
 
-        $this->validate($this->request, [
-            'file' => [
-                'required',
-                'file',
-                function ($attribute, UploadedFile $value, $fail) use (
-                    $payload,
-                ) {
-                    $errors = app(ValidateFileUpload::class)->execute([
-                        'extension' => $payload->clientExtension,
-                        'size' => $payload->size,
-                    ]);
-                    if ($errors) {
-                        $fail($errors->first());
-                    }
-                },
-            ],
-            'parentId' => 'nullable|exists:file_entries,id',
-            'relativePath' => 'nullable|string',
+        // 🔍 LOG: اطلاعات فایل
+        \Log::info('[FILE-ENTRY-CONTROLLER] File details', [
+            'original_name' => $file ? $file->getClientOriginalName() : 'NULL',
+            'size' => $file ? $file->getSize() : 0,
+            'size_mb' => $file ? round($file->getSize() / (1024 * 1024), 2) : 0,
+            'mime_type' => $file ? $file->getMimeType() : 'NULL',
+            'client_mime' => $payload->clientMime,
+            'client_extension' => $payload->clientExtension,
+            'temp_path' => $file ? $file->getPathname() : 'NULL',
+            'is_valid' => $file ? $file->isValid() : false,
+            'error' => $file ? $file->getError() : 'NULL',
         ]);
 
-        app(StoreFile::class)->execute($payload, ['file' => $file]);
+        // 🔍 LOG: شروع validation
+        \Log::info('[FILE-ENTRY-CONTROLLER] Starting validation', [
+            'extension' => $payload->clientExtension,
+            'size' => $payload->size,
+        ]);
 
-        $fileEntry = app(CreateFileEntry::class)->execute($payload);
+        try {
+            $this->validate($this->request, [
+                'file' => [
+                    'required',
+                    'file',
+                    function ($attribute, UploadedFile $value, $fail) use (
+                        $payload,
+                    ) {
+                        $errors = app(ValidateFileUpload::class)->execute([
+                            'extension' => $payload->clientExtension,
+                            'size' => $payload->size,
+                        ]);
+                        if ($errors) {
+                            // 🔍 LOG: validation fail
+                            \Log::warning('[FILE-ENTRY-CONTROLLER] Validation failed', [
+                                'errors' => $errors->toArray(),
+                            ]);
+                            $fail($errors->first());
+                        }
+                    },
+                ],
+                'parentId' => 'nullable|exists:file_entries,id',
+                'relativePath' => 'nullable|string',
+            ]);
 
-        event(new FileUploaded($fileEntry));
+            // 🔍 LOG: validation موفق
+            \Log::info('[FILE-ENTRY-CONTROLLER] Validation passed, storing file...');
 
-        return $this->success(['fileEntry' => $fileEntry->load('users')], 201);
+            app(StoreFile::class)->execute($payload, ['file' => $file]);
+
+            // 🔍 LOG: ذخیره‌سازی موفق
+            \Log::info('[FILE-ENTRY-CONTROLLER] File stored, creating entry...');
+
+            $fileEntry = app(CreateFileEntry::class)->execute($payload);
+
+            // 🔍 LOG: ایجاد entry موفق
+            \Log::info('[FILE-ENTRY-CONTROLLER] Entry created successfully', [
+                'entry_id' => $fileEntry->id,
+                'entry_name' => $fileEntry->name,
+                'entry_path' => $fileEntry->path,
+            ]);
+
+            event(new FileUploaded($fileEntry));
+
+            return $this->success(['fileEntry' => $fileEntry->load('users')], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // 🔍 LOG: validation exception
+            \Log::error('[FILE-ENTRY-CONTROLLER] Validation exception', [
+                'errors' => $e->errors(),
+                'message' => $e->getMessage(),
+            ]);
+            throw $e;
+        } catch (\Exception $e) {
+            // 🔍 LOG: exception غیرمنتظره
+            \Log::error('[FILE-ENTRY-CONTROLLER] Unexpected exception', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
     }
 
     public function update(int $entryId)
